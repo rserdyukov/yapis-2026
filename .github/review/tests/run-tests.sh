@@ -746,6 +746,79 @@ test_task_checks_require_compile_script() {
 }
 
 # ══════════════════════════════════════════════════════════════════════════
+# Манифест шаблона (admin/template-manifest.txt)
+# ══════════════════════════════════════════════════════════════════════════
+
+_manifest() { echo "${REPO_ROOT}/admin/template-manifest.txt"; }
+
+_manifest_pairs() {
+  awk -F'->' '
+    /^[[:space:]]*#/ { next } /^[[:space:]]*$/ { next } /^[[:space:]]*!/ { next }
+    NF == 2 {
+      src=$1; dst=$2
+      gsub(/^[[:space:]]+|[[:space:]]+$/,"",src); gsub(/^[[:space:]]+|[[:space:]]+$/,"",dst)
+      if (src!="" && dst!="") print src "\t" dst
+    }' "$(_manifest)"
+}
+
+test_template_manifest_exists() {
+  [ -f "$(_manifest)" ] || { fail "нет admin/template-manifest.txt"; return 1; }
+  local n; n="$(_manifest_pairs | wc -l | tr -d ' ')"
+  [ "${n}" -ge 4 ] || { fail "манифест почти пуст (${n} записей)"; return 1; }
+  return 0
+}
+
+test_template_manifest_sources_exist() {
+  # Каждый источник из манифеста должен реально существовать: иначе
+  # sync-template упадёт уже на живом шаблоне.
+  local src dst missing=""
+  while IFS=$'\t' read -r src dst; do
+    [ -z "${src}" ] && continue
+    [ -e "${REPO_ROOT}/${src}" ] || missing="${missing} ${src}"
+  done < <(_manifest_pairs)
+  [ -z "${missing}" ] || { fail "в манифесте есть несуществующие пути:${missing}"; return 1; }
+  return 0
+}
+
+test_template_manifest_covers_infrastructure() {
+  # Инфраструктура ревью и оба workflow обязаны попадать в шаблон,
+  # иначе у студента просто не будет проверок.
+  local pairs; pairs="$(_manifest_pairs)"
+  local required=".github/review .github/workflows/ai-review.yml .github/workflows/guard-main.yml"
+  local r
+  for r in ${required}; do
+    case "${pairs}" in
+      *"${r}"*) ;;
+      *) fail "манифест не переносит ${r}"; return 1 ;;
+    esac
+  done
+  return 0
+}
+
+test_template_manifest_excludes_teacher_only() {
+  # Тесты инфраструктуры — инструмент преподавателя, в репозитории студента
+  # они не нужны (13 файлов с фикстурами).
+  local ex
+  ex="$(awk '/^[[:space:]]*!EXCLUDE[[:space:]]+/ {$1="";sub(/^[[:space:]]+/,"");print}' "$(_manifest)")"
+  case "${ex}" in
+    *".github/review/tests"*) return 0 ;;
+    *) fail "tests/ должны исключаться из шаблона"; return 1 ;;
+  esac
+}
+
+test_workflows_skip_in_source_repo() {
+  # Оба workflow не должны выполняться в преподавательском репозитории:
+  # там нет работ студентов, а минуты Actions общие на организацию.
+  local f
+  for f in "${REPO_ROOT}/.github/workflows/ai-review.yml" \
+           "${REPO_ROOT}/.github/workflows/guard-main.yml"; do
+    grep -q "is_source" "${f}" || { fail "$(basename "${f}"): нет детектора репозитория-источника"; return 1; }
+    grep -q "admin/manage.sh" "${f}" || { fail "$(basename "${f}"): детектор не проверяет признак источника"; return 1; }
+  done
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
 # Запуск
 # ══════════════════════════════════════════════════════════════════════════
 

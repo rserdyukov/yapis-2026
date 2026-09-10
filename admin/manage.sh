@@ -45,6 +45,9 @@
 #                                                          на уровень организации (нужен план Team)
 #   ./manage.sh status [<фамилия>]                     — сводка по PR/веткам во всех репозиториях
 #                                                          студентов (или по одному, если указана фамилия)
+#   ./manage.sh sync-template                            — раскатать этот репозиторий в шаблон
+#                                                          (состав — admin/template-manifest.txt);
+#                                                          выполняется ПЕРЕД sync-workflow
 #   ./manage.sh sync-workflow                            — обновить .github/review/** и оба
 #                                                          workflow (ai-review, guard-main) во всех
 #                                                          репозиториях студентов из шаблона
@@ -780,6 +783,127 @@ cmd_status() {
   done <<< "${repos}"
 }
 
+# Путь к манифесту состава шаблона (единый источник правды, см. файл).
+TEMPLATE_MANIFEST="${SCRIPT_DIR}/template-manifest.txt"
+
+# Разбирает манифест и печатает строки "источник<TAB>назначение".
+# Строки !EXCLUDE отдаются отдельно через parse_template_excludes.
+parse_template_manifest() {
+  awk -F'->' '
+    /^[[:space:]]*#/    { next }
+    /^[[:space:]]*$/    { next }
+    /^[[:space:]]*!/    { next }
+    NF == 2 {
+      src = $1; dst = $2
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", src)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", dst)
+      if (src != "" && dst != "") print src "\t" dst
+    }
+  ' "${TEMPLATE_MANIFEST}"
+}
+
+# Печатает пути, которые не должны попадать в шаблон.
+parse_template_excludes() {
+  awk '/^[[:space:]]*!EXCLUDE[[:space:]]+/ { $1=""; sub(/^[[:space:]]+/,""); print }' \
+    "${TEMPLATE_MANIFEST}"
+}
+
+# Раскатка: этот репозиторий (источник) -> template-репозиторий.
+#
+# Порядок работы с изменениями инфраструктуры:
+#   1. правки вносятся ТОЛЬКО здесь, в репозитории курса;
+#   2. ./manage.sh sync-template  — источник -> шаблон;
+#   3. ./manage.sh sync-workflow  — шаблон -> репозитории студентов.
+#
+# Шаг 2 отделён от шага 3 намеренно: между ними шаблон можно просмотреть
+# глазами, а новые репозитории студентов сразу создаются из свежего шаблона.
+cmd_sync_template() {
+  require_gh_auth
+
+  if [ ! -f "${TEMPLATE_MANIFEST}" ]; then
+    echo "Не найден манифест ${TEMPLATE_MANIFEST}." >&2
+    exit 1
+  fi
+
+  local src_root
+  src_root="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+  echo "Источник: ${src_root}"
+  echo "Шаблон:   ${TEMPLATE_REPO}"
+  echo
+  echo "Будет скопировано (по ${TEMPLATE_MANIFEST}):"
+  local src dst
+  while IFS=$'\t' read -r src dst; do
+    [ -z "${src}" ] && continue
+    if [ ! -e "${src_root}/${src}" ]; then
+      echo "  ОШИБКА: нет ${src}" >&2
+      exit 1
+    fi
+    echo "  ${src} -> ${dst}"
+  done < <(parse_template_manifest)
+
+  local excludes
+  excludes="$(parse_template_excludes)"
+  if [ -n "${excludes}" ]; then
+    echo
+    echo "Не попадёт в шаблон:"
+    echo "${excludes}" | sed 's/^/  /'
+  fi
+  echo
+  echo "В шаблоне README.md будет ПЕРЕЗАПИСАН заготовкой. На репозитории"
+  echo "студентов это не влияет: sync-workflow их README не трогает."
+  confirm "Продолжить?"
+
+  SYNC_TPL_DIR="$(mktemp -d)"
+  trap 'rm -rf "${SYNC_TPL_DIR:-}"' EXIT
+  local work="${SYNC_TPL_DIR}/template"
+
+  echo "Клонирую ${TEMPLATE_REPO}..."
+  gh repo clone "${TEMPLATE_REPO}" "${work}" -- --quiet
+
+  # Копируем по манифесту.
+  while IFS=$'\t' read -r src dst; do
+    [ -z "${src}" ] && continue
+    mkdir -p "$(dirname "${work}/${dst}")"
+    if [ -d "${src_root}/${src}" ]; then
+      rm -rf "${work:?}/${dst}"
+      cp -R "${src_root}/${src}" "${work}/${dst}"
+    else
+      cp "${src_root}/${src}" "${work}/${dst}"
+    fi
+  done < <(parse_template_manifest)
+
+  # Убираем исключённые пути.
+  local ex
+  while IFS= read -r ex; do
+    [ -z "${ex}" ] && continue
+    rm -rf "${work:?}/${ex}"
+  done <<< "${excludes}"
+
+  find "${work}" -name '.DS_Store' -delete 2>/dev/null || true
+
+  (
+    cd "${work}"
+    git add -A
+    if git diff --cached --quiet; then
+      echo "Шаблон уже актуален, изменений нет."
+      exit 0
+    fi
+
+    echo
+    echo "Изменения в шаблоне:"
+    git diff --cached --stat | tail -n 20
+    echo
+
+    git -c user.name="${GIT_AUTHOR_NAME:-yapis-admin}" \
+        -c user.email="${GIT_AUTHOR_EMAIL:-yapis-admin@users.noreply.github.com}" \
+        commit -qm "sync: обновить инфраструктуру и документы из репозитория курса"
+    git push -q origin HEAD
+    echo "Шаблон обновлён и запушен."
+    echo "Дальше: ./manage.sh sync-workflow — раскатать по репозиториям студентов."
+  )
+}
+
 cmd_sync_workflow() {
   require_gh_auth
 
@@ -886,6 +1010,7 @@ main() {
     invite)            cmd_invite "$@" ;;
     set-secret)         cmd_set_secret "$@" ;;
     status)            cmd_status "$@" ;;
+    sync-template)      cmd_sync_template "$@" ;;
     sync-workflow)      cmd_sync_workflow "$@" ;;
     broadcast-issue)     cmd_broadcast_issue "$@" ;;
     -h|--help|help|"")  usage ;;

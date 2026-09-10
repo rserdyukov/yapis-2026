@@ -62,8 +62,25 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Этот же workflow лежит в преподавательском репозитории курса, откуда
+      # раскатывается в шаблон и репозитории студентов. Там он не нужен:
+      # правила «только через PR» к нему не применяются, а минуты Actions
+      # тратятся впустую. Признак источника — каталог admin/, который в
+      # шаблон не копируется (см. admin/template-manifest.txt).
+      - name: Пропустить проверку в репозитории-источнике
+        id: origin
+        run: |
+          if [ -d admin ] && [ -f admin/manage.sh ]; then
+            echo "is_source=true" >> "$GITHUB_OUTPUT"
+            echo "Это репозиторий курса, а не студента — проверка не применяется."
+          else
+            echo "is_source=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
       - name: Определить, пришли ли коммиты через смерженный PR
         id: check
+        if: steps.origin.outputs.is_source == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -207,8 +224,11 @@ jobs:
         if: always()
         env:
           VIOLATION: ${{ steps.check.outputs.violation }}
+          IS_SOURCE: ${{ steps.origin.outputs.is_source }}
         run: |
-          if [ "${VIOLATION}" = "true" ]; then
+          if [ "${IS_SOURCE}" = "true" ]; then
+            echo "Репозиторий курса, а не студента — проверка \`guard-main\` не применяется." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${VIOLATION}" = "true" ]; then
             {
               echo "## Нарушение: прямой push в \`main\`"
               echo

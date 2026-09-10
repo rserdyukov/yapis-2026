@@ -1,0 +1,33 @@
+# Состав template-репозитория студента.
+#
+# Единый источник правды: используется командой `./manage.sh sync-template`
+# (раскатка источник -> шаблон) и тестом template_manifest_is_consistent
+# в .github/review/tests/run-tests.sh.
+#
+# Формат строки:
+#   <путь в этом репозитории> -> <путь в шаблоне>
+#
+# Пустые строки и строки, начинающиеся с #, игнорируются.
+# Путь-источник может быть файлом или директорией; директория копируется
+# целиком, кроме исключений (см. ниже).
+
+# --- Инфраструктура автоматической проверки ---
+.github/review                   -> .github/review
+.github/workflows/ai-review.yml  -> .github/workflows/ai-review.yml
+.github/workflows/guard-main.yml -> .github/workflows/guard-main.yml
+
+# --- Документы студента ---
+# README студента перезаписывается ТОЛЬКО в шаблоне: в репозитории студента
+# там уже его собственное описание варианта (см. sync-workflow, который этот
+# файл не трогает).
+admin/template-README.md         -> README.md
+admin/template-TASK.md           -> TASK.md
+admin/template-GUIDE.md          -> GUIDE.md
+
+# --- Исключения (не копируются в шаблон) ---
+# Тесты инфраструктуры — инструмент преподавателя, студенту не нужны:
+# 13 файлов с фикстурами, которые только зашумляют его репозиторий.
+# review-local.sh работает без них.
+!EXCLUDE .github/review/tests
+# Результаты локальных прогонов ИИ-ревью.
+!EXCLUDE .github/review/tests/results

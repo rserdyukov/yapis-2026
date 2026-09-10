@@ -53,9 +53,18 @@ cp .env.example .env        # заполнить ORG и TEMPLATE_REPO
 | `admin/template-TASK.md` | `TASK.md` |
 | `admin/template-GUIDE.md` | `GUIDE.md` |
 
-Инфраструктура раскатывается по существующим репозиториям командой
-`./manage.sh sync-workflow`; текстовые документы копируются вручную
-(см. [`admin/STUDENT_GUIDE.md`](admin/STUDENT_GUIDE.md)).
+Состав шаблона задан в
+[`admin/template-manifest.txt`](admin/template-manifest.txt).
+
+Правки вносятся только здесь и расходятся по цепочке:
+
+```bash
+cd admin
+./manage.sh sync-template     # источник -> шаблон
+./manage.sh sync-workflow     # шаблон -> репозитории студентов
+```
+
+Подробнее — [`admin/STUDENT_GUIDE.md`](admin/STUDENT_GUIDE.md).
 
 ## Тесты
 

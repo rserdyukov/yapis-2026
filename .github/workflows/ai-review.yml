@@ -111,8 +111,25 @@ jobs:
       # persist-credentials: false у git нет учётных данных для обращения к
       # remote — попытка fetch падает с "could not read Username".
 
+      # Этот же workflow лежит в преподавательском репозитории курса, откуда
+      # раскатывается в шаблон и репозитории студентов. Там ревью не нужно:
+      # PR преподавателя — это правки самой инфраструктуры, а не лабораторные
+      # работы. Признак источника — каталог admin/, который в шаблон не
+      # копируется (см. admin/template-manifest.txt).
+      - name: Пропустить ревью в репозитории-источнике
+        id: origin
+        run: |
+          if [ -d admin ] && [ -f admin/manage.sh ]; then
+            echo "is_source=true" >> "$GITHUB_OUTPUT"
+            echo "Это репозиторий курса, а не студента — ИИ-ревью не запускается." >&2
+          else
+            echo "is_source=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
       - name: Sanity-check — инфраструктура ревью и конфиг агента не изменены в PR
         id: integrity
+        if: steps.origin.outputs.is_source == 'false'
         run: |
           set -uo pipefail
           # Помимо самих скриптов ревью проверяем файлы, через которые можно

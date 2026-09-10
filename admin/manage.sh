@@ -48,9 +48,9 @@
 #   ./manage.sh sync-template                            — раскатать этот репозиторий в шаблон
 #                                                          (состав — admin/template-manifest.txt);
 #                                                          выполняется ПЕРЕД sync-workflow
-#   ./manage.sh sync-workflow                            — обновить .github/review/** и оба
-#                                                          workflow (ai-review, guard-main) во всех
-#                                                          репозиториях студентов из шаблона
+#   ./manage.sh sync-workflow                            — раскатать шаблон по репозиториям
+#                                                          студентов (инфраструктура + TASK.md,
+#                                                          GUIDE.md); README студента не трогает
 #   ./manage.sh broadcast-issue <title> <body-file>     — создать одинаковый issue во всех
 #                                                          репозиториях студентов (например,
 #                                                          объявление/напоминание о дедлайне)
@@ -808,6 +808,27 @@ parse_template_excludes() {
     "${TEMPLATE_MANIFEST}"
 }
 
+# Печатает пути (в терминах шаблона), которые нельзя перезаписывать в
+# репозиториях студентов: там уже их собственная работа.
+parse_student_keep() {
+  awk '/^[[:space:]]*!STUDENT_KEEP[[:space:]]+/ { $1=""; sub(/^[[:space:]]+/,""); print }' \
+    "${TEMPLATE_MANIFEST}"
+}
+
+# Пути в шаблоне, которые sync-workflow раскатывает студентам:
+# все назначения из манифеста, кроме перечисленных в !STUDENT_KEEP.
+template_paths_for_students() {
+  local keep dst
+  keep="$(parse_student_keep)"
+  while IFS=$'\t' read -r _src dst; do
+    [ -z "${dst}" ] && continue
+    if [ -n "${keep}" ] && echo "${keep}" | grep -qxF "${dst}"; then
+      continue
+    fi
+    echo "${dst}"
+  done < <(parse_template_manifest)
+}
+
 # Раскатка: этот репозиторий (источник) -> template-репозиторий.
 #
 # Порядок работы с изменениями инфраструктуры:
@@ -915,9 +936,32 @@ cmd_sync_workflow() {
     exit 0
   fi
 
-  echo "Будут обновлены .github/workflows/{ai-review,guard-main}.yml и .github/review/**"
-  echo "в следующих репозиториях, путём открытия PR из ветки ci/sync-review-tooling"
-  echo "в каждом (изменения не мержатся автоматически):"
+  if [ ! -f "${TEMPLATE_MANIFEST}" ]; then
+    echo "Не найден манифест ${TEMPLATE_MANIFEST}." >&2
+    exit 1
+  fi
+
+  # Что раскатывать — берём из манифеста, а не из захардкоженного списка:
+  # иначе он разъедется с sync-template при добавлении новых файлов.
+  local sync_paths keep_paths
+  sync_paths="$(template_paths_for_students)"
+  keep_paths="$(parse_student_keep)"
+
+  if [ -z "${sync_paths}" ]; then
+    echo "Манифест не содержит путей для раскатки студентам." >&2
+    exit 1
+  fi
+
+  echo "Будут обновлены (из шаблона ${TEMPLATE_REPO}):"
+  echo "${sync_paths}" | sed 's/^/  - /'
+  if [ -n "${keep_paths}" ]; then
+    echo
+    echo "НЕ будут тронуты (там работа студента):"
+    echo "${keep_paths}" | sed 's/^/  - /'
+  fi
+  echo
+  echo "В следующих репозиториях, путём открытия PR из ветки"
+  echo "ci/sync-review-tooling в каждом (изменения не мержатся автоматически):"
   echo "${repos}" | sed 's/^/  - /'
   confirm "Продолжить?"
 
@@ -939,28 +983,59 @@ cmd_sync_workflow() {
 
     (
       cd "${work}"
-      git checkout -q -b ci/sync-review-tooling
-      rm -rf .github/review
-      cp -r "${tmp_dir}/template/.github/review" .github/review
-      mkdir -p .github/workflows
-      cp "${tmp_dir}/template/.github/workflows/ai-review.yml" .github/workflows/ai-review.yml
-      cp "${tmp_dir}/template/.github/workflows/guard-main.yml" .github/workflows/guard-main.yml
+      # -B, а не -b: ветка могла остаться от прошлого прогона (например,
+      # если PR не смержили). Тогда `-b` падает с "already exists", а push —
+      # с "non-fast-forward". Пересоздаём её от свежего main.
+      git checkout -q -B ci/sync-review-tooling
+
+      local p
+      while IFS= read -r p; do
+        [ -z "${p}" ] && continue
+        [ -e "${tmp_dir}/template/${p}" ] || continue
+        mkdir -p "$(dirname "./${p}")"
+        if [ -d "${tmp_dir}/template/${p}" ]; then
+          rm -rf "./${p:?}"
+          cp -R "${tmp_dir}/template/${p}" "./${p}"
+        else
+          cp "${tmp_dir}/template/${p}" "./${p}"
+        fi
+        git add -A "./${p}"
+      done <<< "${sync_paths}"
 
       # Индексируем ДО проверки изменений: `git diff` не замечает новые
       # (untracked) файлы, поэтому при первом развёртывании инфраструктуры
       # проверка ложно сообщала бы "изменений нет".
-      git add -A .github/review .github/workflows
-
       if git diff --cached --quiet; then
         echo "  Изменений нет, пропускаю."
         exit 0
       fi
 
-      git commit -m "ci: обновить инфраструктуру ИИ-ревью из шаблона" --quiet
-      git push -u origin ci/sync-review-tooling --quiet
+      echo "  Изменения:"
+      git diff --cached --name-only | sed 's/^/    /'
+
+      git commit -m "ci: обновить инфраструктуру и документы курса из шаблона" --quiet
+      # --force-with-lease: ветка служебная и пересоздаётся от main при каждом
+      # прогоне. Обычный push отклоняется как non-fast-forward, если PR с
+      # прошлого раза остался незакрытым.
+      git push -u origin ci/sync-review-tooling --force-with-lease --quiet
+
+      # PR мог остаться открытым с прошлого прогона — тогда он уже указывает
+      # на обновлённую ветку, создавать второй не нужно.
+      local existing
+      existing="$(gh pr list --head ci/sync-review-tooling --state open \
+        --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+      if [ -n "${existing}" ]; then
+        echo "  Обновлён существующий PR #${existing}."
+        exit 0
+      fi
+
       gh pr create \
-        --title "ci: обновить инфраструктуру ИИ-ревью" \
-        --body "Автоматическое обновление \`.github/review/**\`, \`.github/workflows/ai-review.yml\` и \`.github/workflows/guard-main.yml\` из шаблона. Слить самостоятельно после проверки." \
+        --title "ci: обновить инфраструктуру проверки и документы курса" \
+        --body "Автоматическое обновление из шаблона курса: инфраструктура ИИ-ревью (\`.github/**\`) и документы практикума (\`TASK.md\`, \`GUIDE.md\`).
+
+Ваш \`README.md\` не затронут — там описание вашего варианта.
+
+Слейте PR после просмотра." \
         --base main
     )
   done <<< "${repos}"

@@ -806,6 +806,55 @@ test_template_manifest_excludes_teacher_only() {
   esac
 }
 
+_manifest_student_keep() {
+  awk '/^[[:space:]]*!STUDENT_KEEP[[:space:]]+/ {$1="";sub(/^[[:space:]]+/,"");print}' "$(_manifest)"
+}
+
+test_template_manifest_protects_student_readme() {
+  # README студента содержит описание его варианта. sync-workflow не должен
+  # его перезаписывать, иначе работа будет затёрта.
+  local keep; keep="$(_manifest_student_keep)"
+  case "${keep}" in
+    *"README.md"*) return 0 ;;
+    *) fail "README.md должен быть в !STUDENT_KEEP"; return 1 ;;
+  esac
+}
+
+test_sync_workflow_distributes_course_docs() {
+  # TASK.md и GUIDE.md обязаны доезжать до студентов: иначе правки
+  # требований останутся только в шаблоне.
+  local pairs; pairs="$(_manifest_pairs)"
+  local keep; keep="$(_manifest_student_keep)"
+  local doc
+  for doc in TASK.md GUIDE.md; do
+    case "${pairs}" in
+      *"-> ${doc}"*|*"${doc}"*) ;;
+      *) fail "${doc} отсутствует в манифесте"; return 1 ;;
+    esac
+    if echo "${keep}" | grep -qxF "${doc}"; then
+      fail "${doc} не должен быть в !STUDENT_KEEP — правки не дойдут до студентов"
+      return 1
+    fi
+  done
+  return 0
+}
+
+test_sync_workflow_reads_manifest() {
+  # Список раскатываемых путей не должен быть захардкожен в manage.sh:
+  # иначе он разъедется с манифестом при добавлении новых файлов.
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  grep -q "template_paths_for_students" "${mg}" \
+    || { fail "sync-workflow не использует манифест"; return 1; }
+  # В теле команды не должно остаться прямых путей к workflow-файлам.
+  local body
+  body="$(awk '/^cmd_sync_workflow\(\)/,/^}/' "${mg}")"
+  case "${body}" in
+    *"template/.github/workflows/ai-review.yml"*)
+      fail "в sync-workflow остался захардкоженный путь к ai-review.yml"; return 1 ;;
+  esac
+  return 0
+}
+
 test_workflows_skip_in_source_repo() {
   # Оба workflow не должны выполняться в преподавательском репозитории:
   # там нет работ студентов, а минуты Actions общие на организацию.

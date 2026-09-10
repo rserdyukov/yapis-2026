@@ -1,0 +1,376 @@
+name: ai-review
+
+# Автоматическое предварительное ИИ-ревью PR с лабораторными работами.
+#
+# Модель курса: одна GitHub-организация на группу, внутри неё — один приватный
+# репозиторий на студента, создаваемый преподавателем из template-репозитория
+# (см. GUIDE.md в корне репозитория). Студенты добавляются
+# как outside collaborators, а не как члены организации, поэтому не видят
+# репозитории друг друга — именно это, а не сам workflow, защищает от
+# списывания. Проверить настройки организации: admin/manage.sh doctor.
+#
+# Особенности:
+#   - Промпт и скрипт структурной проверки зависят от номера лабораторной
+#     работы, который определяется по имени ветки — task<номер> (см.
+#     .github/review/lib/detect-task.sh), см. .github/review/tasks/task1..task5
+#     и .github/review/tasks/default.
+#   - Встроена защита от избыточного количества запусков и от превышения
+#     бесплатных лимитов API модели (.github/review/lib/rate-limit.sh —
+#     лимиты на PR/сутки/cooldown, .github/review/lib/diff-guard.sh — лимит
+#     на размер diff). Все лимиты настраиваются в .github/review/config.env.
+#   - Используется обычный pull_request (не pull_request_target): по правилам
+#     курса ветки создаются внутри самого репозитория, а не в форках.
+#     Дополнительно job запускается только если PR действительно из этого
+#     репозитория (см. условие ниже).
+#
+# БЕЗОПАСНОСТЬ (важно при правке этого файла):
+#   1. Код студента считается НЕДОВЕРЕННЫМ. Любые данные, подконтрольные
+#      автору PR (имя ветки, заголовок, содержимое файлов), НИКОГДА не
+#      подставляются через ${{ }} прямо в тело `run:` — только через `env:`
+#      с последующим обращением как "$VAR". Прямая подстановка ${{ }} в
+#      скрипт означает выполнение произвольного кода в раннере, так как
+#      git разрешает в именах ветвей символы `$`, `(`, `)`.
+#   2. ИИ-агент запускается строго read-only: bash ЗАПРЕЩЁН полностью.
+#      Разрешение вида "git *" эквивалентно разрешению bash, поскольку
+#      `git -c alias.x='!sh -c ...' x` выполняет произвольную команду.
+#      Поэтому история/diff готовятся отдельным шагом workflow и передаются
+#      агенту как обычный файл, который он читает через read.
+#   3. Секрет с ключом модели виден только шагу запуска ревью и не должен
+#      попадать в шаги, исполняющие код студента (см. check.sh, который
+#      запускает студенческий compile.sh).
+#
+# ОСТАТОЧНЫЙ РИСК:
+#   GitHub для pull_request из ветки того же репозитория запускает workflow
+#   и все скрипты (.github/review/**) в ТОЙ ВЕРСИИ, что лежит в ветке PR, а
+#   не в main. Формально автор PR может отредактировать rate-limit.sh или сам
+#   workflow в своей ветке — но только В СВОЁМ репозитории, не затрагивая
+#   других студентов. Против этого работает шаг "Sanity-check" ниже: при
+#   изменении инфраструктуры ревью или конфигурации агента ревью не
+#   выполняется, а в PR остаётся комментарий.
+#   Полностью исключить prompt injection через содержимое файлов студента
+#   нельзя — учитывайте это при чтении комментария бота.
+#
+# Настройка секретов:
+#   Провайдер модели задаётся переменной MODEL в .github/review/config.env,
+#   а ключ кладётся как Organization secret (admin/manage.sh set-secret).
+#   Workflow править не нужно — поддерживаются:
+#     openrouter/... -> OPENROUTER_API_KEY  (https://openrouter.ai/keys)
+#     groq/...       -> GROQ_API_KEY        (https://console.groq.com/keys)
+#     google/...     -> GEMINI_API_KEY      (https://aistudio.google.com/apikey)
+#   Шаг запуска ревью проверяет, что нужный ключ задан, и при его отсутствии
+#   выдаёт понятное сообщение вместо невнятной ошибки провайдера.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  # Нужно для gh run list в lib/rate-limit.sh: по истории запусков считается
+  # дневной лимит и cooldown. Без этого права gh возвращает пустой список,
+  # оба ограничения молча перестают работать (проверено на живом прогоне —
+  # в логе было "запусков за сутки 0/6" при фактических семи).
+  actions: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Жёсткий потолок на время выполнения — дополнительная защита от зависа-
+    # ний/долгих ретраев модели, которые впустую расходовали бы Actions-минуты
+    # (на Free-плане организации это 2000 минут в месяц на ВСЮ организацию).
+    timeout-minutes: 10
+    # Ревью имеет смысл только для PR внутри самого репозитория (не форк).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      # Все подконтрольные автору PR значения — только через env, никогда
+      # не через ${{ }} внутри `run:` (см. раздел БЕЗОПАСНОСТЬ выше).
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      REPO_NAME: ${{ github.event.repository.name }}
+      REPO_FULL: ${{ github.repository }}
+
+    steps:
+      - name: Checkout PR (код студента + история для diff)
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      # Отдельный `git fetch` здесь не нужен и вреден: fetch-depth: 0 выше уже
+      # выкачивает полную историю вместе с base-коммитом, а с
+      # persist-credentials: false у git нет учётных данных для обращения к
+      # remote — попытка fetch падает с "could not read Username".
+
+      - name: Sanity-check — инфраструктура ревью и конфиг агента не изменены в PR
+        id: integrity
+        run: |
+          set -uo pipefail
+          # Помимо самих скриптов ревью проверяем файлы, через которые можно
+          # повлиять на поведение агента (правила, агенты, плагины, скиллы) —
+          # иначе integrity-check обходится добавлением AGENTS.md в корень.
+          # Сравниваем по SHA из события, а не по origin/<branch>: remote-
+          # tracking ссылки при checkout по SHA может не быть, а base_sha
+          # гарантированно присутствует в истории после fetch-depth: 0.
+          CHANGED="$(git diff --name-only "${PR_BASE_SHA}" "${PR_HEAD_SHA}" -- \
+            .github/review \
+            .github/workflows \
+            AGENTS.md \
+            CLAUDE.md \
+            opencode.json \
+            opencode.jsonc \
+            .opencode \
+            .claude)"
+          if [ -n "${CHANGED}" ]; then
+            echo "modified=true" >> "$GITHUB_OUTPUT"
+            echo "Изменены файлы инфраструктуры ревью в PR:" >&2
+            echo "${CHANGED}" >&2
+          else
+            echo "modified=false" >> "$GITHUB_OUTPUT"
+          fi
+        shell: bash
+
+      - name: Сообщить о пропуске ревью (изменена инфраструктура ревью)
+        if: steps.integrity.outputs.modified == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Тексты сообщений — в .github/review/messages.env
+          # shellcheck source=/dev/null
+          source .github/review/messages.env
+          {
+            echo "${MARKER_REVIEW}"
+            echo "${MARKER_SKIPPED}"
+            printf '%b\n' "${MSG_INFRA_CHANGED}"
+          } > /tmp/skip-comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO_FULL" --body-file /tmp/skip-comment.md
+        shell: bash
+
+      - name: Определить лабораторную работу по имени ветки
+        id: task
+        if: steps.integrity.outputs.modified == 'false'
+        run: bash .github/review/lib/detect-task.sh "$PR_HEAD_REF" "$REPO_NAME"
+        shell: bash
+
+      - name: Проверить лимиты запусков (защита от превышения лимитов API)
+        id: rate_limit
+        if: steps.integrity.outputs.modified == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash .github/review/lib/rate-limit.sh "$PR_NUMBER" "ai-review.yml"
+        shell: bash
+
+      - name: Проверить размер diff (защита от слишком больших PR)
+        id: diff_guard
+        if: steps.rate_limit.outputs.allowed == 'true'
+        env:
+          WORK_DIR: ${{ steps.task.outputs.work_dir }}
+        run: bash .github/review/lib/diff-guard.sh "$PR_BASE_SHA" "$PR_HEAD_SHA" "$WORK_DIR"
+        shell: bash
+
+      - name: Сообщить о пропуске ревью (лимиты)
+        if: steps.rate_limit.outputs.allowed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REASON: ${{ steps.rate_limit.outputs.reason }}
+        run: |
+          # Формируем комментарий как GitHub alert: жёлтый блок с иконкой
+          # заметнее обычного абзаца в длинной ленте PR. Синтаксис alert
+          # требует '>' в начале каждой строки, поэтому причину отказа
+          # (она однострочная) префиксуем отдельно.
+          bash .github/review/lib/skip-comment.sh "${REASON}" > /tmp/skip-comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO_FULL" --body-file /tmp/skip-comment.md
+        shell: bash
+
+      - name: Сообщить о пропуске ревью (слишком большой PR)
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REASON: ${{ steps.diff_guard.outputs.reason }}
+        run: |
+          # Формируем комментарий как GitHub alert: жёлтый блок с иконкой
+          # заметнее обычного абзаца в длинной ленте PR. Синтаксис alert
+          # требует '>' в начале каждой строки, поэтому причину отказа
+          # (она однострочная) префиксуем отдельно.
+          bash .github/review/lib/skip-comment.sh "${REASON}" > /tmp/skip-comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO_FULL" --body-file /tmp/skip-comment.md
+        shell: bash
+
+      # Diff готовится здесь, а не агентом: агенту запрещён bash (см. раздел
+      # БЕЗОПАСНОСТЬ выше), поэтому историю изменений он получает как файл.
+      - name: Подготовить diff PR для агента
+        id: diff_file
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'true'
+        env:
+          WORK_DIR: ${{ steps.task.outputs.work_dir }}
+        run: |
+          set -uo pipefail
+          {
+            echo "### Список изменённых файлов"
+            echo
+            git diff --stat "$PR_BASE_SHA" "$PR_HEAD_SHA" -- "$WORK_DIR"
+            echo
+            echo "### Полный diff"
+            echo
+            git diff "$PR_BASE_SHA" "$PR_HEAD_SHA" -- "$WORK_DIR"
+          } > /tmp/pr-diff.txt
+          echo "Размер diff-файла: $(wc -c < /tmp/pr-diff.txt) байт" >&2
+        shell: bash
+
+      - name: Собрать промпт для ИИ-ревью
+        id: prompt
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'true'
+        env:
+          TASK_DIR: ${{ steps.task.outputs.task_dir }}
+          WORK_DIR: ${{ steps.task.outputs.work_dir }}
+          STUDENT: ${{ steps.task.outputs.student }}
+          TASK_NUM: ${{ steps.task.outputs.task_num }}
+        run: |
+          bash .github/review/lib/build-prompt.sh \
+            "$TASK_DIR" "$WORK_DIR" "$STUDENT" "$TASK_NUM" "/tmp/pr-diff.txt" \
+            > /tmp/review-prompt.md
+          echo "path=/tmp/review-prompt.md" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Установить opencode
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'true'
+        run: curl -fsSL https://opencode.ai/install | bash
+        shell: bash
+
+      - name: Настроить opencode (read-only агент, без bash и без правок)
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'true'
+        run: |
+          set -euo pipefail
+          # shellcheck source=/dev/null
+          source .github/review/config.env
+          # bash запрещён целиком: "git *" не является безопасным подмножеством,
+          # так как git умеет выполнять произвольные команды через алиасы,
+          # core.pager, --ext-diff и т.п. Diff агент читает из файла.
+          cat > opencode.json <<EOF
+          {
+            "\$schema": "https://opencode.ai/config.json",
+            "model": "${MODEL}",
+            "share": "disabled",
+            "permission": {
+              "*": "deny",
+              "read": "allow",
+              "glob": "allow",
+              "grep": "allow"
+            }
+          }
+          EOF
+          cat opencode.json
+        shell: bash
+
+      - name: Запустить ИИ-ревью
+        id: run_review
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'true'
+        env:
+          # Все секреты репозитория передаются одним JSON, из которого ниже
+          # извлекается ключ нужного провайдера. Так поддерживается ЛЮБОЙ из
+          # 200+ провайдеров opencode без правки workflow: достаточно
+          # поменять MODEL в config.env и добавить соответствующий секрет
+          # (./manage.sh set-secret <ИМЯ>).
+          #
+          # Перечислить секреты по одному было нельзя: имена заранее
+          # неизвестны, а GitHub не поддерживает динамическое обращение
+          # к secrets.<ИМЯ>. Значение маскируется в логах как секрет.
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+          PROMPT_PATH: ${{ steps.prompt.outputs.path }}
+          # Не читать правила из .claude/CLAUDE.md, если студент их добавил:
+          # integrity-check это уже ловит, но выключаем и на уровне агента.
+          OPENCODE_DISABLE_CLAUDE_CODE: "true"
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.opencode/bin:$PATH"
+
+          # shellcheck source=/dev/null
+          source .github/review/config.env
+
+          # Проверяем, что задан ключ именно того провайдера, который указан
+          # в MODEL. Без этой проверки opencode падает с невнятной ошибкой
+          # вида "UnknownError: Unexpected server error", по которой
+          # невозможно понять, что дело в отсутствующем секрете.
+          # Имя переменной выводится автоматически — см. lib/provider.sh,
+          # поэтому смена провайдера не требует правки workflow.
+          # shellcheck source=/dev/null
+          source .github/review/lib/provider.sh
+          PROVIDER="$(provider_for "${MODEL}")"
+          REQUIRED_KEY="$(key_var_for "${PROVIDER}")"
+
+          if [ -n "${REQUIRED_KEY}" ]; then
+            # Достаём значение нужного секрета из JSON и экспортируем под тем
+            # именем, которое ожидает opencode. jq -e даёт ненулевой код,
+            # если ключа нет или он null.
+            if ! KEY_VALUE="$(printf '%s' "${ALL_SECRETS}" \
+                  | jq -er --arg k "${REQUIRED_KEY}" '.[$k] // empty')"; then
+              echo "Не задан секрет ${REQUIRED_KEY}, необходимый для модели ${MODEL}." >&2
+              echo "Добавьте его: ./manage.sh set-secret ${REQUIRED_KEY}" >&2
+              exit 1
+            fi
+            export "${REQUIRED_KEY}=${KEY_VALUE}"
+          fi
+
+          echo "Провайдер: ${PROVIDER}, модель: ${MODEL}" >&2
+
+          PROMPT="$(cat "$PROMPT_PATH")"
+          opencode run --auto --format default "$PROMPT" > /tmp/review-result.md
+
+          # opencode при некорректных флагах печатает справку и выходит с
+          # кодом 0 — без этой проверки в PR попал бы текст help вместо ревью.
+          if [ ! -s /tmp/review-result.md ]; then
+            echo "Пустой результат ревью." >&2
+            exit 1
+          fi
+          if grep -qE '^opencode run \[message' /tmp/review-result.md; then
+            echo "opencode напечатал справку вместо ревью — проверьте флаги CLI." >&2
+            exit 1
+          fi
+        shell: bash
+
+      - name: Опубликовать результат ревью в PR
+        if: steps.run_review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK_NUM: ${{ steps.task.outputs.task_num }}
+        run: |
+          # Тексты сообщений — в .github/review/messages.env
+          # shellcheck source=/dev/null
+          source .github/review/messages.env
+          {
+            # Маркер используется rate-limit.sh, чтобы считать реально
+            # опубликованные ревью, а не все запуски workflow. Здесь НЕТ
+            # MARKER_SKIPPED — именно этим комментарий-ревью отличается
+            # от комментария-отказа.
+            echo "${MARKER_REVIEW}"
+            eval "echo \"${MSG_REVIEW_HEADER}\""
+            echo
+            echo "${MSG_REVIEW_DISCLAIMER}"
+            echo
+            cat /tmp/review-result.md
+          } > /tmp/review-comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO_FULL" --body-file /tmp/review-comment.md
+        shell: bash
+
+      - name: Сообщить об ошибке выполнения ИИ-ревью
+        if: steps.rate_limit.outputs.allowed == 'true' && steps.diff_guard.outputs.allowed == 'true' && failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # shellcheck source=/dev/null
+          source .github/review/messages.env
+          {
+            echo "${MARKER_FAILED}"
+            printf '%b\n' "${MSG_TECH_ERROR}"
+          } > /tmp/failed-comment.md
+          gh pr comment "$PR_NUMBER" --repo "$REPO_FULL" --body-file /tmp/failed-comment.md
+        shell: bash

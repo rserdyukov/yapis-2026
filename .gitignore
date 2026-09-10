@@ -16,3 +16,10 @@ Icon
 .Trashes
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+### Секреты и локальная конфигурация
+.env
+.env.*
+!.env.example
+
+### Артефакты локальных прогонов ИИ-ревью
+.github/review/tests/results/

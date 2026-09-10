@@ -1,0 +1,223 @@
+name: guard-main
+
+# Детектирующий контроль прямых push в ветку main.
+#
+# ЗАЧЕМ. По правилам курса изменения попадают в main только через Pull Request,
+# одобренный преподавателем (см. GUIDE.md). Превентивно это
+# должна запрещать защита ветки — ruleset или branch protection, которые
+# включает admin/manage.sh protect. Но на плане Free организации для приватных
+# репозиториев защита может быть недоступна, и тогда GitHub физически не
+# помешает запушить в main напрямую или смержить свой PR самому.
+#
+# Этот workflow не блокирует push (в GitHub нет server-side pre-receive хуков
+# вне Enterprise Server, а client-side .git/hooks не клонируются и обходятся
+# через --no-verify). Вместо этого он ДЕЛАЕТ НАРУШЕНИЕ ЗАМЕТНЫМ:
+#   - помечает коммит failing check (виден красным крестом в истории);
+#   - открывает issue с деталями, чтобы преподаватель узнал сразу;
+#   - пишет запись в summary запуска.
+#
+# Такой контроль не мешает работе, но лишает обход смысла: оценку ставит
+# преподаватель, а работа, залитая в обход PR, считается несданной.
+#
+# Ложные срабатывания. Коммиты, попавшие в main через смерженный PR, а также
+# коммиты преподавателя и ботов, не считаются нарушением — см. шаг проверки.
+
+on:
+  push:
+    branches: [main]
+
+# Нужны права на создание issue и на постановку статуса коммита.
+permissions:
+  contents: read
+  issues: write
+  statuses: write
+  # Нужно для двух вызовов API: связь коммита с PR
+  # (/commits/{sha}/pulls) и уровень доступа автора push
+  # (/collaborators/{user}/permission). Без этого оба отвечают 403,
+  # и проверка не может отличить штатный мерж от прямого push.
+  pull-requests: read
+
+jobs:
+  check-direct-push:
+    runs-on: ubuntu-latest
+    # Job короткий (несколько секунд): на Free-плане минуты Actions общие
+    # на всю организацию, поэтому важно не тратить их зря.
+    timeout-minutes: 5
+
+    env:
+      PUSHER: ${{ github.event.pusher.name }}
+      ACTOR: ${{ github.actor }}
+      HEAD_SHA: ${{ github.sha }}
+      REPO_FULL: ${{ github.repository }}
+      RUN_ID: ${{ github.run_id }}
+      SERVER_URL: ${{ github.server_url }}
+      # Сообщение головного коммита — недоверенные данные, только через env.
+      HEAD_MSG: ${{ github.event.head_commit.message }}
+      FORCED: ${{ github.event.forced }}
+
+    steps:
+      - name: Checkout (нужна история для анализа коммитов)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Определить, пришли ли коммиты через смерженный PR
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+
+          # Связан ли коммит с PR в main. Если push — результат мержа PR,
+          # GitHub свяжет SHA с этим PR.
+          #
+          # ВАЖНО: gh печатает JSON ошибки в STDOUT, поэтому `--jq ... || echo 0`
+          # недостаточно — при 403 в переменную попал бы текст ошибки, который
+          # не равен "0", и штатный мерж посчитался бы нарушением. Поэтому
+          # сначала проверяем код возврата, затем валидность числа.
+          PR_COUNT=0
+          if PR_JSON="$(gh api "repos/${REPO_FULL}/commits/${HEAD_SHA}/pulls" 2>/dev/null)"; then
+            PR_COUNT="$(printf '%s' "${PR_JSON}" \
+              | jq '[.[] | select(.base.ref == "main")] | length' 2>/dev/null || echo 0)"
+          else
+            # Нет доступа к API (например, ограничение прав токена) — не можем
+            # подтвердить связь с PR. Считаем это неизвестностью, а не
+            # нарушением: лучше пропустить, чем ложно обвинить студента.
+            echo "ПРЕДУПРЕЖДЕНИЕ: не удалось проверить связь коммита с PR." >&2
+            echo "violation=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "${PR_COUNT}" in
+            ''|*[!0-9]*) PR_COUNT=0 ;;
+          esac
+
+          # Кто считается доверенным: администраторы/владельцы репозитория
+          # (преподаватель) и боты. Проверяем по фактическому уровню доступа,
+          # а НЕ по github.repository_owner — для репозитория в организации
+          # это имя организации, а не человека, и сравнение с actor всегда ложно.
+          IS_TRUSTED=false
+          case "${ACTOR}" in
+            github-actions|"github-actions[bot]"|web-flow|dependabot|"dependabot[bot]")
+              IS_TRUSTED=true ;;
+            *)
+              PERM="$(gh api "repos/${REPO_FULL}/collaborators/${ACTOR}/permission" \
+                --jq '.permission' 2>/dev/null || echo "unknown")"
+              case "${PERM}" in
+                admin|maintain) IS_TRUSTED=true ;;
+              esac
+              ;;
+          esac
+
+          echo "actor=${ACTOR}, pr_linked=${PR_COUNT}, trusted=${IS_TRUSTED}, forced=${FORCED}"
+
+          if [ "${IS_TRUSTED}" = "true" ]; then
+            echo "violation=false" >> "$GITHUB_OUTPUT"
+            echo "Push от доверенного актора — нарушением не считается."
+            exit 0
+          fi
+
+          if [ "${PR_COUNT}" != "0" ]; then
+            echo "violation=false" >> "$GITHUB_OUTPUT"
+            echo "Коммит связан с PR в main — это штатный мерж."
+            exit 0
+          fi
+
+          echo "violation=true" >> "$GITHUB_OUTPUT"
+          echo "Обнаружен прямой push в main в обход PR." >&2
+        shell: bash
+
+      - name: Пометить коммит failing check
+        if: steps.check.outputs.violation == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${REPO_FULL}/statuses/${HEAD_SHA}" \
+            --method POST \
+            -f state=failure \
+            -f context="guard-main" \
+            -f description="Прямой push в main в обход Pull Request" \
+            -f target_url="${SERVER_URL}/${REPO_FULL}/actions/runs/${RUN_ID}" \
+            --silent
+        shell: bash
+
+      - name: Открыть issue о нарушении правил работы с main
+        if: steps.check.outputs.violation == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -uo pipefail
+
+          # Не плодим дубликаты: если открытый issue guard-main уже есть,
+          # добавляем комментарий к нему вместо создания нового.
+          EXISTING="$(gh issue list --repo "${REPO_FULL}" \
+            --state open --label guard-main --limit 1 \
+            --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+
+          {
+            echo "Обнаружен прямой push в ветку \`main\` в обход Pull Request."
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Коммит | \`${HEAD_SHA}\` |"
+            echo "| Автор push | \`${ACTOR}\` |"
+            echo "| Force-push | \`${FORCED}\` |"
+            echo "| Запуск проверки | ${SERVER_URL}/${REPO_FULL}/actions/runs/${RUN_ID} |"
+            echo
+            echo "Сообщение коммита:"
+            echo
+            echo '```text'
+            printf '%s\n' "${HEAD_MSG}"
+            echo '```'
+            echo
+            echo "### Что это значит"
+            echo
+            echo "По правилам курса изменения попадают в \`main\` только через Pull Request,"
+            echo "одобренный преподавателем. Работа, залитая в обход PR, **считается несданной**"
+            echo "(см. инструкцию в \`README.md\` репозитория)."
+            echo
+            echo "### Что делать"
+            echo
+            echo "1. Не пытайтесь скрыть это force-push'ем — история изменений сохраняется в логах."
+            echo "2. Создайте ветку \`task<номер>\` от \`main\`, оформите работу и откройте Pull Request."
+            echo "3. Если push произошёл случайно — напишите об этом в комментарии к этому issue."
+            echo
+            echo "_Issue создан автоматически workflow \`guard-main\`._"
+          } > /tmp/guard-body.md
+
+          if [ -n "${EXISTING}" ]; then
+            gh issue comment "${EXISTING}" --repo "${REPO_FULL}" --body-file /tmp/guard-body.md
+            echo "Добавлен комментарий к issue #${EXISTING}."
+          else
+            # Метку создаём при необходимости: в свежем репозитории её нет.
+            gh label create guard-main \
+              --repo "${REPO_FULL}" \
+              --color B60205 \
+              --description "Нарушение правил работы с веткой main" \
+              >/dev/null 2>&1 || true
+
+            gh issue create --repo "${REPO_FULL}" \
+              --title "Прямой push в main в обход Pull Request" \
+              --label guard-main \
+              --body-file /tmp/guard-body.md
+          fi
+        shell: bash
+
+      - name: Записать результат в summary
+        if: always()
+        env:
+          VIOLATION: ${{ steps.check.outputs.violation }}
+        run: |
+          if [ "${VIOLATION}" = "true" ]; then
+            {
+              echo "## Нарушение: прямой push в \`main\`"
+              echo
+              echo "- Коммит: \`${HEAD_SHA}\`"
+              echo "- Автор: \`${ACTOR}\`"
+              echo
+              echo "Создан issue с деталями. Работа в обход PR считается несданной."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Проверка пройдена: изменения в \`main\` пришли штатным путём." >> "$GITHUB_STEP_SUMMARY"
+          fi
+        shell: bash

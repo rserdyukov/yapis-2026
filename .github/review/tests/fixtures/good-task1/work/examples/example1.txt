@@ -1,0 +1,10 @@
+int count = 10;
+float rate = 2.5;
+string label = "total";
+
+if (count > 5) {
+    write(label);
+    write(count * rate);
+} else {
+    write("too small");
+}

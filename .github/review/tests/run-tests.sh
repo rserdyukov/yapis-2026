@@ -911,6 +911,50 @@ test_stats_collector_runs_offline() {
   assert_contains "${out}" "нет репозиториев" "при пустом списке должно быть внятное сообщение"
 }
 
+test_doctor_checks_provider_key() {
+  # doctor должен проверять наличие секрета провайдера: иначе о его
+  # отсутствии узнаёшь только из комментария бота об ошибке на первом PR.
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  local body
+  body="$(awk '/^cmd_doctor\(\)/,/^}/' "${mg}")"
+  case "${body}" in
+    *"Ключ провайдера модели"*) ;;
+    *) fail "doctor не проверяет ключ провайдера"; return 1 ;;
+  esac
+  # Имя секрета должно вычисляться теми же функциями, что в workflow,
+  # а не задаваться отдельным списком — иначе проверки разойдутся.
+  case "${body}" in
+    *"key_var_for"*) ;;
+    *) fail "doctor не использует key_var_for из lib/provider.sh"; return 1 ;;
+  esac
+  case "${body}" in
+    *"set-secret"*) ;;
+    *) fail "doctor не подсказывает, как исправить"; return 1 ;;
+  esac
+  return 0
+}
+
+test_provider_key_names_resolve() {
+  # Контракт provider.sh, на который опирается и workflow, и doctor.
+  local out
+  out="$(bash -c '
+    source "'"${REVIEW_DIR}"'/lib/provider.sh"
+    for m in openrouter/x groq/x google/x ollama/x; do
+      p="$(provider_for "$m")"
+      printf "%s=%s\n" "$p" "$(key_var_for "$p")"
+    done' 2>&1)"
+
+  assert_contains "${out}" "openrouter=OPENROUTER_API_KEY" "openrouter -> OPENROUTER_API_KEY" || return 1
+  assert_contains "${out}" "groq=GROQ_API_KEY" "groq -> GROQ_API_KEY" || return 1
+  assert_contains "${out}" "google=GEMINI_API_KEY" "google -> GEMINI_API_KEY (исключение)" || return 1
+  # Локальный провайдер: ключ не нужен, строка пустая.
+  case "${out}" in
+    *"ollama="$'\n'*|*"ollama=") ;;
+    *) fail "для локального провайдера ключ должен быть пустым: ${out}"; return 1 ;;
+  esac
+  return 0
+}
+
 test_stats_registered_in_manage() {
   local mg="${REPO_ROOT}/admin/manage.sh"
   grep -q "stats)" "${mg}" || { fail "команда stats не зарегистрирована"; return 1; }

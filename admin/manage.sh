@@ -351,6 +351,79 @@ cmd_doctor() {
   fi
   echo
 
+  # Ключ провайдера модели. Без него ai-review падает на последнем шаге —
+  # причём студент узнаёт об этом только из комментария бота об ошибке.
+  # Имя нужного секрета вычисляется из MODEL теми же функциями, что
+  # использует workflow, чтобы проверка не разошлась с реальностью.
+  echo "=== Ключ провайдера модели ==="
+  local review_root="${SCRIPT_DIR}/../.github/review"
+  if [ ! -f "${review_root}/config.env" ] || [ ! -f "${review_root}/lib/provider.sh" ]; then
+    echo "  Не найден config.env или lib/provider.sh — проверка пропущена."
+    echo
+  else
+    local model provider required_key key_url
+    # Читаем в субшелле: config.env определяет MODEL и не должен
+    # перетирать переменные этого скрипта.
+    model="$(
+      # shellcheck source=/dev/null
+      source "${review_root}/config.env" >/dev/null 2>&1
+      printf '%s' "${MODEL:-}"
+    )"
+    provider="$(
+      # shellcheck source=/dev/null
+      source "${review_root}/lib/provider.sh" >/dev/null 2>&1
+      provider_for "${model}"
+    )"
+    required_key="$(
+      # shellcheck source=/dev/null
+      source "${review_root}/lib/provider.sh" >/dev/null 2>&1
+      key_var_for "${provider}"
+    )"
+
+    echo "  Модель:    ${model:-<не задана>}"
+    echo "  Провайдер: ${provider:-<не определён>}"
+
+    if [ -z "${model}" ]; then
+      echo "  ПРОБЛЕМА: в .github/review/config.env не задан MODEL."
+      problems=$((problems + 1))
+      echo
+    elif [ -z "${required_key}" ]; then
+      echo "  Ключ не требуется: провайдер работает локально."
+      echo
+    else
+      echo "  Нужен секрет: ${required_key}"
+
+      local missing_key="" repo has_key
+      if [ -n "${repos_for_check}" ]; then
+        while IFS= read -r repo; do
+          [ -z "${repo}" ] && continue
+          has_key="$(gh secret list --repo "${ORG}/${repo}" --json name \
+            --jq '[.[].name] | index("'"${required_key}"'") // empty' 2>/dev/null || true)"
+          [ -z "${has_key}" ] && missing_key="${missing_key}  - ${repo}"$'\n'
+        done <<< "${repos_for_check}"
+      fi
+
+      if [ -z "${repos_for_check}" ]; then
+        echo "  Репозиториев студентов пока нет — проверять негде."
+      elif [ -z "${missing_key}" ]; then
+        echo "  Секрет есть во всех репозиториях студентов — хорошо."
+      else
+        echo "  ПРОБЛЕМА: секрет отсутствует в репозиториях:"
+        echo "${missing_key}" | sed '/^$/d'
+        echo "  Без него ИИ-ревью будет падать с ошибкой на каждом PR."
+        echo "  Исправить: ./manage.sh set-secret ${required_key}"
+        key_url="$(
+          # shellcheck source=/dev/null
+          source "${review_root}/lib/provider.sh" >/dev/null 2>&1
+          key_url_for "${provider}"
+        )"
+        echo "  Получить ключ: ${key_url}"
+        problems=$((problems + 1))
+      fi
+      echo
+    fi
+  fi
+
   if [ "${problems}" -eq 0 ]; then
     echo "Проблем не найдено."
   else

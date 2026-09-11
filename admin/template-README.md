@@ -46,7 +46,7 @@
 без ограничений по количеству запусков:
 
 ```bash
-./.github/review/review-local.sh
+./review-local.sh
 ```
 
 Подробности — в [`GUIDE.md`](GUIDE.md), раздел «Проверка работы локально».

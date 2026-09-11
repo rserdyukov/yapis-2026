@@ -97,7 +97,12 @@ def billable_minutes(created, updated):
 
 
 def collect_runs(org, repo, since):
-    """Запуски всех workflow репозитория за период."""
+    """Запуски всех workflow репозитория за период.
+
+    После перехода на централизованный ревьюер в репозиториях студентов
+    остаётся только guard-main, а минуты ИИ-ревью расходуются в репозитории
+    ревьюера (см. --reviewer-repo).
+    """
     data = gh_json(
         [
             "run", "list", "--repo", f"{org}/{repo}", "--limit", "200",
@@ -127,8 +132,9 @@ def collect_runs(org, repo, since):
 def count_skip_comments(org, repo):
     """Комментарии бота: сколько ревью опубликовано, а сколько пропущено.
 
-    Считаем по маркеру, который ставит workflow (см. lib/skip-comment.sh):
-    отказы по лимитам содержат «пропущено», реальные ревью — нет.
+    Считаем по маркерам из .github/review/messages.env, а не по тексту:
+    формулировки правятся преподавателем, и привязка к ним ломала бы
+    подсчёт молча. Отказы несут ai-review-skipped, сбои — ai-review-marker-failed.
     """
     prs = gh_json(
         [
@@ -137,19 +143,19 @@ def count_skip_comments(org, repo):
         ],
         [],
     )
-    published = skipped = 0
+    published = skipped = failed = 0
     for pr in prs:
         for c in pr.get("comments") or []:
             body = c.get("body") or ""
             if "ai-review-marker" not in body:
                 continue
-            if "пропущено" in body:
+            if "ai-review-skipped" in body:
                 skipped += 1
             elif "ai-review-marker-failed" in body:
-                continue
+                failed += 1
             else:
                 published += 1
-    return published, skipped
+    return published, skipped, failed
 
 
 def openrouter_quota():
@@ -188,6 +194,8 @@ def main():
     ap.add_argument("--prefix", required=True)
     ap.add_argument("--days", type=int, default=30)
     ap.add_argument("--json", action="store_true", help="машиночитаемый вывод")
+    ap.add_argument("--reviewer-repo", default="",
+                    help="owner/repo ревьюера: его минуты считаются отдельно")
     args = ap.parse_args()
 
     since = datetime.now(timezone.utc) - timedelta(days=args.days)
@@ -202,6 +210,32 @@ def main():
     per_repo = {}
     totals = {"minutes": 0, "runs": 0, "success": 0, "failure": 0, "other": 0}
     by_workflow = {}
+    reviewer = {"minutes": 0, "runs": 0, "failure": 0}
+
+    # Минуты ревьюера списываются с аккаунта, где лежит его репозиторий, а
+    # не с квоты организации, поэтому считаем их отдельной строкой.
+    if args.reviewer_repo:
+        rv_owner, _, rv_name = args.reviewer_repo.partition("/")
+        if rv_name:
+            rv_runs = collect_runs(rv_owner, rv_name, since)
+            reviewer["minutes"] = sum(r["minutes"] for r in rv_runs)
+            reviewer["runs"] = len(rv_runs)
+            reviewer["failure"] = sum(1 for r in rv_runs if r["conclusion"] == "failure")
+            for r in rv_runs:
+                w = by_workflow.setdefault(r["workflow"], {"runs": 0, "minutes": 0, "failure": 0})
+                w["runs"] += 1
+                w["minutes"] += r["minutes"]
+                if r["conclusion"] == "failure":
+                    w["failure"] += 1
+            if reviewer["runs"] == 0:
+                problems.append(
+                    f"{args.reviewer_repo}: ревьюер не запускался за период "
+                    f"— проверьте ./manage.sh doctor"
+                )
+            elif reviewer["failure"] >= FAILURE_STREAK_WARN:
+                problems.append(
+                    f"{args.reviewer_repo}: {reviewer['failure']} неудачных запусков ревьюера"
+                )
 
     for repo in repos:
         runs = collect_runs(args.org, repo, since)
@@ -232,7 +266,7 @@ def main():
         if streak >= FAILURE_STREAK_WARN:
             problems.append(f"{repo}: {streak} неудачных запусков подряд")
 
-        published, skipped = count_skip_comments(args.org, repo)
+        published, skipped, failed = count_skip_comments(args.org, repo)
         if skipped and not published:
             problems.append(
                 f"{repo}: ревью ни разу не опубликовано, отказов по лимитам — {skipped}"
@@ -242,7 +276,14 @@ def main():
             # лимиты в config.env заданы строже, чем нужно.
             problems.append(
                 f"{repo}: отказов по лимитам {skipped} против {published} ревью "
-                f"— проверьте COOLDOWN_MINUTES и MAX_REVIEWS_PER_PR"
+                f"— проверьте MAX_REVIEWS_PER_DAY и MAX_REVIEWS_PER_PR"
+            )
+        # Технические сбои ревью студент видит как «не удалось выполнить»,
+        # и сам починить не может — это всегда к преподавателю.
+        if failed:
+            problems.append(
+                f"{repo}: {failed} комментариев о технической ошибке ревью "
+                f"— смотрите логи workflow review"
             )
 
         open_prs = gh_json(
@@ -267,6 +308,7 @@ def main():
             "runs": len(runs),
             "success": success,
             "failure": failure,
+            "reviews_failed": failed,
             "reviews_published": published,
             "reviews_skipped": skipped,
             "open_prs": [p.get("headRefName") for p in open_prs],
@@ -285,6 +327,7 @@ def main():
             {
                 "org": args.org, "days": args.days,
                 "totals": totals, "by_workflow": by_workflow,
+                "reviewer": reviewer, "reviewer_repo": args.reviewer_repo,
                 "repos": per_repo, "openrouter": quota, "problems": problems,
             },
             ensure_ascii=False, indent=2, default=str,
@@ -308,6 +351,12 @@ def main():
         for name, w in sorted(by_workflow.items(), key=lambda kv: -kv[1]["minutes"]):
             print(f"    {name:<14} запусков {w['runs']:>3}, минут {w['minutes']:>4}, "
                   f"ошибок {w['failure']}")
+    if args.reviewer_repo:
+        # Отдельной строкой: эти минуты берутся из личной квоты владельца
+        # репозитория ревьюера, а не из 2000 минут организации.
+        print(f"  Ревьюер ({args.reviewer_repo}): минут {reviewer['minutes']}, "
+              f"запусков {reviewer['runs']}, ошибок {reviewer['failure']}")
+        print("    (списываются с квоты владельца этого репозитория, не организации)")
     print("  Оценка сверху: GitHub тарифицирует с округлением вверх до минуты.")
     print("  Точные цифры — Organization settings -> Billing.")
     print()

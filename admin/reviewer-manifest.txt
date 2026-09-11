@@ -1,0 +1,30 @@
+# Состав приватного репозитория ревьюера (yapis-2026-reviewer).
+#
+# Используется командой `./manage.sh sync-reviewer` (раскатка источник ->
+# репозиторий ревьюера) и тестами в .github/review/tests/run-tests.sh.
+#
+# Формат тот же, что у template-manifest.txt:
+#   <путь в этом репозитории> -> <путь в репозитории ревьюера>
+#
+# ЗАЧЕМ ОТДЕЛЬНЫЙ РЕПОЗИТОРИЙ. Там лежат секреты (ключ модели, приватный ключ
+# GitHub App) и логи запусков с фрагментами студенческого кода, поэтому он
+# приватный. Репозиторий курса (этот) публичный: студенты должны иметь
+# возможность скачать проверки для локального прогона (review-local.sh).
+
+# --- Движок ревью: промпты, структурные проверки, настройки ---
+.github/review                        -> .github/review
+reviewer/lib                          -> reviewer/lib
+reviewer/Dockerfile                   -> reviewer/Dockerfile
+
+# --- Workflow ---
+# В репозитории-источнике они лежат в reviewer/workflow/, чтобы не
+# запускаться здесь: ревью должно идти только из приватного репозитория.
+reviewer/workflow/review.yml            -> .github/workflows/review.yml
+reviewer/workflow/build-check-image.yml -> .github/workflows/build-check-image.yml
+
+# --- Документация ---
+reviewer/README.md                    -> README.md
+
+# --- Исключения (не копируются) ---
+# Тесты инфраструктуры — инструмент разработки в репозитории курса.
+!EXCLUDE .github/review/tests

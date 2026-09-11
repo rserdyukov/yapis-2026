@@ -43,7 +43,7 @@ cd .github/review/tests
 Чтобы увидеть промпт целиком на своей работе:
 
 ```bash
-./.github/review/review-local.sh --prompt-only | less
+bash .github/review/lib/build-prompt.sh task3 . student 3 | less
 ```
 
 ### Шаг 2. Зафиксировать текущее качество
@@ -255,10 +255,10 @@ cd admin
 
 ```bash
 # модель курса (по умолчанию)
-./.github/review/review-local.sh
+bash .github/review/tests/eval-prompts.sh --list
 
 # своя модель разово
-./.github/review/review-local.sh --model anthropic/claude-sonnet-4
+./manage.sh review ivanov:4      # прогнать ревью на реальном PR
 
 # постоянно — через переменную окружения в ~/.zshrc
 export REVIEW_MODEL=deepseek/deepseek-chat
@@ -266,7 +266,7 @@ export DEEPSEEK_API_KEY=...
 
 # локальная модель: без ключей, без интернета, без лимитов
 ollama pull qwen2.5-coder
-./.github/review/review-local.sh --model ollama/qwen2.5-coder
+bash .github/review/tests/eval-prompts.sh good-task1
 ```
 
 Это влияет **только** на локальный запуск. В Pull Request всегда работает
@@ -303,7 +303,7 @@ git checkout HEAD~1 -- .github/review/tasks/task3/prompt.md
 
 ```bash
 cd /путь/к/работе/студента
-/путь/к/yapis-2026/.github/review/review-local.sh --task 3
+/путь/к/yapis-2026/admin/template-review-local.sh --task 3
 ```
 
 **Сколько стоит прогон `eval-prompts.sh`?**

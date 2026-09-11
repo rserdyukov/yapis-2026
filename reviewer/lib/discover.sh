@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+# Обходит репозитории студентов организации и решает, какие PR нужно
+# проверить в этом запуске ревьюера.
+#
+# Для каждого открытого PR:
+#   1. Пропускает служебные ветки (ci/*), draft-PR и PR без изменений.
+#   2. Смотрит комментарии бота: если для текущего head SHA уже есть
+#      комментарий (ревью или отказ) — PR уже обработан, пропускаем.
+#   3. Применяет лимиты из config.env. Лимиты считаются по ФАКТИЧЕСКИ
+#      опубликованным ревью (маркер MARKER_REVIEW без MARKER_SKIPPED), а не
+#      по запускам workflow — отказы бюджет не расходуют.
+#        - MAX_REVIEWS_PER_PR        на один PR за всё время;
+#        - MAX_REVIEWS_PER_DAY       на репозиторий за последние 24 часа;
+#        - MAX_REVIEWS_PER_DAY_TOTAL на все репозитории за последние 24 часа;
+#        - MAX_DIFF_LINES            размер PR (additions + deletions).
+#      При превышении PR-лимита или размера — в PR ставится комментарий-отказ
+#      (один раз на SHA). При исчерпании дневных лимитов комментарий НЕ
+#      ставится: PR просто дождётся следующего запуска.
+#   4. Отбирает не более MAX_REVIEWS_PER_RUN PR, самые старые по времени
+#      обновления первыми (справедливость: кто раньше запушил, тот раньше
+#      получит ревью).
+#
+# Результат — JSON-массив в stdout, по элементу на PR:
+#   {"repo":"yapis-2026-ivanov","pr":4,"head_sha":"...","base_sha":"...",
+#    "branch":"task3","student":"ivanov"}
+# Он используется как matrix в reviewer/workflow/review.yml.
+#
+# Требования: gh (аутентифицирован токеном с доступом ко всем репозиториям
+# организации — installation token GitHub App), jq.
+#
+# Использование:
+#   discover.sh <org> <repo_prefix> [--only <repo>[:<pr>]] [--dry-run]
+#
+#   --only     проверить только указанный репозиторий (и PR) — для ручного
+#              запуска через workflow_dispatch / ./manage.sh review.
+#              Лимиты при этом всё равно применяются, кроме
+#              MAX_REVIEWS_PER_RUN.
+#   --dry-run  не публиковать комментарии-отказы, только напечатать решение.
+#
+# Переменные окружения:
+#   REVIEW_ROOT  каталог .github/review с config.env и messages.env
+#                (по умолчанию — ../../.github/review относительно скрипта).
+
+set -euo pipefail
+
+ORG="${1:?org is required}"
+REPO_PREFIX="${2:?repo_prefix is required}"
+shift 2
+
+ONLY=""
+DRY_RUN=0
+while [ $# -gt 0 ]; do
+  # shellcheck disable=SC2034  # DRY_RUN читается в common.sh (post_skip)
+  case "${1}" in
+    --only)    ONLY="${2:?--only requires <repo>[:<pr>]}"; shift 2 ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    *) echo "Неизвестный аргумент: ${1}" >&2; exit 2 ;;
+  esac
+done
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REVIEW_ROOT="${REVIEW_ROOT:-$(cd "${SCRIPT_DIR}/../../.github/review" && pwd)}"
+
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/config.env"
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/messages.env"
+# shellcheck source=/dev/null
+source "${SCRIPT_DIR}/common.sh"
+
+log() { echo "$*" >&2; }
+
+# --- Список репозиториев ---------------------------------------------------
+
+ONLY_REPO="${ONLY%%:*}"
+ONLY_PR=""
+if [[ "${ONLY}" == *:* ]]; then
+  ONLY_PR="${ONLY#*:}"
+  case "${ONLY_PR}" in
+    ''|*[!0-9]*) echo "Номер PR в --only должен быть числом: ${ONLY}" >&2; exit 2 ;;
+  esac
+fi
+
+if [ -n "${ONLY_REPO}" ]; then
+  REPOS="${ONLY_REPO}"
+else
+  # gh не поддерживает --arg, поэтому префикс фильтруется после выборки.
+  REPOS="$(gh repo list "${ORG}" --limit 500 --json name --jq '.[].name' 2>/dev/null \
+    | grep -E "^${REPO_PREFIX}" \
+    | grep -v -- '-template$' || true)"
+fi
+
+if [ -z "${REPOS}" ]; then
+  log "Репозиториев студентов в ${ORG} с префиксом ${REPO_PREFIX} не найдено."
+  echo "[]"
+  exit 0
+fi
+
+SINCE="$(since_24h)"
+
+# --- Обход PR ------------------------------------------------------------
+
+# Кандидаты собираются в TSV: updatedAt<TAB>json — чтобы потом отсортировать
+# по времени и отрезать MAX_REVIEWS_PER_RUN.
+CANDIDATES=""
+GLOBAL_TODAY=0
+# Дневной счётчик по репозиториям: repo<TAB>count.
+DAILY_BY_REPO=""
+
+while IFS= read -r repo; do
+  [ -z "${repo}" ] && continue
+  student="${repo#"${REPO_PREFIX}"}"
+
+  if ! prs_json="$(gh pr list --repo "${ORG}/${repo}" --state open --limit 50 \
+      --json number,headRefName,headRefOid,baseRefName,isDraft,additions,deletions,updatedAt,comments 2>/dev/null)"; then
+    log "${repo}: не удалось получить список PR (нет доступа?), пропускаю."
+    continue
+  fi
+
+  if ! printf '%s' "${prs_json}" | jq -e 'type == "array"' >/dev/null 2>&1; then
+    log "${repo}: неожиданный ответ API, пропускаю."
+    continue
+  fi
+
+  # Дневной счётчик репозитория: опубликованные ревью во ВСЕХ его открытых
+  # PR за 24 часа. (Закрытые PR игнорируем осознанно — их ревью не мешают
+  # студенту продолжать работу, а запросов к API становится вдвое меньше.)
+  repo_today="$(printf '%s' "${prs_json}" | jq \
+    --arg m "${MARKER_REVIEW}" --arg s "${MARKER_SKIPPED}" --arg since "${SINCE}" '
+    [ .[].comments[]
+      | select(.body | contains($m))
+      | select(.body | contains($s) | not)
+      | select(.createdAt >= $since)
+    ] | length')"
+  GLOBAL_TODAY=$((GLOBAL_TODAY + repo_today))
+  DAILY_BY_REPO="${DAILY_BY_REPO}${repo}"$'\t'"${repo_today}"$'\n'
+
+  while IFS=$'\t' read -r number branch head_sha base_ref draft additions deletions updated_at; do
+    [ -z "${number}" ] && continue
+
+    if [ -n "${ONLY_PR}" ] && [ "${number}" != "${ONLY_PR}" ]; then
+      continue
+    fi
+
+    case "${branch}" in
+      ci/*|dependabot/*) log "${repo}#${number}: служебная ветка ${branch}, пропускаю."; continue ;;
+    esac
+    if [ "${draft}" = "true" ]; then
+      log "${repo}#${number}: draft, пропускаю."; continue
+    fi
+
+    # Уже есть комментарий бота для этого коммита?
+    sha_marker="${MARKER_SHA_PREFIX}${head_sha}"
+    seen="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" --arg mk "${sha_marker}" '
+      [ .[] | select(.number == $n) | .comments[] | select(.body | contains($mk)) ] | length')"
+    if [ "${seen}" -gt 0 ]; then
+      log "${repo}#${number}: коммит ${head_sha:0:7} уже обработан."; continue
+    fi
+
+    # Сколько ревью уже опубликовано в этом PR.
+    published="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" \
+      --arg m "${MARKER_REVIEW}" --arg s "${MARKER_SKIPPED}" '
+      [ .[] | select(.number == $n) | .comments[]
+        | select(.body | contains($m))
+        | select(.body | contains($s) | not)
+      ] | length')"
+
+    if [ "${published}" -ge "${MAX_REVIEWS_PER_PR}" ]; then
+      log "${repo}#${number}: лимит ревью на PR (${published}/${MAX_REVIEWS_PER_PR})."
+      post_skip "${ORG}/${repo}" "${number}" "${head_sha}" "$(render_msg "${MSG_LIMIT_PER_PR}")"
+      continue
+    fi
+
+    changed=$((additions + deletions))
+    if [ "${changed}" -gt "${MAX_DIFF_LINES}" ]; then
+      log "${repo}#${number}: слишком большой PR (${changed} > ${MAX_DIFF_LINES})."
+      # shellcheck disable=SC2034  # подставляется в MSG_DIFF_TOO_BIG через render_msg
+      CHANGED_LINES="${changed}"
+      post_skip "${ORG}/${repo}" "${number}" "${head_sha}" "$(render_msg "${MSG_DIFF_TOO_BIG}")"
+      continue
+    fi
+    if [ "${changed}" -eq 0 ]; then
+      log "${repo}#${number}: нет изменений, пропускаю."; continue
+    fi
+
+    if [ "${repo_today}" -ge "${MAX_REVIEWS_PER_DAY}" ]; then
+      log "${repo}#${number}: дневной лимит репозитория (${repo_today}/${MAX_REVIEWS_PER_DAY}), отложено."
+      continue
+    fi
+
+    # base SHA нужен ревьюеру для diff; берём актуальный коммит base-ветки.
+    base_sha="$(gh api "repos/${ORG}/${repo}/git/ref/heads/${base_ref}" --jq '.object.sha' 2>/dev/null || true)"
+    if [ -z "${base_sha}" ]; then
+      log "${repo}#${number}: не удалось получить SHA ветки ${base_ref}, пропускаю."; continue
+    fi
+
+    item="$(jq -cn \
+      --arg repo "${repo}" --argjson pr "${number}" --arg head "${head_sha}" \
+      --arg base "${base_sha}" --arg branch "${branch}" --arg student "${student}" \
+      '{repo:$repo, pr:$pr, head_sha:$head, base_sha:$base, branch:$branch, student:$student}')"
+    CANDIDATES="${CANDIDATES}${updated_at}"$'\t'"${repo}"$'\t'"${item}"$'\n'
+  done < <(printf '%s' "${prs_json}" | jq -r '.[] |
+    [.number, .headRefName, .headRefOid, .baseRefName, (.isDraft|tostring),
+     (.additions // 0), (.deletions // 0), .updatedAt] | @tsv')
+done <<< "${REPOS}"
+
+# --- Глобальный лимит и отбор ---------------------------------------------
+
+if [ -z "${CANDIDATES}" ]; then
+  log "Новых PR для ревью нет."
+  echo "[]"
+  exit 0
+fi
+
+REMAINING_GLOBAL=$((MAX_REVIEWS_PER_DAY_TOTAL - GLOBAL_TODAY))
+if [ "${REMAINING_GLOBAL}" -le 0 ]; then
+  log "Общий дневной лимит исчерпан (${GLOBAL_TODAY}/${MAX_REVIEWS_PER_DAY_TOTAL}); все PR отложены."
+  echo "[]"
+  exit 0
+fi
+
+LIMIT="${MAX_REVIEWS_PER_RUN}"
+if [ -n "${ONLY}" ]; then
+  LIMIT=1000
+fi
+if [ "${REMAINING_GLOBAL}" -lt "${LIMIT}" ]; then
+  LIMIT="${REMAINING_GLOBAL}"
+fi
+
+# Не более одного PR на репозиторий за запуск и не больше, чем осталось до
+# дневного лимита репозитория: иначе студент с тремя открытыми PR получит
+# три ревью за раз и съест общий лимит.
+SELECTED="$(printf '%s' "${CANDIDATES}" | sort | awk -F'\t' -v limit="${LIMIT}" '
+  NF >= 3 && !seen[$2]++ && n < limit { print $3; n++ }')"
+
+if [ -z "${SELECTED}" ]; then
+  echo "[]"
+  exit 0
+fi
+
+log "Отобрано для ревью (лимит ${LIMIT}, за сутки уже ${GLOBAL_TODAY}/${MAX_REVIEWS_PER_DAY_TOTAL}):"
+printf '%s\n' "${SELECTED}" | jq -r '"  \(.repo)#\(.pr) (\(.branch), \(.head_sha[0:7]))"' >&2
+
+printf '%s\n' "${SELECTED}" | jq -cs '.'

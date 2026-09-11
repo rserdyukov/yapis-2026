@@ -1,0 +1,187 @@
+name: review
+
+# Централизованное ИИ-ревью лабораторных работ.
+#
+# АРХИТЕКТУРА. Этот workflow живёт в ПРИВАТНОМ репозитории преподавателя
+# (yapis-2026-reviewer), а не в репозиториях студентов. По расписанию он
+# обходит все репозитории организации, находит PR с новыми коммитами и
+# проверяет их. Комментарии публикуются от имени GitHub App.
+#
+# ПОЧЕМУ ТАК, А НЕ WORKFLOW У СТУДЕНТА:
+#   1. Ключ модели больше не лежит в репозиториях студентов. Раньше org-секрет
+#      на плане Free не привязывался к приватным репозиториям, и ключ
+#      приходилось класть в каждый репозиторий отдельно — студент с правом
+#      write мог добавить свой workflow и получить его.
+#   2. Минуты Actions расходуются из аккаунта преподавателя, а не из общей
+#      квоты организации, которую мог выесть один студент.
+#   3. Лимиты считаются глобально по всему курсу, а не отдельно в каждом
+#      репозитории (из репозитория студента чужие не видны).
+#   4. Студент не может подменить инфраструктуру ревью в своей ветке: скрипты
+#      и промпты берутся из этого репозитория. Integrity-check не нужен.
+#
+# БЕЗОПАСНОСТЬ (важно при правке файла):
+#   - Код студента НЕДОВЕРЕННЫЙ. Его compile.sh исполняется только внутри
+#     контейнера без сети (reviewer/lib/run-check.sh), а не в раннере.
+#   - Ни одно значение, подконтрольное студенту, не подставляется через
+#     ${{ }} в тело `run:` — только через env и аргументы скриптов.
+#   - Ключ модели передаётся ТОЛЬКО шагу ревью; агент запускается через
+#     `env -i` с минимальным окружением, без токена GitHub (см. review-pr.sh).
+#   - Токен GitHub App живёт 1 час и ограничен правами contents:read +
+#     pull-requests:write.
+
+on:
+  schedule:
+    # Каждые 10 минут. GitHub не гарантирует точность расписания и может
+    # пропускать запуски при высокой нагрузке — для учебного ревью это
+    # приемлемо (задержка до получаса вместо десяти минут).
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Проверить только <репозиторий> или <репозиторий>:<PR>"
+        required: false
+        type: string
+      dry_run:
+        description: "Не публиковать комментарии, только показать решение"
+        required: false
+        type: boolean
+        default: false
+
+# Параллельные запуски по расписанию опасны: два обхода могут выбрать один и
+# тот же PR и опубликовать два ревью. Новый запуск ждёт завершения текущего.
+concurrency:
+  group: review
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+      count: ${{ steps.discover.outputs.count }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Токен GitHub App: даёт доступ ко всем репозиториям организации, где
+      # установлено приложение, и живёт один час. Комментарии от него видны
+      # как "<имя приложения> [bot]", а не как комментарии преподавателя.
+      - name: Получить токен GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ vars.ORG }}
+
+      - name: Найти PR, требующие ревью
+        id: discover
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ORG: ${{ vars.ORG }}
+          REPO_PREFIX: ${{ vars.REPO_PREFIX }}
+          ONLY: ${{ inputs.only }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          [ -n "${ONLY:-}" ] && ARGS+=(--only "${ONLY}")
+          [ "${DRY_RUN:-false}" = "true" ] && ARGS+=(--dry-run)
+          MATRIX="$(bash reviewer/lib/discover.sh "${ORG}" "${REPO_PREFIX:-yapis-2026-}" "${ARGS[@]+"${ARGS[@]}"}")"
+          COUNT="$(printf '%s' "${MATRIX}" | jq 'length')"
+          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
+          echo "count=${COUNT}" >> "$GITHUB_OUTPUT"
+          echo "PR к проверке: ${COUNT}" >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
+
+  review:
+    needs: discover
+    if: needs.discover.outputs.count != '0' && inputs.dry_run != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      # Один упавший PR не должен отменять ревью остальных.
+      fail-fast: false
+      # Больше двух параллельных обращений к бесплатному API модели упираются
+      # в лимит запросов в минуту.
+      max-parallel: 2
+      matrix:
+        pr: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Получить токен GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ vars.ORG }}
+
+      # Версия зафиксирована: установочный скрипт по умолчанию ставит самую
+      # свежую сборку, и её изменение молча приезжало бы в раннер, где лежат
+      # ключ модели и токен приложения. Обновлять здесь осознанно.
+      - name: Установить opencode
+        env:
+          OPENCODE_VERSION: "1.18.30"
+        run: |
+          set -euo pipefail
+          curl -fsSL https://opencode.ai/install | bash -s -- --version "${OPENCODE_VERSION}"
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+        shell: bash
+
+      - name: Скачать образ для изолированного запуска проверок
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          CHECK_IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check:latest
+        run: |
+          set -uo pipefail
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          if ! docker pull -q "${CHECK_IMAGE}"; then
+            echo "::warning::Образ ${CHECK_IMAGE} недоступен — соберите его: workflow build-check-image."
+          fi
+          docker logout ghcr.io >/dev/null 2>&1 || true
+        shell: bash
+
+      - name: ИИ-ревью PR
+        env:
+          # Токен нужен для клонирования и публикации комментария. В окружение
+          # агента он не попадает — см. env -i в reviewer/lib/review-pr.sh.
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ORG: ${{ vars.ORG }}
+          CHECK_IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check:latest
+          # Ключи всех поддерживаемых провайдеров. Нужный выбирается по MODEL
+          # из config.env (lib/provider.sh), лишние остаются пустыми.
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          PR_REPO: ${{ matrix.pr.repo }}
+          PR_NUMBER: ${{ matrix.pr.pr }}
+          PR_HEAD_SHA: ${{ matrix.pr.head_sha }}
+          PR_BASE_SHA: ${{ matrix.pr.base_sha }}
+          PR_BRANCH: ${{ matrix.pr.branch }}
+          PR_STUDENT: ${{ matrix.pr.student }}
+        run: |
+          bash reviewer/lib/review-pr.sh \
+            "${ORG}" "${PR_REPO}" "${PR_NUMBER}" \
+            "${PR_HEAD_SHA}" "${PR_BASE_SHA}" "${PR_BRANCH}" "${PR_STUDENT}"
+        shell: bash
+
+      - name: Итог в summary
+        if: always()
+        env:
+          PR_REPO: ${{ matrix.pr.repo }}
+          PR_NUMBER: ${{ matrix.pr.pr }}
+          STATUS: ${{ job.status }}
+        run: |
+          echo "- ${PR_REPO}#${PR_NUMBER}: ${STATUS}" >> "$GITHUB_STEP_SUMMARY"
+        shell: bash

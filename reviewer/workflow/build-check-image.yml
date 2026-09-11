@@ -1,0 +1,71 @@
+name: build-check-image
+
+# Собирает образ для изолированного запуска compile.sh студентов и публикует
+# его в GitHub Container Registry аккаунта ревьюера.
+#
+# Отдельный workflow нужен потому, что образ тяжёлый (JDK + .NET + Python +
+# ANTLR, около 2 ГБ): собирать его при каждом ревью — это минуты Actions на
+# ровном месте. Ревью только скачивает готовый образ.
+#
+# Запускается: при изменении Dockerfile, вручную и раз в неделю (чтобы
+# подтягивались обновления безопасности базового образа).
+
+on:
+  push:
+    paths:
+      - "reviewer/Dockerfile"
+      - ".github/workflows/build-check-image.yml"
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: build-check-image
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Войти в GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        shell: bash
+
+      - name: Собрать и опубликовать образ
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check
+        run: |
+          set -euo pipefail
+          docker build -t "${IMAGE}:latest" -t "${IMAGE}:${GITHUB_SHA::7}" reviewer
+          docker push "${IMAGE}:latest"
+          docker push "${IMAGE}:${GITHUB_SHA::7}"
+          echo "Опубликован ${IMAGE}:latest" >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
+
+      - name: Проверить, что образ пригоден для проверок
+        env:
+          IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check
+        run: |
+          set -euo pipefail
+          # Образ обязан уметь то, что нужно compile.sh студентов, и делать
+          # это БЕЗ СЕТИ — именно так он запускается при ревью.
+          docker run --rm --network none "${IMAGE}:latest" bash -c '
+            set -e
+            python3 --version
+            java -version 2>&1 | head -1
+            javac --version
+            node --version
+            dotnet --version
+            antlr4 2>&1 | head -1
+            python3 -c "import antlr4; print(\"antlr4 python runtime ok\")"
+          '
+        shell: bash

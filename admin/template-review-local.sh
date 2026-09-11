@@ -1,34 +1,40 @@
 #!/usr/bin/env bash
-# Локальный запуск проверки лабораторной работы — то же самое, что делает бот
-# в Pull Request, но на вашей машине и без ограничений по количеству запусков.
+# Локальная проверка лабораторной работы — то же, что делает бот в Pull
+# Request, но на вашей машине и без ограничений по количеству запусков.
 #
-# ЗАЧЕМ. Автоматическое ревью в PR запускается ограниченное число раз
-# (см. .github/review/config.env). Этот скрипт позволяет проверить работу
-# сколько угодно раз ДО отправки PR и не тратить лимиты на очевидные
-# недоработки.
+# ЗАЧЕМ. Автоматическое ревью в PR запускается ограниченное число раз.
+# Этот скрипт позволяет проверить работу сколько угодно раз ДО отправки PR
+# и не тратить лимиты на очевидные недоработки.
 #
 # ИСПОЛЬЗОВАНИЕ
 #
-#   ./.github/review/review-local.sh                 проверить текущую работу
-#   ./.github/review/review-local.sh --task 3        явно указать номер лабы
-#   ./.github/review/review-local.sh --dir path/     проверить другую папку
-#   ./.github/review/review-local.sh --model M       использовать свою модель
-#   ./.github/review/review-local.sh --prompt-only   только показать промпт
-#   ./.github/review/review-local.sh --help          справка
+#   ./review-local.sh                 проверить текущую работу
+#   ./review-local.sh --task 3        явно указать номер лабораторной
+#   ./review-local.sh --model M       использовать свою модель
+#   ./review-local.sh --prompt-only   только показать промпт, без запроса к модели
+#   ./review-local.sh --update        обновить скачанные проверки курса
+#   ./review-local.sh --help          справка
+#
+# КАК ЭТО РАБОТАЕТ
+#
+#   Сами проверки и промпты живут в публичном репозитории курса и
+#   скачиваются в ~/.cache/yapis-review при первом запуске. Поэтому вы
+#   всегда проверяетесь ровно тем, чем проверяет преподаватель, и вам не
+#   нужно подтягивать обновления инфраструктуры в свой репозиторий.
 #
 # РЕЖИМЫ РАБОТЫ
 #
 #   Без ключа API — выполняются структурные проверки (наличие нужных файлов,
-#   примеров с префиксом error-, запуск build.sh/run.sh) и печатается промпт,
-#   который получил бы ИИ-агент. Ключ не нужен, интернет не нужен.
+#   примеров с префиксом error-, запуск вашего compile.sh) и печатается
+#   промпт, который получил бы ИИ-агент. Ключ не нужен, только git.
 #
 #   С ключом API — дополнительно запускается полноценное ИИ-ревью, как в PR.
 #   Нужен opencode (https://opencode.ai/docs/) и ключ провайдера.
 #
 # ВЫБОР МОДЕЛИ
 #
-#   По умолчанию берётся модель курса из config.env. Локально можно
-#   использовать ЛЮБУЮ модель — свою платную, бесплатную или локальную:
+#   По умолчанию берётся модель курса. Локально можно использовать ЛЮБУЮ —
+#   свою платную, бесплатную или локальную:
 #
 #       export ANTHROPIC_API_KEY=...
 #       ./review-local.sh --model anthropic/claude-sonnet-4
@@ -42,28 +48,31 @@
 #       ollama pull qwen2.5-coder
 #       ./review-local.sh --model ollama/qwen2.5-coder
 #
-#   Имя переменной с ключом определяется автоматически по имени провайдера
-#   (openrouter -> OPENROUTER_API_KEY и т.д.). Полный список моделей:
-#   https://models.dev, настройка провайдеров: https://opencode.ai/docs/providers
-#
 #   Выбор модели влияет только на ваш локальный запуск. В Pull Request
-#   всегда используется модель курса, заданная преподавателем.
+#   всегда используется модель курса.
 #
 # Скрипт ничего не отправляет на GitHub и не изменяет ваши файлы.
+#
+# ВНИМАНИЕ: структурная проверка ЗАПУСКАЕТ ваш compile.sh прямо на этой
+# машине (в PR он выполняется в изолированном контейнере). Это ваш
+# собственный код, но помните об этом, если копируете чужие примеры.
 
 set -uo pipefail
 
+# Репозиторий курса, откуда берутся проверки и промпты.
+COURSE_REPO="${YAPIS_COURSE_REPO:-https://github.com/rserdyukov/yapis-2026.git}"
+CACHE_DIR="${YAPIS_CACHE_DIR:-${HOME}/.cache/yapis-review}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="${SCRIPT_DIR}"
 
 WORK_DIR="."
 TASK_NUM=""
 PROMPT_ONLY=0
+UPDATE_ONLY=0
 MODEL_OVERRIDE=""
 
 usage() {
-  # Печатаем шапку целиком до первой строки кода. Жёсткий диапазон строк
-  # использовать нельзя: он молча обрезает справку при правке комментариев.
   awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"
 }
 
@@ -73,12 +82,11 @@ while [ $# -gt 0 ]; do
     --dir)         WORK_DIR="${2:?Укажите директорию, например --dir .}"; shift 2 ;;
     --model)       MODEL_OVERRIDE="${2:?Укажите модель, например --model anthropic/claude-sonnet-4}"; shift 2 ;;
     --prompt-only) PROMPT_ONLY=1; shift ;;
+    --update)      UPDATE_ONLY=1; shift ;;
     -h|--help)     usage; exit 0 ;;
     *)             echo "Неизвестный аргумент: ${1}" >&2; usage; exit 1 ;;
   esac
 done
-
-cd "${REPO_ROOT}"
 
 # --- Цветной вывод, если терминал поддерживает ---------------------------
 if [ -t 1 ]; then
@@ -95,7 +103,6 @@ err()  { echo "  ${C_RED}✗${C_OFF} $*"; }
 
 # --- Проверка окружения ---------------------------------------------------
 MISSING=""
-command -v jq  >/dev/null 2>&1 || MISSING="${MISSING} jq"
 command -v git >/dev/null 2>&1 || MISSING="${MISSING} git"
 if [ -n "${MISSING}" ]; then
   err "Не установлены:${MISSING}"
@@ -104,9 +111,53 @@ if [ -n "${MISSING}" ]; then
   exit 1
 fi
 
+# --- Загрузка/обновление проверок курса -----------------------------------
+sync_course() {
+  if [ -d "${CACHE_DIR}/.git" ]; then
+    git -C "${CACHE_DIR}" fetch -q --depth 1 origin HEAD 2>/dev/null \
+      && git -C "${CACHE_DIR}" reset -q --hard FETCH_HEAD 2>/dev/null
+    return $?
+  fi
+  mkdir -p "$(dirname "${CACHE_DIR}")"
+  git clone -q --depth 1 "${COURSE_REPO}" "${CACHE_DIR}" 2>/dev/null
+}
+
+if [ "${UPDATE_ONLY}" -eq 1 ]; then
+  say "Обновляю проверки курса из ${COURSE_REPO}"
+  if sync_course; then ok "Готово: ${CACHE_DIR}"; else err "Не удалось обновить."; exit 1; fi
+  exit 0
+fi
+
+if [ ! -d "${CACHE_DIR}/.github/review" ]; then
+  say "Первый запуск: скачиваю проверки курса в ${CACHE_DIR}"
+  if ! sync_course; then
+    err "Не удалось скачать ${COURSE_REPO}."
+    echo "     Проверьте доступ в интернет. Проверки можно получить и вручную:"
+    echo "       git clone --depth 1 ${COURSE_REPO} ${CACHE_DIR}"
+    exit 1
+  fi
+  echo
+else
+  # Тихое обновление раз в сутки, чтобы студент не проверялся устаревшими
+  # правилами. Неудача не фатальна — работаем тем, что уже скачано.
+  STAMP="${CACHE_DIR}/.last-sync"
+  if [ ! -f "${STAMP}" ] || [ -n "$(find "${STAMP}" -mtime +1 2>/dev/null)" ]; then
+    sync_course >/dev/null 2>&1 && touch "${STAMP}" 2>/dev/null || true
+  fi
+fi
+
+REVIEW_ROOT="${CACHE_DIR}/.github/review"
+REVIEWER_LIB="${CACHE_DIR}/reviewer/lib"
+
+if [ ! -f "${REVIEW_ROOT}/lib/build-prompt.sh" ]; then
+  err "В ${CACHE_DIR} нет ожидаемых файлов проверок."
+  echo "     Попробуйте: rm -rf ${CACHE_DIR} && $0 --update"
+  exit 1
+fi
+
+cd "${REPO_ROOT}" || { err "Не удалось перейти в ${REPO_ROOT}"; exit 1; }
+
 # --- Определение номера лабораторной работы -------------------------------
-# Если номер не задан явно, берём его из имени текущей ветки (task<N>) —
-# ровно так же, как это делает бот в PR.
 if [ -z "${TASK_NUM}" ]; then
   BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
   TASK_NUM="$(printf '%s' "${BRANCH}" | grep -oE 'task[0-9]+' | grep -oE '[0-9]+' | head -1 || true)"
@@ -114,7 +165,7 @@ if [ -z "${TASK_NUM}" ]; then
     say "Лабораторная работа №${TASK_NUM} (определена по имени ветки '${BRANCH}')"
   else
     warn "Не удалось определить номер работы по имени ветки '${BRANCH}'."
-    echo "     Бот в PR тоже не сможет — назовите ветку 'task<номер>', например task3,"
+    echo "     Бот тоже не сможет — назовите ветку 'task<номер>', например task3,"
     echo "     либо укажите вручную: $0 --task 3"
     TASK_NUM="0"
   fi
@@ -123,17 +174,19 @@ else
 fi
 
 TASK_DIR="task${TASK_NUM}"
-[ -d "${SCRIPT_DIR}/tasks/${TASK_DIR}" ] || TASK_DIR="default"
+[ -d "${REVIEW_ROOT}/tasks/${TASK_DIR}" ] || TASK_DIR="default"
 echo "Набор проверок: ${TASK_DIR}"
 echo "Проверяемая директория: ${WORK_DIR}"
 echo
 
 # --- Подготовка diff ------------------------------------------------------
-# Бот анализирует изменения относительно main. Локально пытаемся сделать так
-# же; если сравнить не с чем (нет main или это сам main) — не страшно,
-# структурные проверки и чтение файлов работают в любом случае.
 DIFF_FILE="$(mktemp)"
-trap 'rm -f "${DIFF_FILE}"' EXIT
+PROMPT_FILE="$(mktemp)"
+CHECK_FILE="$(mktemp)"
+trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}"' EXIT
+
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/config.env"
 
 BASE_REF=""
 for candidate in "origin/main" "main" "origin/master" "master"; do
@@ -156,8 +209,6 @@ if [ -n "${BASE_REF}" ] && [ "$(git rev-parse HEAD)" != "$(git rev-parse "${BASE
   CHANGED="$(git diff --numstat "${BASE_REF}...HEAD" -- "${WORK_DIR}" 2>/dev/null \
     | awk '{ if ($1 != "-") a+=$1; if ($2 != "-") d+=$2 } END { print a+d+0 }')"
 
-  # shellcheck source=/dev/null
-  source "${SCRIPT_DIR}/config.env"
   echo "Изменено строк относительно ${BASE_REF}: ${CHANGED} (лимит в PR: ${MAX_DIFF_LINES})"
   if [ "${CHANGED}" -gt "${MAX_DIFF_LINES}" ]; then
     warn "Такой PR бот пропустит: изменений больше лимита — ревью будет делать преподаватель."
@@ -169,29 +220,38 @@ else
   echo
 fi
 
-# --- Сборка промпта -------------------------------------------------------
-say "1. Структурные проверки и сборка промпта"
+# --- Структурные проверки -------------------------------------------------
+say "1. Структурные проверки"
 echo
 
-PROMPT_FILE="$(mktemp)"
-trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}"' EXIT
+# Локально проверки запускаются напрямую: это ваш собственный код на вашей
+# машине. В PR тот же check.sh выполняется в контейнере без сети.
+CHECK_RUNNER=direct REVIEW_ROOT="${REVIEW_ROOT}" \
+  bash "${REVIEWER_LIB}/run-check.sh" "${TASK_DIR}" "${REPO_ROOT}" "${WORK_DIR}" "${CHECK_FILE}"
+CHECK_EXIT=$?
 
+sed 's/^/  /' "${CHECK_FILE}"
+echo
+if [ "${CHECK_EXIT}" -eq 0 ]; then
+  ok "Структурные проверки пройдены."
+else
+  warn "Структурные проверки нашли замечания (код ${CHECK_EXIT}) — см. выше."
+fi
+echo
+
+# --- Сборка промпта -------------------------------------------------------
 STUDENT="$(basename "$(git rev-parse --show-toplevel 2>/dev/null || echo student)")"
 
-if ! bash "${SCRIPT_DIR}/lib/build-prompt.sh" \
-      "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" "${DIFF_FILE}" \
+if ! bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
+      "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
+      "${DIFF_FILE}" "${CHECK_FILE}" "${CHECK_EXIT}" \
       > "${PROMPT_FILE}" 2>/tmp/build-prompt.err; then
   err "Не удалось собрать промпт:"
   sed 's/^/     /' /tmp/build-prompt.err
   exit 1
 fi
 
-# Показываем студенту результат структурных проверок — самая полезная часть.
-sed -n '/## Результаты автоматических проверок/,/^## /p' "${PROMPT_FILE}" \
-  | sed '$d' | sed 's/^/  /'
-
 if [ "${PROMPT_ONLY}" -eq 1 ]; then
-  echo
   say "Промпт, который получил бы ИИ-агент:"
   echo
   cat "${PROMPT_FILE}"
@@ -199,26 +259,16 @@ if [ "${PROMPT_ONLY}" -eq 1 ]; then
 fi
 
 # --- Запуск ИИ-ревью ------------------------------------------------------
-echo
 say "2. ИИ-ревью"
 echo
 
 # shellcheck source=/dev/null
-source "${SCRIPT_DIR}/config.env"
-# shellcheck source=/dev/null
-source "${SCRIPT_DIR}/lib/provider.sh"
+source "${REVIEW_ROOT}/lib/provider.sh"
 
-# Студент может использовать ЛЮБУЮ модель, а не только ту, что настроена
-# для курса: достаточно задать REVIEW_MODEL или указать --model.
-# Это его локальный запуск и его ключ — на проверку в PR не влияет.
 if [ -n "${MODEL_OVERRIDE}" ]; then
   MODEL="${MODEL_OVERRIDE}"
-  MODEL_SOURCE="аргумент --model"
 elif [ -n "${REVIEW_MODEL:-}" ]; then
   MODEL="${REVIEW_MODEL}"
-  MODEL_SOURCE="переменная REVIEW_MODEL"
-else
-  MODEL_SOURCE="config.env (модель курса)"
 fi
 
 PROVIDER="$(provider_for "${MODEL}")"
@@ -252,11 +302,11 @@ echo "Модель: ${MODEL}"
 echo "Запуск... (обычно 1-2 минуты)"
 echo
 
-# Агент работает в режиме только для чтения — как и в PR.
 SANDBOX="$(mktemp -d)"
-trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}"; rm -rf "${SANDBOX}"' EXIT
+trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}"; rm -rf "${SANDBOX}"' EXIT
 
-cat > "${SANDBOX}/opencode.json" <<EOF
+# Агент работает в режиме только для чтения — как и в PR.
+AGENT_CONFIG="$(cat <<EOF
 {
   "\$schema": "https://opencode.ai/config.json",
   "model": "${MODEL}",
@@ -265,13 +315,17 @@ cat > "${SANDBOX}/opencode.json" <<EOF
     "*": "deny",
     "read": "allow",
     "glob": "allow",
-    "grep": "allow"
+    "grep": "allow",
+    "bash": "deny",
+    "edit": "deny",
+    "write": "deny"
   }
 }
 EOF
+)"
 
 RESULT_FILE="${SANDBOX}/result.md"
-if ! (cd "${REPO_ROOT}" && OPENCODE_CONFIG="${SANDBOX}/opencode.json" \
+if ! (cd "${REPO_ROOT}" && OPENCODE_CONFIG_CONTENT="${AGENT_CONFIG}" \
         OPENCODE_DISABLE_CLAUDE_CODE=true \
         opencode run --auto --format default "$(cat "${PROMPT_FILE}")" \
         > "${RESULT_FILE}" 2>"${SANDBOX}/err.log"); then
@@ -281,7 +335,7 @@ if ! (cd "${REPO_ROOT}" && OPENCODE_CONFIG="${SANDBOX}/opencode.json" \
 fi
 
 if [ ! -s "${RESULT_FILE}" ]; then
-  err "Пустой ответ модели. Попробуйте ещё раз или смените модель в config.env."
+  err "Пустой ответ модели. Попробуйте ещё раз или смените модель через --model."
   exit 1
 fi
 

@@ -1,0 +1,48 @@
+name: tests
+
+# Тесты инфраструктуры ревью. Запускаются в репозитории курса — том самом,
+# где вносятся все правки. Раньше их приходилось помнить и гонять руками.
+#
+# Сеть и API модели не используются: прогон занимает секунды.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Установить зависимости тестов
+        run: |
+          set -euo pipefail
+          # jq есть на раннере по умолчанию; PyYAML нужен тестам, которые
+          # разбирают workflow-файлы и проверяют права и секреты.
+          python3 -m pip install --quiet pyyaml
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+        shell: bash
+
+      - name: Автотесты
+        run: bash .github/review/tests/run-tests.sh
+        shell: bash
+
+      # shellcheck ловит то, что не видит `bash -n`: необъявленные
+      # переменные, неэкранированные подстановки, ошибки в кавычках.
+      # Предупреждения не валят сборку — только ошибки.
+      - name: shellcheck
+        run: |
+          set -uo pipefail
+          mapfile -t files < <(find .github/review admin reviewer -name '*.sh' -type f | sort)
+          printf 'Проверяю %s скриптов\n' "${#files[@]}"
+          shellcheck --severity=error --external-sources "${files[@]}"
+        shell: bash

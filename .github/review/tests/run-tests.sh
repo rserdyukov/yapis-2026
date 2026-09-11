@@ -1022,6 +1022,20 @@ test_check_missing_script_is_not_error() {
   assert_contains "$(cat "${out}")" "не настроен" "должно быть внятное сообщение"
 }
 
+# Регрессия: копирование по манифесту не удаляет файлы, которых в манифесте
+# больше нет. Без этого в шаблоне навсегда остался бы workflow прежней
+# схемы, требующий секрет с ключом модели в репозитории студента.
+test_sync_template_removes_legacy_paths() {
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  local body
+  body="$(awk '/^sync_repo_from_manifest\(\)/,/^}/' "${mg}")"
+  [ -n "${body}" ] || { fail "не найдена функция sync_repo_from_manifest"; return 1; }
+  case "${body}" in
+    *parse_student_remove*) return 0 ;;
+    *) fail "sync-template не удаляет пути из !STUDENT_REMOVE"; return 1 ;;
+  esac
+}
+
 # ══════════════════════════════════════════════════════════════════════════
 # Манифест ревьюера (admin/reviewer-manifest.txt)
 # ══════════════════════════════════════════════════════════════════════════

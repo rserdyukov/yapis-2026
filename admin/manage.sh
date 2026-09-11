@@ -487,9 +487,13 @@ cmd_doctor() {
     # Когда ревьюер работал в последний раз. Пустая история обычно значит,
     # что движок не раскатан (./manage.sh sync-reviewer) или выключен cron.
     local last_run
+    # jq для пустого массива возвращает строку "null (...)", а не пусто:
+    # .[0] даёт null, и интерполяция превращает его в текст. Поэтому
+    # фильтруем пустой список явно через empty.
     last_run="$(gh run list --repo "${REVIEWER_REPO}" --workflow review.yml --limit 1 \
-      --json createdAt,conclusion --jq '.[0] | "\(.createdAt) (\(.conclusion // "в процессе"))"' 2>/dev/null || true)"
-    if [ -z "${last_run}" ] || [ "${last_run}" = "null" ]; then
+      --json createdAt,conclusion \
+      --jq 'if length == 0 then empty else .[0] | "\(.createdAt) (\(.conclusion // "в процессе"))" end' 2>/dev/null || true)"
+    if [ -z "${last_run}" ]; then
       echo
       echo "  ПРОБЛЕМА: workflow review ни разу не запускался."
       echo "  Раскатайте движок: ./manage.sh sync-reviewer"
@@ -1035,11 +1039,14 @@ parse_student_keep() {
     "${TEMPLATE_MANIFEST}"
 }
 
-# Печатает пути, которые sync-workflow должен УДАЛИТЬ из репозиториев
-# студентов (остатки прежней схемы, см. комментарий в манифесте).
+# Печатает пути, которые нужно УДАЛИТЬ из целевого репозитория
+# (остатки прежней схемы, см. комментарий в манифесте). Применяется и к
+# шаблону (sync-template), и к репозиториям студентов (sync-workflow):
+# копирование по манифесту само по себе не убирает файлы, которых в
+# манифесте больше нет.
 parse_student_remove() {
   awk '/^[[:space:]]*!STUDENT_REMOVE[[:space:]]+/ { $1=""; sub(/^[[:space:]]+/,""); print }' \
-    "${TEMPLATE_MANIFEST}"
+    "${1:-${TEMPLATE_MANIFEST}}"
 }
 
 # Пути в шаблоне, которые sync-workflow раскатывает студентам:
@@ -1083,12 +1090,18 @@ sync_repo_from_manifest() {
     echo "  ${src} -> ${dst}"
   done < <(parse_manifest "${manifest}")
 
-  local excludes
+  local excludes removals
   excludes="$(parse_excludes "${manifest}")"
   if [ -n "${excludes}" ]; then
     echo
     echo "Не попадёт в ${target}:"
     echo "${excludes}" | sed 's/^/  /'
+  fi
+  removals="$(parse_student_remove "${manifest}")"
+  if [ -n "${removals}" ]; then
+    echo
+    echo "Будет УДАЛЕНО из ${target} (остатки прежней схемы):"
+    echo "${removals}" | sed 's/^/  /'
   fi
   echo
   confirm "Продолжить?"
@@ -1116,6 +1129,16 @@ sync_repo_from_manifest() {
     [ -z "${ex}" ] && continue
     rm -rf "${work:?}/${ex}"
   done <<< "${excludes}"
+
+  # Пути, помеченные !STUDENT_REMOVE, вычищаем и здесь: иначе файлы прежней
+  # схемы (workflow ревью, движок) остались бы в шаблоне навсегда и
+  # разъезжались бы с репозиториями студентов, откуда их удаляет
+  # sync-workflow.
+  local rm_path
+  while IFS= read -r rm_path; do
+    [ -z "${rm_path}" ] && continue
+    rm -rf "${work:?}/${rm_path}"
+  done <<< "$(parse_student_remove "${manifest}")"
 
   find "${work}" -name '.DS_Store' -delete 2>/dev/null || true
 

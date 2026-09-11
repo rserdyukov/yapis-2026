@@ -868,6 +868,84 @@ test_workflows_skip_in_source_repo() {
 }
 
 # ══════════════════════════════════════════════════════════════════════════
+# stats: сбор статистики (admin/lib/collect-stats.py)
+# ══════════════════════════════════════════════════════════════════════════
+
+_collector() { echo "${REPO_ROOT}/admin/lib/collect-stats.py"; }
+
+test_stats_collector_is_valid_python() {
+  local c; c="$(_collector)"
+  [ -f "${c}" ] || { fail "нет admin/lib/collect-stats.py"; return 1; }
+  command -v python3 >/dev/null 2>&1 || return 0   # без python3 проверять нечего
+  python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "${c}" 2>/dev/null \
+    || { fail "collect-stats.py не парсится как Python"; return 1; }
+  return 0
+}
+
+test_stats_collector_has_cli_contract() {
+  # manage.sh вызывает коллектор с этими флагами — если их переименовать,
+  # команда stats молча сломается.
+  local c; c="$(_collector)"
+  local flag
+  for flag in --org --prefix --days --json; do
+    grep -q -- "\"${flag}\"" "${c}" \
+      || { fail "collect-stats.py не принимает ${flag}"; return 1; }
+  done
+  return 0
+}
+
+test_stats_collector_runs_offline() {
+  # Коллектор не должен падать, когда gh недоступен: все вызовы обёрнуты
+  # и возвращают значение по умолчанию. Подставляем пустой PATH-заглушку.
+  command -v python3 >/dev/null 2>&1 || return 0   # без python3 проверять нечего
+  local fakebin="${TMP_ROOT}/fakebin"
+  mkdir -p "${fakebin}"
+  printf '#!/usr/bin/env bash\nexit 1\n' > "${fakebin}/gh"
+  chmod +x "${fakebin}/gh"
+
+  local out
+  out="$(PATH="${fakebin}:${PATH}" OPENROUTER_API_KEY="" \
+    python3 "$(_collector)" --org test-org --prefix test- --days 7 2>&1)"
+  local rc=$?
+  [ "${rc}" -eq 0 ] || { fail "коллектор упал при недоступном gh (код ${rc})"; return 1; }
+  assert_contains "${out}" "нет репозиториев" "при пустом списке должно быть внятное сообщение"
+}
+
+test_stats_registered_in_manage() {
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  grep -q "stats)" "${mg}" || { fail "команда stats не зарегистрирована"; return 1; }
+  grep -q "cmd_stats" "${mg}" || { fail "нет функции cmd_stats"; return 1; }
+  grep -q "manage.sh stats" "${mg}" || { fail "stats не описана в справке"; return 1; }
+  return 0
+}
+
+test_stats_does_not_leak_api_key() {
+  # Ключ OpenRouter не должен попадать в вывод: отчёт вставляют в issue и
+  # в логи. Проверяем не grep'ом по коду (он ловит и печать ИМЕНИ
+  # переменной), а фактическим прогоном с канареечным значением.
+  command -v python3 >/dev/null 2>&1 || return 0   # без python3 проверять нечего
+
+  local c; c="$(_collector)"
+  grep -q 'os.environ.get("OPENROUTER_API_KEY"' "${c}" \
+    || { fail "ключ должен читаться из окружения"; return 1; }
+
+  local fakebin="${TMP_ROOT}/fakebin-leak"
+  mkdir -p "${fakebin}"
+  printf '#!/usr/bin/env bash\nexit 1\n' > "${fakebin}/gh"
+  chmod +x "${fakebin}/gh"
+
+  local canary="sk-or-CANARY-DO-NOT-PRINT-0001"
+  local out
+  out="$(PATH="${fakebin}:${PATH}" OPENROUTER_API_KEY="${canary}" \
+    python3 "${c}" --org test-org --prefix test- --days 1 2>&1)"
+
+  case "${out}" in
+    *"${canary}"*) fail "значение ключа попало в вывод"; return 1 ;;
+  esac
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
 # Запуск
 # ══════════════════════════════════════════════════════════════════════════
 

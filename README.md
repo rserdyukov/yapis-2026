@@ -24,7 +24,7 @@
 |---|---|
 | [`TASKS.md`](TASKS.md) | Задания практикума **со всеми вариантами** (остаётся у преподавателя) |
 | [`admin/SETUP.md`](admin/SETUP.md) | Пошаговое развёртывание системы для новой группы |
-| [`admin/manage.sh`](admin/manage.sh) | Управление репозиториями: создание, доступы, аудит, синхронизация |
+| [`admin/manage.sh`](admin/manage.sh) | Управление репозиториями: создание, доступы, статистика, аудит, синхронизация |
 | [`admin/PORTING.md`](admin/PORTING.md) | Перенос системы на другой курс — для коллег |
 | [`admin/PROMPTS.md`](admin/PROMPTS.md) | Как устроены и отлаживаются промпты ИИ-ревью |
 | [`admin/template-*.md`](admin/) | Документы, уходящие в шаблон студента |
@@ -37,6 +37,7 @@
 cd admin
 cp .env.example .env        # заполнить ORG и TEMPLATE_REPO
 ./manage.sh doctor          # проверить настройки организации
+./manage.sh stats           # расход квот и проблемные репозитории
 ```
 
 Полная инструкция — [`admin/SETUP.md`](admin/SETUP.md).

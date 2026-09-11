@@ -33,6 +33,8 @@
 #                                                          критичные для защиты от списывания
 #   ./manage.sh protect [<фамилия>]                    — включить защиту ветки main
 #                                                          (ruleset, иначе branch protection)
+#   ./manage.sh stats [--days N] [--json]              — расход минут Actions, квота модели,
+#                                                          доля неудачных ревью, проблемы
 #   ./manage.sh audit [<фамилия>]                      — найти коммиты в main, попавшие туда
 #                                                          в обход смерженного PR
 #   ./manage.sh list                                   — список репозиториев студентов в ORG
@@ -562,6 +564,55 @@ cmd_protect() {
 
 # Аудит: коммиты в main, которые попали туда не через смерженный PR.
 # Это основной детектирующий контроль, если защита ветки недоступна.
+# Сводка по расходу бесплатных квот и состоянию курса.
+#
+# Только чтение: данные берутся из GitHub API (gh уже авторизован) и, если
+# в окружении есть OPENROUTER_API_KEY, из OpenRouter. Внешние сервисы
+# мониторинга не нужны — всё, что важно для этого проекта (минуты Actions,
+# квота модели, доля неудачных ревью), доступно бесплатно.
+#
+# Использование: stats [--days N] [--json]
+cmd_stats() {
+  require_gh_auth
+
+  local collector="${SCRIPT_DIR}/lib/collect-stats.py"
+  if [ ! -f "${collector}" ]; then
+    echo "Не найден ${collector}." >&2
+    exit 1
+  fi
+
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Нужен python3 — агрегация статистики выполняется им." >&2
+    exit 1
+  fi
+
+  local days=30 as_json=0 arg
+  while [ $# -gt 0 ]; do
+    arg="$1"
+    case "${arg}" in
+      --days) shift; days="${1:-30}" ;;
+      --days=*) days="${arg#*=}" ;;
+      --json) as_json=1 ;;
+      --yes) ;;
+      *) echo "Неизвестный аргумент stats: ${arg}" >&2; exit 1 ;;
+    esac
+    shift || true
+  done
+
+  case "${days}" in
+    ''|*[!0-9]*) echo "--days ожидает число, получено: ${days}" >&2; exit 1 ;;
+  esac
+
+  local extra=()
+  [ "${as_json}" -eq 1 ] && extra+=(--json)
+
+  python3 "${collector}" \
+    --org "${ORG}" \
+    --prefix "${REPO_PREFIX}" \
+    --days "${days}" \
+    "${extra[@]+"${extra[@]}"}"
+}
+
 cmd_audit() {
   local student="${1:-}"
   require_gh_auth
@@ -1079,6 +1130,7 @@ main() {
   case "${command}" in
     doctor)            cmd_doctor "$@" ;;
     protect)           cmd_protect "$@" ;;
+    stats)             cmd_stats "$@" ;;
     audit)             cmd_audit "$@" ;;
     list)             cmd_list "$@" ;;
     create)            cmd_create "$@" ;;

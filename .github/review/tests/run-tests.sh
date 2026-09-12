@@ -1141,6 +1141,25 @@ PYX
 }
 
 # discover.sh фильтрует по переданному префиксу, а не по захардкоженному.
+# Идентификатор студента уходит в промпт. Префикс группы из него убирается,
+# но двойная фамилия пострадать не должна.
+test_discover_student_name_strips_group() {
+  local dir="${TMP_ROOT}/disc-student.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local out
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    GH_PRS="[$(make_pr 1 task1 sha001 50)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- 2>/dev/null)"
+  assert_contains "${out}" '"student":"ivanov"' "префикс группы не должен попадать в имя студента" || return 1
+
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS='[{"name":"yapis-2026-petrov-sidorov"}]' \
+    GH_PRS="[$(make_pr 1 task1 sha001 50)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- 2>/dev/null)"
+  assert_contains "${out}" '"student":"petrov-sidorov"' "двойная фамилия не должна обрезаться"
+}
+
 test_discover_respects_prefix() {
   local dir="${TMP_ROOT}/disc-prefix.$$.${RANDOM}"
   make_gh_mock "${dir}"

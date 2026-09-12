@@ -109,7 +109,17 @@ DAILY_BY_REPO=""
 
 while IFS= read -r repo; do
   [ -z "${repo}" ] && continue
+  # Идентификатор студента для промпта: отрезаем общий префикс курса, а
+  # затем — префикс группы (yapis-2026-g1-ivanov -> ivanov). Группа
+  # техническая деталь раскладки репозиториев, модели она ничего не даёт.
+  #
+  # Отрезаем ТОЛЬКО если первый сегмент похож на идентификатор группы
+  # (g1, 2, 321701): иначе двойная фамилия petrov-sidorov превратилась бы
+  # в sidorov.
   student="${repo#"${REPO_PREFIX}"}"
+  case "${student}" in
+    [a-z][0-9]-*|[a-z][0-9][0-9]-*|[0-9]*-*) student="${student#*-}" ;;
+  esac
 
   if ! prs_json="$(gh pr list --repo "${ORG}/${repo}" --state open --limit 50 \
       --json number,headRefName,headRefOid,baseRefName,isDraft,additions,deletions,updatedAt,comments 2>/dev/null)"; then

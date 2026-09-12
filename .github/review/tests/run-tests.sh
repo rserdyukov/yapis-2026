@@ -792,46 +792,84 @@ test_opencode_version_pinned() {
   return 0
 }
 
-# Провайдер и имя ключа должны определяться через lib/provider.sh, а не
-# жёстким списком: иначе смена модели на любую из 200+ потребует правки
-# workflow, и студент не сможет использовать свою модель локально.
-test_provider_detection_is_generic() {
-  local hardcoded
-  hardcoded="$(grep -cE '^\s+(openrouter|groq|google)\)\s+REQUIRED_KEY=' \
-    "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
-    "${REPO_ROOT}/admin/template-review-local.sh" 2>/dev/null | grep -v ':0$' || true)"
-  [ -z "${hardcoded}" ] \
-    || { fail "жёсткий список провайдеров: ${hardcoded}"; return 1; }
+# Курс работает с одним провайдером — OpenRouter. Ключ у ревьюера ровно
+# один, поэтому вычислять имя переменной из MODEL больше не нужно: лишний
+# слой только усложнял отладку. Здесь фиксируем, что абстракция удалена
+# целиком и не вернулась частями.
+test_single_provider_in_reviewer() {
+  [ ! -f "${REVIEW_DIR}/lib/provider.sh" ] \
+    || { fail "lib/provider.sh должен быть удалён: провайдер один"; return 1; }
 
-  grep -q 'provider.sh' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
-    || { fail "ревьюер не использует lib/provider.sh"; return 1; }
+  local leftovers
+  leftovers="$(grep -rln 'provider_for\|key_var_for\|key_url_for\|lib/provider\.sh' \
+    "${REPO_ROOT}/reviewer" "${REPO_ROOT}/admin/manage.sh" \
+    "${REVIEW_DIR}/lib" "${REVIEW_DIR}/config.env" 2>/dev/null || true)"
+  [ -z "${leftovers}" ] \
+    || { fail "остались обращения к удалённому provider.sh: ${leftovers}"; return 1; }
   return 0
 }
 
-# Имена ключей выводятся по общему правилу; исключения заданы явной таблицей.
-test_provider_key_names() {
-  local out
-  out="$( cd "${REPO_ROOT}"
-    source .github/review/lib/provider.sh
-    printf '%s|%s|%s|%s|%s' \
-      "$(key_var_for openrouter)" \
-      "$(key_var_for anthropic)" \
-      "$(key_var_for google)" \
-      "$(key_var_for deepseek)" \
-      "$(key_var_for ollama)" )"
-  assert_eq "${out}" \
-    "OPENROUTER_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY|DEEPSEEK_API_KEY|" \
-    "имена переменных с ключами"
+# Ревьюер обязан получать ключ ровно одного провайдера: перечисление
+# ключей «про запас» раздаёт агенту лишние секреты.
+test_reviewer_passes_only_openrouter_key() {
+  local keys
+  keys="$(grep -oE '[A-Z_]+_API_KEY' "${REPO_ROOT}/reviewer/workflow/review.yml" \
+    | sort -u | tr '\n' ' ' | sed 's/ $//')"
+  assert_eq "${keys}" "OPENROUTER_API_KEY" "ключи в workflow ревьюера"
 }
 
-test_provider_extracted_from_model() {
+# Несовпадение MODEL и единственного ключа должно ловиться заранее, а не
+# превращаться в невнятную ошибку провайдера на первом же PR.
+test_reviewer_validates_model_prefix() {
+  grep -q 'openrouter/\*' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
+    || { fail "review-pr.sh должен проверять, что MODEL начинается с openrouter/"; return 1; }
+
+  local body
+  body="$(awk '/^cmd_doctor\(\)/,/^}/' "${REPO_ROOT}/admin/manage.sh")"
+  case "${body}" in
+    *'openrouter/'*) ;;
+    *) fail "doctor должен проверять префикс MODEL"; return 1 ;;
+  esac
+  return 0
+}
+
+# Модель курса в config.env должна соответствовать этому же провайдеру.
+test_config_model_is_openrouter() {
+  local model
+  model="$( cd "${REPO_ROOT}"; source .github/review/config.env; printf '%s' "${MODEL}" )"
+  case "${model}" in
+    openrouter/*) return 0 ;;
+    *) fail "MODEL в config.env должен начинаться с openrouter/: ${model}"; return 1 ;;
+  esac
+}
+
+# А вот у студента выбор модели остаётся: review-local.sh работает на его
+# машине и с его ключом, в том числе локальной моделью без ключа вообще.
+test_student_can_use_any_model() {
+  local sc="${REPO_ROOT}/admin/template-review-local.sh"
+  grep -q 'REVIEW_MODEL' "${sc}" \
+    || { fail "студент должен иметь возможность выбрать свою модель"; return 1; }
+  grep -q 'ollama' "${sc}" \
+    || { fail "локальные модели не требуют ключа — это должно быть учтено"; return 1; }
+
+  # Имя переменной с ключом выводится без provider.sh — проверяем правило.
   local out
-  out="$( cd "${REPO_ROOT}"
-    source .github/review/lib/provider.sh
-    printf '%s|%s' \
-      "$(provider_for 'openrouter/nvidia/nemotron:free')" \
-      "$(provider_for 'groq/openai/gpt-oss-120b')" )"
-  assert_eq "${out}" "openrouter|groq" "провайдер из имени модели"
+  local helper="${TMP_ROOT}/keyname.$$.sh"
+  cat > "${helper}" <<'HELPER'
+for m in openrouter/x anthropic/y google/z ollama/q; do
+  pr="${m%%/*}"
+  case "${pr}" in
+    ollama|lmstudio|llama.cpp) k="" ;;
+    google) k="GEMINI_API_KEY" ;;
+    *) k="$(printf '%s' "${pr}" | tr '[:lower:]-' '[:upper:]_')_API_KEY" ;;
+  esac
+  printf '%s ' "${k:-none}"
+done
+HELPER
+  out="$(bash "${helper}")"
+  assert_eq "${out% }" \
+    "OPENROUTER_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY none" \
+    "имена переменных с ключами у студента"
 }
 
 # GitHub поддерживает ровно пять типов alert; опечатка отрендерится как
@@ -1437,7 +1475,7 @@ test_doctor_checks_reviewer() {
   local body
   body="$(awk '/^cmd_doctor\(\)/,/^}/' "${mg}")"
   local need
-  for need in "Ревьюер" "key_var_for" "set-secret" "APP_PRIVATE_KEY" "PRIVATE"; do
+  for need in "Ревьюер" "OPENROUTER_API_KEY" "set-secret" "APP_PRIVATE_KEY" "PRIVATE"; do
     case "${body}" in
       *"${need}"*) ;;
       *) fail "doctor не проверяет: ${need}"; return 1 ;;
@@ -1460,27 +1498,6 @@ test_set_secret_targets_reviewer_only() {
   case "${body}" in
     *'--repo "${ORG}/${repo}"'*)
       fail "set-secret не должен раскладывать секрет по репозиториям студентов"; return 1 ;;
-  esac
-  return 0
-}
-
-test_provider_key_names_resolve() {
-  # Контракт provider.sh, на который опирается и workflow, и doctor.
-  local out
-  out="$(bash -c '
-    source "'"${REVIEW_DIR}"'/lib/provider.sh"
-    for m in openrouter/x groq/x google/x ollama/x; do
-      p="$(provider_for "$m")"
-      printf "%s=%s\n" "$p" "$(key_var_for "$p")"
-    done' 2>&1)"
-
-  assert_contains "${out}" "openrouter=OPENROUTER_API_KEY" "openrouter -> OPENROUTER_API_KEY" || return 1
-  assert_contains "${out}" "groq=GROQ_API_KEY" "groq -> GROQ_API_KEY" || return 1
-  assert_contains "${out}" "google=GEMINI_API_KEY" "google -> GEMINI_API_KEY (исключение)" || return 1
-  # Локальный провайдер: ключ не нужен, строка пустая.
-  case "${out}" in
-    *"ollama="$'\n'*|*"ollama=") ;;
-    *) fail "для локального провайдера ключ должен быть пустым: ${out}"; return 1 ;;
   esac
   return 0
 }

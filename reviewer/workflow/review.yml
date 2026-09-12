@@ -185,13 +185,8 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORG: ${{ vars.ORG }}
           CHECK_IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check:latest
-          # Ключи всех поддерживаемых провайдеров. Нужный выбирается по MODEL
-          # из config.env (lib/provider.sh), лишние остаются пустыми.
+          # Ключ модели. Курс работает с одним провайдером — OpenRouter.
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           PR_REPO: ${{ matrix.pr.repo }}
           PR_NUMBER: ${{ matrix.pr.pr }}
           PR_HEAD_SHA: ${{ matrix.pr.head_sha }}

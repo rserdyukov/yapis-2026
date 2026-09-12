@@ -480,13 +480,14 @@ cmd_doctor() {
       problems=$((problems + 1))
     fi
 
-    # Имя секрета с ключом модели выводится из MODEL теми же функциями, что
-    # использует ревьюер, чтобы проверка не разошлась с реальностью.
+    # Ключ модели. Курс работает с одним провайдером — OpenRouter, поэтому
+    # имя секрета фиксировано. Без него ревью падает на последнем шаге, и
+    # студент узнаёт об этом из комментария бота о технической ошибке.
     local review_root="${SCRIPT_DIR}/../.github/review"
-    if [ ! -f "${review_root}/config.env" ] || [ ! -f "${review_root}/lib/provider.sh" ]; then
-      echo "  Не найден config.env или lib/provider.sh — проверка ключа модели пропущена."
+    if [ ! -f "${review_root}/config.env" ]; then
+      echo "  Не найден config.env — проверка модели пропущена."
     else
-      local model provider required_key key_url
+      local model
       # Читаем в субшелле: config.env определяет MODEL и не должен
       # перетирать переменные этого скрипта.
       model="$(
@@ -494,36 +495,25 @@ cmd_doctor() {
         source "${review_root}/config.env" >/dev/null 2>&1
         printf '%s' "${MODEL:-}"
       )"
-      provider="$(
-        # shellcheck source=/dev/null
-        source "${review_root}/lib/provider.sh" >/dev/null 2>&1
-        provider_for "${model}"
-      )"
-      required_key="$(
-        # shellcheck source=/dev/null
-        source "${review_root}/lib/provider.sh" >/dev/null 2>&1
-        key_var_for "${provider}"
-      )"
 
-      echo "  Модель:    ${model:-<не задана>}"
-      echo "  Провайдер: ${provider:-<не определён>}"
+      echo "  Модель: ${model:-<не задана>}"
 
       if [ -z "${model}" ]; then
         echo "  ПРОБЛЕМА: в .github/review/config.env не задан MODEL."
         problems=$((problems + 1))
-      elif [ -z "${required_key}" ]; then
-        echo "  Ключ не требуется: провайдер работает локально."
-      elif echo "${rv_secrets}" | grep -qxF "${required_key}"; then
-        echo "  Секрет ${required_key} задан — хорошо."
+      elif [ "${model#openrouter/}" = "${model}" ]; then
+        # Ревьюер умеет работать только с OpenRouter: ключ у него один.
+        echo "  ПРОБЛЕМА: MODEL должен начинаться с openrouter/."
+        echo "  Курс использует единственного провайдера — OpenRouter."
+        problems=$((problems + 1))
+      fi
+
+      if echo "${rv_secrets}" | grep -qxF "OPENROUTER_API_KEY"; then
+        echo "  Секрет OPENROUTER_API_KEY задан — хорошо."
       else
-        echo "  ПРОБЛЕМА: не задан секрет ${required_key} для модели ${model}."
-        echo "  Исправить: ./manage.sh set-secret ${required_key}"
-        key_url="$(
-          # shellcheck source=/dev/null
-          source "${review_root}/lib/provider.sh" >/dev/null 2>&1
-          key_url_for "${provider}"
-        )"
-        echo "  Получить ключ: ${key_url}"
+        echo "  ПРОБЛЕМА: не задан секрет OPENROUTER_API_KEY."
+        echo "  Исправить: ./manage.sh set-secret OPENROUTER_API_KEY"
+        echo "  Получить ключ: https://openrouter.ai/keys"
         problems=$((problems + 1))
       fi
     fi
@@ -973,6 +963,18 @@ cmd_set_secret() {
   : "${name:?Укажите имя секрета, например OPENROUTER_API_KEY}"
   require_gh_auth
   require_reviewer_repo
+
+  # Ревьюер читает только OPENROUTER_API_KEY (единственный провайдер курса)
+  # и APP_PRIVATE_KEY. Секрет с другим именем создастся, но останется
+  # неиспользованным — об этом лучше предупредить сразу, чем искать потом,
+  # почему ревью падает с «не задан секрет».
+  case "${name}" in
+    OPENROUTER_API_KEY|APP_PRIVATE_KEY) ;;
+    *)
+      echo "ВНИМАНИЕ: ревьюер использует только OPENROUTER_API_KEY и APP_PRIVATE_KEY."
+      echo "Секрет ${name} будет создан, но никем не читается."
+      ;;
+  esac
 
   if ! gh repo view "${REVIEWER_REPO}" >/dev/null 2>&1; then
     echo "Репозиторий ревьюера ${REVIEWER_REPO} недоступен." >&2

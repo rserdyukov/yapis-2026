@@ -80,12 +80,17 @@ trap cleanup EXIT
 # shellcheck source=/dev/null
 source "${REVIEW_DIR}/config.env"
 
+# Курс работает с одним провайдером — OpenRouter (см. MODEL в config.env),
+# поэтому ключ ровно один. Для локальных экспериментов модель можно
+# переопределить переменной REVIEW_MODEL: тогда имя ключа выводится по
+# общему правилу opencode (<ПРОВАЙДЕР>_API_KEY).
+MODEL="${REVIEW_MODEL:-${MODEL}}"
 PROVIDER="${MODEL%%/*}"
 case "${PROVIDER}" in
-  openrouter) REQUIRED_KEY="OPENROUTER_API_KEY" ;;
-  groq)       REQUIRED_KEY="GROQ_API_KEY" ;;
-  google)     REQUIRED_KEY="GEMINI_API_KEY" ;;
-  *)          REQUIRED_KEY="" ;;
+  ollama|lmstudio|llama.cpp) REQUIRED_KEY="" ;;
+  google)                    REQUIRED_KEY="GEMINI_API_KEY" ;;
+  *)                         REQUIRED_KEY="$(printf '%s' "${PROVIDER}" \
+                               | tr '[:lower:]-' '[:upper:]_')_API_KEY" ;;
 esac
 
 if [ "${DRY_RUN}" -eq 0 ]; then

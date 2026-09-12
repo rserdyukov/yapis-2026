@@ -25,7 +25,7 @@
 #   GH_TOKEN         токен для gh (installation token GitHub App): нужен для
 #                    клонирования и публикации комментария. В окружение
 #                    агента НЕ передаётся.
-#   <PROVIDER>_API_KEY  ключ провайдера из MODEL (имя — lib/provider.sh).
+#   OPENROUTER_API_KEY  ключ модели. Единственный провайдер курса.
 #   REVIEW_ROOT      каталог .github/review (по умолчанию ../../.github/review).
 #   REVIEW_WORKDIR   где создавать рабочие каталоги (по умолчанию mktemp).
 #   CHECK_IMAGE, CHECK_RUNNER — см. run-check.sh.
@@ -47,8 +47,6 @@ REVIEW_ROOT="${REVIEW_ROOT:-$(cd "${SCRIPT_DIR}/../../.github/review" && pwd)}"
 source "${REVIEW_ROOT}/config.env"
 # shellcheck source=/dev/null
 source "${REVIEW_ROOT}/messages.env"
-# shellcheck source=/dev/null
-source "${REVIEW_ROOT}/lib/provider.sh"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/common.sh"
 
@@ -79,17 +77,25 @@ fail_review() {
   exit 1
 }
 
-# --- 0. Ключ провайдера ----------------------------------------------------
+# --- 0. Ключ OpenRouter -----------------------------------------------------
 
-PROVIDER="$(provider_for "${MODEL}")"
-REQUIRED_KEY="$(key_var_for "${PROVIDER}")"
-KEY_VALUE=""
-if [ -n "${REQUIRED_KEY}" ]; then
-  KEY_VALUE="${!REQUIRED_KEY:-}"
-  if [ -z "${KEY_VALUE}" ]; then
-    fail_review "не задан секрет ${REQUIRED_KEY}, необходимый для модели ${MODEL}. Добавьте его: ./manage.sh set-secret ${REQUIRED_KEY}"
-  fi
+# Курс работает с одним провайдером — OpenRouter (см. MODEL в config.env).
+# Раньше провайдер и имя переменной с ключом вычислялись из MODEL, чтобы
+# поддержать любой из 200+ провайдеров opencode. На практике это не
+# понадобилось: ключ один, и лишний слой только усложнял отладку.
+# Если когда-нибудь понадобится другой провайдер — менять нужно здесь,
+# в config.env и в set-secret.
+KEY_VALUE="${OPENROUTER_API_KEY:-}"
+if [ -z "${KEY_VALUE}" ]; then
+  fail_review "не задан секрет OPENROUTER_API_KEY. Добавьте его: ./manage.sh set-secret OPENROUTER_API_KEY"
 fi
+
+case "${MODEL}" in
+  openrouter/*) ;;
+  *)
+    fail_review "MODEL в config.env должен начинаться с openrouter/ (сейчас: ${MODEL})."
+    ;;
+esac
 
 if ! command -v opencode >/dev/null 2>&1; then
   fail_review "opencode не установлен в раннере."
@@ -259,10 +265,8 @@ AGENT_ENV=(
   "OPENCODE_DISABLE_CLAUDE_CODE=true"
   "OPENCODE_DISABLE_AUTOUPDATE=true"
   "OPENCODE_DISABLE_DEFAULT_PLUGINS=true"
+  "OPENROUTER_API_KEY=${KEY_VALUE}"
 )
-if [ -n "${REQUIRED_KEY}" ]; then
-  AGENT_ENV+=("${REQUIRED_KEY}=${KEY_VALUE}")
-fi
 
 (
   cd "${STUDENT_DIR}" \

@@ -262,17 +262,24 @@ fi
 say "2. ИИ-ревью"
 echo
 
-# shellcheck source=/dev/null
-source "${REVIEW_ROOT}/lib/provider.sh"
-
 if [ -n "${MODEL_OVERRIDE}" ]; then
   MODEL="${MODEL_OVERRIDE}"
 elif [ -n "${REVIEW_MODEL:-}" ]; then
   MODEL="${REVIEW_MODEL}"
 fi
 
-PROVIDER="$(provider_for "${MODEL}")"
-REQUIRED_KEY="$(key_var_for "${PROVIDER}")"
+# Провайдер — первая часть имени модели: openrouter/nvidia/... -> openrouter.
+PROVIDER="${MODEL%%/*}"
+
+# Имя переменной с ключом. Общее правило opencode: <ПРОВАЙДЕР>_API_KEY.
+# Исключения перечислены явно; локальные провайдеры ключа не требуют.
+# Полный список: https://models.dev
+case "${PROVIDER}" in
+  ollama|lmstudio|llama.cpp) REQUIRED_KEY="" ;;
+  google)                    REQUIRED_KEY="GEMINI_API_KEY" ;;
+  *)                         REQUIRED_KEY="$(printf '%s' "${PROVIDER}" \
+                                | tr '[:lower:]-' '[:upper:]_')_API_KEY" ;;
+esac
 
 if ! command -v opencode >/dev/null 2>&1; then
   warn "opencode не установлен — ИИ-ревью пропущено."
@@ -289,7 +296,11 @@ if [ -n "${REQUIRED_KEY}" ] && [ -z "${!REQUIRED_KEY:-}" ]; then
   echo
   echo "     Чтобы запускать полноценное ревью локально:"
   echo "       export ${REQUIRED_KEY}=<ваш ключ>"
-  echo "       Ключ: $(key_url_for "${PROVIDER}")"
+  if [ "${PROVIDER}" = "openrouter" ]; then
+    echo "       Ключ: https://openrouter.ai/keys"
+  else
+    echo "       Где взять ключ: https://models.dev (раздел ${PROVIDER})"
+  fi
   echo
   echo "     Можно использовать любую другую модель — свою или локальную:"
   echo "       REVIEW_MODEL=anthropic/claude-sonnet-4 $0"

@@ -225,40 +225,45 @@ gh api "repos/$ORG/yapis-2026-ivanov/contents/.github/review/config.env" \
 
 ---
 
-## 5. Смена модели или провайдера
+## 5. Смена модели
 
-Поддерживается любой из 200+ провайдеров opencode (см. https://models.dev).
-Имя переменной с ключом определяется автоматически, workflow править не нужно.
+Курс работает с одним провайдером — **OpenRouter**. Меняется только модель:
 
 ```bash
 # .github/review/config.env
-MODEL="anthropic/claude-sonnet-4"
+MODEL="openrouter/google/gemma-4-31b-it:free"
 ```
 
 ```bash
 cd admin
-./manage.sh set-secret ANTHROPIC_API_KEY
-./manage.sh sync-workflow
+./manage.sh sync-reviewer     # раскатать движок ревью
+./manage.sh review ivanov:4 --force   # проверить на реальном PR
 ```
 
-Имя секрета выводится по правилу `<ПРОВАЙДЕР>_API_KEY`; исключения (например,
-`google` → `GEMINI_API_KEY`) заданы в `.github/review/lib/provider.sh`.
-Если ключ не задан, workflow остановится с понятным сообщением о том, какой
-именно секрет нужен.
+Модель должна быть из каталога OpenRouter (префикс `openrouter/`): ревьюер
+проверяет это и падает с понятным сообщением, а не с невнятной ошибкой
+провайдера. Каталог: https://openrouter.ai/models
+
+Ключ один — `OPENROUTER_API_KEY`, менять его при смене модели не нужно.
+
+> Поддержки «любого из 200+ провайдеров» больше нет. Она вычисляла имя
+> переменной с ключом из `MODEL` и на практике только усложняла отладку:
+> ключ всё равно был один. Если провайдер понадобится сменить, правьте
+> `reviewer/lib/review-pr.sh`, workflow ревьюера и `doctor`.
 
 ---
 
 ## 6. Студенты и их собственные модели
 
-Локальный запуск не привязан к модели курса. Студент может использовать свой
-ключ, другого провайдера или локальную модель:
+Локальный запуск студента **не привязан** к модели курса: `review-local.sh`
+работает на его машине и с его ключом, на вашу квоту это не влияет.
 
 ```bash
 # модель курса (по умолчанию)
-bash .github/review/tests/eval-prompts.sh --list
+./review-local.sh
 
 # своя модель разово
-./manage.sh review ivanov:4      # прогнать ревью на реальном PR
+./review-local.sh --model anthropic/claude-sonnet-4
 
 # постоянно — через переменную окружения в ~/.zshrc
 export REVIEW_MODEL=deepseek/deepseek-chat
@@ -266,14 +271,18 @@ export DEEPSEEK_API_KEY=...
 
 # локальная модель: без ключей, без интернета, без лимитов
 ollama pull qwen2.5-coder
-bash .github/review/tests/eval-prompts.sh good-task1
+./review-local.sh --model ollama/qwen2.5-coder
 ```
 
-Это влияет **только** на локальный запуск. В Pull Request всегда работает
-модель курса — студент не может её подменить.
+Имя переменной с ключом выводится по правилу `<ПРОВАЙДЕР>_API_KEY`
+(исключения: `google` → `GEMINI_API_KEY`, локальным провайдерам ключ не
+нужен). Это разбирается прямо в `review-local.sh`.
 
-Вариант с Ollama стоит рекомендовать: он снимает вопрос ключей и квот, а
-для черновой проверки структуры работы качества локальной модели достаточно.
+Для отладки промптов на разных моделях у вас есть то же самое:
+
+```bash
+REVIEW_MODEL=ollama/qwen2.5-coder bash .github/review/tests/eval-prompts.sh good-task1
+```
 
 ---
 

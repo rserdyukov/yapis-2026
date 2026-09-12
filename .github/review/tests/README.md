@@ -69,7 +69,7 @@ test_my_check() {
 Перед полным прогоном:
 
 ```bash
-export OPENROUTER_API_KEY=<ключ>   # или GROQ_API_KEY / GEMINI_API_KEY
+export OPENROUTER_API_KEY=<ключ>   # модель курса; другую — через REVIEW_MODEL
 ```
 
 Ответы модели сохраняются в `tests/results/` — их полезно читать глазами,

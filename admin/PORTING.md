@@ -52,7 +52,6 @@
     ├── common-footer.md       # общие правила ревью
     ├── lib/                   # предметно-независимая часть
     │   ├── detect-task.sh     #   номер работы из имени ветки
-    │   ├── provider.sh        #   провайдер и имя ключа из MODEL
     │   ├── compile-check.sh   #   прогон compile.sh студента
     │   └── build-prompt.sh    #   сборка промпта
     └── tasks/                 # ← ВАШ ПРЕДМЕТ

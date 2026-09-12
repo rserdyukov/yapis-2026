@@ -30,7 +30,22 @@
 #                      ведут разные люди, иначе doctor/audit сочтут коммиты коллеги
 #                      подозрительными (скрипт сам знает только того, кто его запустил)
 #
+# Группы студентов живут в ОДНОЙ организации и различаются частью имени
+# репозитория (yapis-2026-g1-ivanov, yapis-2026-g2-petrov). Любую команду
+# можно сузить до одной группы флагом --group:
+#
+#   ./manage.sh --group g1 status          только группа g1
+#   ./manage.sh --group g1 create ivanov   создаст yapis-2026-g1-ivanov
+#   ./manage.sh status                     все группы сразу
+#
+# Отдельные организации под группы не нужны: изоляция студентов держится на
+# base permissions = none и статусе outside collaborator (работает внутри
+# одной организации), минуты Actions расходуются в репозитории ревьюера, а
+# лимит OpenRouter действует на аккаунт, а не на ключ.
+#
 # Использование:
+#   ./manage.sh [--group <группа>] <команда> [аргументы]
+#
 #   ./manage.sh doctor                                 — проверить настройки организации и
 #                                                          ревьюера, критичные для защиты
 #   ./manage.sh protect [<фамилия>]                    — включить защиту ветки main
@@ -97,11 +112,35 @@ TEMPLATE_REPO="${TEMPLATE_REPO:-${ORG}/yapis-2026-template}"
 REVIEWER_REPO="${REVIEWER_REPO:-}"
 
 ASSUME_YES=0
+# Фильтр по группе. Группы живут в ОДНОЙ организации и различаются частью
+# имени репозитория: yapis-2026-g1-ivanov, yapis-2026-g2-petrov. Разделять
+# группы по разным организациям смысла нет: изоляция студентов держится на
+# base permissions + outside collaborators и работает внутри одной
+# организации, а минуты Actions и квота модели теперь общие в любом случае
+# (ревью выполняется централизованно, лимит OpenRouter — на аккаунт).
+#
+# Пустое значение = все группы. См. также GROUP в .env.
+GROUP="${GROUP:-}"
+
+_prev_arg=""
 for arg in "$@"; do
-  if [ "${arg}" = "--yes" ]; then
-    ASSUME_YES=1
-  fi
+  case "${arg}" in
+    --yes)     ASSUME_YES=1 ;;
+    --group=*) GROUP="${arg#--group=}" ;;
+  esac
+  [ "${_prev_arg}" = "--group" ] && GROUP="${arg}"
+  _prev_arg="${arg}"
 done
+unset _prev_arg
+
+# Санитизация: значение уходит в имена репозиториев и в grep-шаблон.
+GROUP="$(printf '%s' "${GROUP}" | tr -cd 'A-Za-z0-9._-')"
+
+# Полный префикс с учётом группы. Именно он определяет, какие репозитории
+# считаются «своими» для всех команд.
+group_prefix() {
+  printf '%s%s' "${REPO_PREFIX}" "${GROUP:+${GROUP}-}"
+}
 
 confirm() {
   local message="$1"
@@ -134,8 +173,10 @@ require_gh_auth() {
 # gh repo list --jq принимает ровно одно выражение (без --arg), поэтому
 # префикс подставляется через bash-переменную прямо в выражение jq.
 list_student_repos() {
+  local prefix
+  prefix="$(group_prefix)"
   gh repo list "${ORG}" --limit 500 --json name \
-    --jq ".[] | select(.name | startswith(\"${REPO_PREFIX}\")) | .name" \
+    --jq ".[] | select(.name | startswith(\"${prefix}\")) | .name" \
     | grep -v -- "-template$" || true
 }
 
@@ -173,16 +214,38 @@ is_teacher_login() {
   return 1
 }
 
+# Имя репозитория студента. Если задана группа и фамилия ещё не содержит
+# её префикс — подставляем: ./manage.sh --group g1 create ivanov создаёт
+# yapis-2026-g1-ivanov.
 repo_for_student() {
   local student="$1"
+  case "${student}" in
+    "${REPO_PREFIX}"*) echo "${student}"; return 0 ;;
+  esac
+  if [ -n "${GROUP}" ]; then
+    case "${student}" in
+      "${GROUP}-"*) : ;;
+      *) student="${GROUP}-${student}" ;;
+    esac
+  fi
   echo "${REPO_PREFIX}${student}"
 }
 
 cmd_list() {
   require_gh_auth
   echo "Организация: ${ORG}"
-  echo "Репозитории студентов (префикс ${REPO_PREFIX}):"
-  list_student_repos | sed 's/^/  - /'
+  if [ -n "${GROUP}" ]; then
+    echo "Группа: ${GROUP}"
+  fi
+  echo "Репозитории студентов (префикс $(group_prefix)):"
+  local repos
+  repos="$(list_student_repos)"
+  if [ -z "${repos}" ]; then
+    echo "  (ничего не найдено)"
+    [ -n "${GROUP}" ] && echo "  Проверьте имя группы: ./manage.sh list — без фильтра."
+    return 0
+  fi
+  echo "${repos}" | sed 's/^/  - /'
 }
 
 # Проверка настроек организации, от которых реально зависит защита от
@@ -952,13 +1015,21 @@ cmd_review() {
   require_gh_auth
   require_reviewer_repo
 
-  # Фамилию принимаем наравне с именем репозитория: ./manage.sh review ivanov
-  if [ -n "${only}" ] && [[ "${only}" != "${REPO_PREFIX}"* ]]; then
-    only="${REPO_PREFIX}${only}"
+  # Фамилию принимаем наравне с именем репозитория:
+  #   ./manage.sh review ivanov              -> yapis-2026-ivanov
+  #   ./manage.sh --group g1 review ivanov   -> yapis-2026-g1-ivanov
+  #   ./manage.sh review yapis-2026-g1-ivanov:4
+  if [ -n "${only}" ]; then
+    local only_repo="${only%%:*}" only_pr=""
+    case "${only}" in *:*) only_pr="${only#*:}" ;; esac
+    only_repo="$(repo_for_student "${only_repo}")"
+    only="${only_repo}${only_pr:+:${only_pr}}"
   fi
 
   if [ -n "${only}" ]; then
     echo "Будет запущено ревью только для: ${only}"
+  elif [ -n "${GROUP}" ]; then
+    echo "Будет запущен обход репозиториев группы ${GROUP} в ${ORG}."
   else
     echo "Будет запущен полный обход репозиториев ${ORG}."
   fi
@@ -967,6 +1038,8 @@ cmd_review() {
 
   local args=(workflow run review.yml --repo "${REVIEWER_REPO}")
   [ -n "${only}" ] && args+=(-f "only=${only}")
+  # Ревьюер фильтрует репозитории тем же префиксом, что и локальные команды.
+  [ -n "${GROUP}" ] && args+=(-f "prefix=$(group_prefix)")
   [ "${dry_run}" -eq 1 ] && args+=(-f "dry_run=true")
 
   if ! gh "${args[@]}"; then
@@ -1386,6 +1459,21 @@ usage() {
 }
 
 main() {
+  # Глобальные флаги (--group/--yes) уже разобраны выше и не должны
+  # доезжать до диспетчера: иначе `--group g1 list` попытается выполнить
+  # команду «--group». Вырезаем их из списка аргументов целиком.
+  local args=() skip_next=0 a
+  for a in "$@"; do
+    if [ "${skip_next}" -eq 1 ]; then skip_next=0; continue; fi
+    case "${a}" in
+      --group)   skip_next=1; continue ;;
+      --group=*) continue ;;
+      --yes)     continue ;;
+    esac
+    args+=("${a}")
+  done
+  set -- "${args[@]+"${args[@]}"}"
+
   local command="${1:-}"
   [ $# -gt 0 ] && shift || true
 

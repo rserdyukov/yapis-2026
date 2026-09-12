@@ -41,6 +41,10 @@ on:
         description: "Проверить только <репозиторий> или <репозиторий>:<PR>"
         required: false
         type: string
+      prefix:
+        description: "Префикс репозиториев (для одной группы, напр. yapis-2026-g1-)"
+        required: false
+        type: string
       dry_run:
         description: "Не публиковать комментарии, только показать решение"
         required: false
@@ -86,13 +90,17 @@ jobs:
           ORG: ${{ vars.ORG }}
           REPO_PREFIX: ${{ vars.REPO_PREFIX }}
           ONLY: ${{ inputs.only }}
+          PREFIX_OVERRIDE: ${{ inputs.prefix }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
           ARGS=()
           [ -n "${ONLY:-}" ] && ARGS+=(--only "${ONLY}")
           [ "${DRY_RUN:-false}" = "true" ] && ARGS+=(--dry-run)
-          MATRIX="$(bash reviewer/lib/discover.sh "${ORG}" "${REPO_PREFIX:-yapis-2026-}" "${ARGS[@]+"${ARGS[@]}"}")"
+          # По расписанию обходятся все группы (REPO_PREFIX), при ручном
+          # запуске можно сузить до одной (./manage.sh --group g1 review).
+          PREFIX="${PREFIX_OVERRIDE:-${REPO_PREFIX:-yapis-2026-}}"
+          MATRIX="$(bash reviewer/lib/discover.sh "${ORG}" "${PREFIX}" "${ARGS[@]+"${ARGS[@]}"}")"
           COUNT="$(printf '%s' "${MATRIX}" | jq 'length')"
           echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
           echo "count=${COUNT}" >> "$GITHUB_OUTPUT"

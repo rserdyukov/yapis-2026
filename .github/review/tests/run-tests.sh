@@ -1037,6 +1037,124 @@ test_sync_template_removes_legacy_paths() {
 }
 
 # ══════════════════════════════════════════════════════════════════════════
+# Фильтр по группе (--group): одна организация, группы через префикс
+# ══════════════════════════════════════════════════════════════════════════
+
+# Запускает manage.sh с подставленным моком gh и заданной группой.
+# Команды только читающие (list), поэтому ничего не меняется.
+_run_manage() {
+  local dir="${TMP_ROOT}/mg.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  env PATH="${dir}/bin:${PATH}" ORG=test-org REPO_PREFIX=yapis-2026- \
+      REVIEWER_REPO=owner/reviewer "$@" \
+      bash "${REPO_ROOT}/admin/manage.sh" "${MANAGE_ARGS[@]}" 2>&1
+}
+
+test_group_filter_selects_only_its_repos() {
+  local repos out
+  repos='[{"name":"yapis-2026-g1-ivanov"},{"name":"yapis-2026-g2-petrov"},{"name":"yapis-2026-g1-sidorov"}]'
+
+  MANAGE_ARGS=(--group g1 list)
+  out="$(_run_manage GH_REPOS="${repos}")"
+  assert_contains "${out}" "yapis-2026-g1-ivanov" "репозиторий своей группы должен попасть" || return 1
+  assert_contains "${out}" "yapis-2026-g1-sidorov" "второй репозиторий своей группы" || return 1
+  assert_not_contains "${out}" "yapis-2026-g2-petrov" "репозиторий чужой группы не должен попасть"
+}
+
+# Без --group видны все группы: одна организация — один курс.
+test_no_group_filter_sees_all() {
+  local repos out
+  repos='[{"name":"yapis-2026-g1-ivanov"},{"name":"yapis-2026-g2-petrov"}]'
+
+  MANAGE_ARGS=(list)
+  out="$(_run_manage GH_REPOS="${repos}")"
+  assert_contains "${out}" "yapis-2026-g1-ivanov" "без фильтра видны все группы" || return 1
+  assert_contains "${out}" "yapis-2026-g2-petrov" "без фильтра видны все группы"
+}
+
+# Регрессия: имя репозитория собирается один раз в repo_for_student, иначе
+# create/invite/status разойдутся между собой при работе с группами.
+test_repo_name_includes_group() {
+  local out
+  local fn="${TMP_ROOT}/naming.$$.sh"
+  sed -n '/^group_prefix()/,/^}/p;/^repo_for_student()/,/^}/p' \
+    "${REPO_ROOT}/admin/manage.sh" > "${fn}"
+  out="$( ORG=x REPO_PREFIX=yapis-2026- GROUP=g1
+    # shellcheck disable=SC1090
+    source "${fn}"
+    printf '%s|%s|%s' \
+      "$(repo_for_student ivanov)" \
+      "$(repo_for_student g1-ivanov)" \
+      "$(repo_for_student yapis-2026-g1-ivanov)" )"
+  assert_eq "${out}" \
+    "yapis-2026-g1-ivanov|yapis-2026-g1-ivanov|yapis-2026-g1-ivanov" \
+    "имя репозитория не должно удваивать префикс группы"
+}
+
+test_repo_name_without_group() {
+  local out
+  local fn="${TMP_ROOT}/naming-nogroup.$$.sh"
+  sed -n '/^group_prefix()/,/^}/p;/^repo_for_student()/,/^}/p' \
+    "${REPO_ROOT}/admin/manage.sh" > "${fn}"
+  out="$( ORG=x REPO_PREFIX=yapis-2026- GROUP=""
+    # shellcheck disable=SC1090
+    source "${fn}"
+    printf '%s' "$(repo_for_student ivanov)" )"
+  assert_eq "${out}" "yapis-2026-ivanov" "без группы имя не меняется"
+}
+
+# Значение уходит в имена репозиториев и в jq-выражение, поэтому спецсимволы
+# должны отсекаться: иначе ./manage.sh --group 'x") | .name' сломает выборку.
+test_group_value_is_sanitized() {
+  local out
+  local fn="${TMP_ROOT}/naming-sanitize.$$.sh"
+  sed -n '/^group_prefix()/,/^}/p' "${REPO_ROOT}/admin/manage.sh" > "${fn}"
+  out="$( REPO_PREFIX=yapis-2026-
+    GROUP="$(printf '%s' 'g1") | .name #' | tr -cd 'A-Za-z0-9._-')"
+    # shellcheck disable=SC1090
+    source "${fn}"
+    printf '%s' "$(group_prefix)" )"
+  case "${out}" in
+    *'"'*|*'|'*|*' '*|*'#'*) fail "в префиксе остались спецсимволы: ${out}"; return 1 ;;
+  esac
+  grep -q "tr -cd 'A-Za-z0-9._-'" "${REPO_ROOT}/admin/manage.sh" \
+    || { fail "значение --group должно санитизироваться"; return 1; }
+  return 0
+}
+
+# Ревьюер должен уметь принимать префикс группы, иначе ручной запуск
+# ./manage.sh --group g1 review обойдёт все группы.
+test_reviewer_accepts_prefix_input() {
+  local inputs
+  inputs="$(python3 - "${REPO_ROOT}/reviewer/workflow/review.yml" <<'PYX'
+import yaml, sys
+d = yaml.safe_load(open(sys.argv[1]))
+# 'on' парсится как True в YAML 1.1
+trigger = d.get('on') or d.get(True)
+print(",".join(sorted((trigger['workflow_dispatch'].get('inputs') or {}).keys())))
+PYX
+)"
+  assert_contains "${inputs}" "prefix" "workflow должен принимать префикс группы" || return 1
+  grep -q 'PREFIX_OVERRIDE' "${REPO_ROOT}/reviewer/workflow/review.yml" \
+    || { fail "префикс не пробрасывается в discover.sh"; return 1; }
+  return 0
+}
+
+# discover.sh фильтрует по переданному префиксу, а не по захардкоженному.
+test_discover_respects_prefix() {
+  local dir="${TMP_ROOT}/disc-prefix.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local out
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"},{"name":"yapis-2026-g2-petrov"}]' \
+    GH_PRS="[$(make_pr 1 task1 sha001 50)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026-g1- 2>/dev/null)"
+  assert_contains "${out}" "yapis-2026-g1-ivanov" "репозиторий своей группы" || return 1
+  assert_not_contains "${out}" "yapis-2026-g2-petrov" "репозиторий чужой группы"
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # Манифест ревьюера (admin/reviewer-manifest.txt)
 # ══════════════════════════════════════════════════════════════════════════
 

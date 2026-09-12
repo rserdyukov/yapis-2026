@@ -63,8 +63,10 @@
 #                                                          в репозиторий ревьюера
 #   ./manage.sh status [<фамилия>]                     — сводка по PR/веткам во всех репозиториях
 #                                                          студентов (или по одному, если указана фамилия)
-#   ./manage.sh review [<репозиторий>[:<PR>]] [--dry-run]
-#                                                        — запустить ревьюер вне расписания
+#   ./manage.sh review [<репозиторий>[:<PR>]] [--dry-run] [--force]
+#                                                        — запустить ревьюер вне расписания;
+#                                                          --force перепроверяет уже
+#                                                          проверенный коммит (после сбоя)
 #   ./manage.sh sync-reviewer                            — раскатать движок ревью в приватный
 #                                                          репозиторий ревьюера (состав —
 #                                                          admin/reviewer-manifest.txt)
@@ -1004,14 +1006,21 @@ cmd_set_secret() {
 # Полезно, когда студент ждёт ревью прямо сейчас (на занятии) или когда надо
 # перепроверить один PR после правки промптов.
 cmd_review() {
-  local only="" dry_run=0 arg
+  local only="" dry_run=0 force=0 arg
   for arg in "$@"; do
     case "${arg}" in
       --dry-run) dry_run=1 ;;
+      --force)   force=1 ;;
       --yes)     ;;
       *)         [ -z "${only}" ] && only="${arg}" ;;
     esac
   done
+
+  # Повтор всех PR разом сжёг бы дневной лимит курса.
+  if [ "${force}" -eq 1 ] && [ -z "${only}" ]; then
+    echo "--force требует указать репозиторий: ./manage.sh review ivanov --force" >&2
+    exit 1
+  fi
   require_gh_auth
   require_reviewer_repo
 
@@ -1034,6 +1043,7 @@ cmd_review() {
     echo "Будет запущен полный обход репозиториев ${ORG}."
   fi
   [ "${dry_run}" -eq 1 ] && echo "Режим dry-run: комментарии публиковаться не будут."
+  [ "${force}" -eq 1 ] && echo "Режим force: отметка об уже проверенном коммите игнорируется."
   confirm "Запустить workflow review в ${REVIEWER_REPO}?"
 
   local args=(workflow run review.yml --repo "${REVIEWER_REPO}")
@@ -1041,6 +1051,7 @@ cmd_review() {
   # Ревьюер фильтрует репозитории тем же префиксом, что и локальные команды.
   [ -n "${GROUP}" ] && args+=(-f "prefix=$(group_prefix)")
   [ "${dry_run}" -eq 1 ] && args+=(-f "dry_run=true")
+  [ "${force}" -eq 1 ] && args+=(-f "force=true")
 
   if ! gh "${args[@]}"; then
     echo "Не удалось запустить workflow." >&2

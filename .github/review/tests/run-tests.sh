@@ -224,6 +224,34 @@ test_discover_reviews_new_commit_in_same_pr() {
   assert_contains "${DISC_OUT}" '"head_sha":"bbb222"' "новый коммит проверяется"
 }
 
+# После технической ошибки SHA помечается обработанным (иначе сбой
+# повторялся бы каждые 10 минут), поэтому нужен способ перепроверить PR
+# вручную после починки.
+test_discover_force_rechecks_handled_sha() {
+  local dir="${TMP_ROOT}/disc-force.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local out
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 4 task3 aaa111 100 sha:aaa111)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- \
+      --only yapis-2026-ivanov:4 --force 2>/dev/null)"
+  assert_contains "${out}" '"pr":4' "--force должен перепроверять обработанный коммит"
+}
+
+# --force без --only перепроверил бы все PR разом и сжёг дневной лимит.
+test_discover_force_requires_only() {
+  local dir="${TMP_ROOT}/disc-force2.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local rc=0
+  env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS="$(_one_repo)" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- --force \
+    >/dev/null 2>&1 || rc=$?
+  [ "${rc}" -ne 0 ] || { fail "--force без --only должен отклоняться"; return 1; }
+  return 0
+}
+
 test_discover_skips_service_branches() {
   run_discover GH_REPOS="$(_one_repo)" \
     GH_PRS="[$(make_pr 5 ci/sync-review-tooling ccc333 500)]"

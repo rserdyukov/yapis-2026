@@ -50,6 +50,11 @@ on:
         required: false
         type: boolean
         default: false
+      force:
+        description: "Проверить повторно, игнорируя отметку об обработке (только с only)"
+        required: false
+        type: boolean
+        default: false
 
 # Параллельные запуски по расписанию опасны: два обхода могут выбрать один и
 # тот же PR и опубликовать два ревью. Новый запуск ждёт завершения текущего.
@@ -92,11 +97,13 @@ jobs:
           ONLY: ${{ inputs.only }}
           PREFIX_OVERRIDE: ${{ inputs.prefix }}
           DRY_RUN: ${{ inputs.dry_run }}
+          FORCE: ${{ inputs.force }}
         run: |
           set -euo pipefail
           ARGS=()
           [ -n "${ONLY:-}" ] && ARGS+=(--only "${ONLY}")
           [ "${DRY_RUN:-false}" = "true" ] && ARGS+=(--dry-run)
+          [ "${FORCE:-false}" = "true" ] && ARGS+=(--force)
           # По расписанию обходятся все группы (REPO_PREFIX), при ручном
           # запуске можно сузить до одной (./manage.sh --group g1 review).
           PREFIX="${PREFIX_OVERRIDE:-${REPO_PREFIX:-yapis-2026-}}"

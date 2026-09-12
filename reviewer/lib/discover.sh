@@ -36,6 +36,12 @@
 #              Лимиты при этом всё равно применяются, кроме
 #              MAX_REVIEWS_PER_RUN.
 #   --dry-run  не публиковать комментарии-отказы, только напечатать решение.
+#   --force    проверить PR повторно, даже если для этого коммита уже есть
+#              комментарий и даже если исчерпан лимит ревью на PR. Нужен
+#              после починки инфраструктуры: при технической ошибке SHA
+#              помечается обработанным, чтобы сбой не повторялся каждые
+#              10 минут. Требует --only — иначе повтор всех PR разом сожжёт
+#              дневной лимит курса.
 #
 # Переменные окружения:
 #   REVIEW_ROOT  каталог .github/review с config.env и messages.env
@@ -49,14 +55,21 @@ shift 2
 
 ONLY=""
 DRY_RUN=0
+FORCE=0
 while [ $# -gt 0 ]; do
   # shellcheck disable=SC2034  # DRY_RUN читается в common.sh (post_skip)
   case "${1}" in
     --only)    ONLY="${2:?--only requires <repo>[:<pr>]}"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
+    --force)   FORCE=1; shift ;;
     *) echo "Неизвестный аргумент: ${1}" >&2; exit 2 ;;
   esac
 done
+
+if [ "${FORCE}" -eq 1 ] && [ -z "${ONLY}" ]; then
+  echo "--force требует --only: повторное ревью всех PR разом сожгло бы лимит." >&2
+  exit 2
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REVIEW_ROOT="${REVIEW_ROOT:-$(cd "${SCRIPT_DIR}/../../.github/review" && pwd)}"
@@ -159,11 +172,13 @@ while IFS= read -r repo; do
       log "${repo}#${number}: draft, пропускаю."; continue
     fi
 
-    # Уже есть комментарий бота для этого коммита?
+    # Уже есть комментарий бота для этого коммита? Маркер ставится и при
+    # технической ошибке — иначе сбой повторялся бы каждые 10 минут. Чтобы
+    # перепроверить такой PR после починки, нужен явный --force.
     sha_marker="${MARKER_SHA_PREFIX}${head_sha}"
     seen="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" --arg mk "${sha_marker}" '
       [ .[] | select(.number == $n) | .comments[] | select(.body | contains($mk)) ] | length')"
-    if [ "${seen}" -gt 0 ]; then
+    if [ "${seen}" -gt 0 ] && [ "${FORCE}" -eq 0 ]; then
       log "${repo}#${number}: коммит ${head_sha:0:7} уже обработан."; continue
     fi
 
@@ -175,7 +190,7 @@ while IFS= read -r repo; do
         | select(.body | contains($s) | not)
       ] | length')"
 
-    if [ "${published}" -ge "${MAX_REVIEWS_PER_PR}" ]; then
+    if [ "${published}" -ge "${MAX_REVIEWS_PER_PR}" ] && [ "${FORCE}" -eq 0 ]; then
       log "${repo}#${number}: лимит ревью на PR (${published}/${MAX_REVIEWS_PER_PR})."
       post_skip "${ORG}/${repo}" "${number}" "${head_sha}" "$(render_msg "${MSG_LIMIT_PER_PR}")"
       continue

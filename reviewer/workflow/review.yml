@@ -112,6 +112,11 @@ jobs:
     if: needs.discover.outputs.count != '0' && inputs.dry_run != true
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      # Нужно, чтобы GITHUB_TOKEN мог скачать образ проверок из GHCR.
+      # Комментарии в PR публикуются токеном GitHub App, а не этим.
+      packages: read
     strategy:
       # Один упавший PR не должен отменять ревью остальных.
       fail-fast: false
@@ -145,15 +150,23 @@ jobs:
           echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
         shell: bash
 
+      # Образ публикуется этим же репозиторием (workflow build-check-image),
+      # поэтому доступ к нему даёт GITHUB_TOKEN — пакет наследует права
+      # связанного репозитория. Токен GitHub App здесь НЕ подходит: он
+      # выдан на организацию студентов и прав на пакеты личного аккаунта
+      # не имеет (docker login проходит, а pull падает с "denied").
       - name: Скачать образ для изолированного запуска проверок
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CHECK_IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check:latest
         run: |
           set -uo pipefail
-          echo "${GH_TOKEN}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
           if ! docker pull -q "${CHECK_IMAGE}"; then
-            echo "::warning::Образ ${CHECK_IMAGE} недоступен — соберите его: workflow build-check-image."
+            echo "::error::Образ ${CHECK_IMAGE} недоступен."
+            echo "Соберите его: gh workflow run build-check-image.yml --repo ${GITHUB_REPOSITORY}" >&2
+            echo "Без образа структурные проверки не выполняются." >&2
+            exit 1
           fi
           docker logout ghcr.io >/dev/null 2>&1 || true
         shell: bash

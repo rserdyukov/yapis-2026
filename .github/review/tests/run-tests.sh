@@ -550,18 +550,81 @@ test_messages_markers_present() {
   return 0
 }
 
-# Токен GitHub App должен создаваться с минимальными правами, а сам workflow
-# — не иметь лишних прав к своему репозиторию: в нём лежат секреты.
+# Workflow ревью не должен иметь лишних прав к своему репозиторию: в нём
+# лежат ключ модели и приватный ключ GitHub App. Проверяем и верхний
+# уровень, и каждую job: права job перекрывают верхние, и лишнее там
+# (например, contents: write) осталось бы незамеченным.
 test_reviewer_workflow_permissions_are_minimal() {
   local perms
   perms="$(python3 - "${REPO_ROOT}/reviewer/workflow/review.yml" <<'PY'
 import yaml, sys
 d = yaml.safe_load(open(sys.argv[1]))
-p = d.get('permissions') or {}
-print(",".join(f"{k}={v}" for k, v in sorted(p.items())))
+
+# Разрешённый максимум: чтение своего кода и чтение пакетов (образ проверок
+# из GHCR). Всё, что даёт запись, должно идти через токен GitHub App.
+ALLOWED = {"contents": "read", "packages": "read"}
+
+def check(where, perms):
+    if not perms:
+        return []
+    if isinstance(perms, str):
+        return [f"{where}={perms}"]
+    return [f"{where}.{k}={v}" for k, v in perms.items()
+            if ALLOWED.get(k) != v]
+
+bad = check("top", d.get("permissions"))
+for name, job in d["jobs"].items():
+    bad += check(name, job.get("permissions"))
+print(",".join(bad))
 PY
 )"
-  assert_eq "${perms}" "contents=read" "права workflow review"
+  [ -z "${perms}" ] || { fail "лишние права в workflow ревью: ${perms}"; return 1; }
+  return 0
+}
+
+# Образ проверок лежит в GHCR личного аккаунта и наследует права своего
+# репозитория, поэтому тянуть его нужно GITHUB_TOKEN. Токен GitHub App
+# выдан на организацию студентов: docker login с ним проходит, а pull
+# падает с "denied" — проверка тогда молча не выполняется.
+test_ghcr_pull_uses_github_token() {
+  local block
+  block="$(python3 - "${REPO_ROOT}/reviewer/workflow/review.yml" <<'PY'
+import yaml, sys
+d = yaml.safe_load(open(sys.argv[1]))
+for job in d["jobs"].values():
+    for step in job.get("steps", []):
+        if "docker login ghcr.io" in (step.get("run") or ""):
+            print("|".join(f"{k}={v}" for k, v in (step.get("env") or {}).items()))
+PY
+)"
+  [ -n "${block}" ] || { fail "не найден шаг входа в GHCR"; return 1; }
+  case "${block}" in
+    *"secrets.GITHUB_TOKEN"*) ;;
+    *) fail "вход в GHCR должен использовать GITHUB_TOKEN: ${block}"; return 1 ;;
+  esac
+  case "${block}" in
+    *"app-token"*) fail "токен GitHub App не даёт доступа к пакетам личного аккаунта"; return 1 ;;
+  esac
+  return 0
+}
+
+# Без образа структурные проверки не выполняются, и ревью получается
+# заведомо неполным. Это должно быть ошибкой, а не предупреждением.
+test_missing_image_fails_loudly() {
+  local run
+  run="$(python3 - "${REPO_ROOT}/reviewer/workflow/review.yml" <<'PY'
+import yaml, sys
+d = yaml.safe_load(open(sys.argv[1]))
+for job in d["jobs"].values():
+    for step in job.get("steps", []):
+        if "docker pull" in (step.get("run") or ""):
+            print(step["run"])
+PY
+)"
+  case "${run}" in
+    *"exit 1"*) return 0 ;;
+    *) fail "при недоступном образе шаг должен падать, а не продолжать"; return 1 ;;
+  esac
 }
 
 # guard-main вызывает /commits/{sha}/pulls и /collaborators/{u}/permission —

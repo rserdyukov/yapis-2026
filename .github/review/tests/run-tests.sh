@@ -1493,6 +1493,41 @@ test_stats_registered_in_manage() {
   return 0
 }
 
+# Дневной лимит free-моделей зависит от того, покупались ли кредиты:
+# 50 запросов без покупки и 1000 после. Зашитая строка "50/сутки" врала бы
+# после пополнения аккаунта.
+test_stats_reports_actual_quota_tier() {
+  local c; c="$(_collector)"
+  grep -q 'free_model_rpd' "${c}" \
+    || { fail "лимит запросов должен зависеть от is_free_tier, а не быть зашитым"; return 1; }
+  grep -q '50 if is_free else 1000' "${c}" \
+    || { fail "нет разделения лимитов 50/1000 по тарифу"; return 1; }
+  # Строка про лимит должна подставлять значение, а не печатать константу.
+  if grep -qE 'и 50/сутки' "${c}"; then
+    fail "в выводе осталась зашитая цифра 50/сутки"; return 1
+  fi
+  return 0
+}
+
+# После пополнения узким местом становится наш собственный лимит в
+# config.env, а не провайдер. О нём легко забыть, поэтому stats подсказывает.
+test_stats_reads_course_limit_from_config() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  local out
+  out="$(python3 - "$(_collector)" <<'PYX'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("cs", sys.argv[1])
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+print(m.course_review_limit())
+PYX
+)"
+  case "${out}" in
+    ''|*[!0-9]*) fail "не удалось прочитать MAX_REVIEWS_PER_DAY_TOTAL из config.env: ${out}"; return 1 ;;
+  esac
+  return 0
+}
+
 test_stats_does_not_leak_api_key() {
   # Ключ OpenRouter не должен попадать в вывод: отчёт вставляют в issue и
   # в логи. Проверяем не grep'ом по коду (он ловит и печать ИМЕНИ

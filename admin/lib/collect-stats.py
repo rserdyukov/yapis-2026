@@ -17,6 +17,7 @@ import json
 import math
 import os
 import subprocess
+import pathlib
 import sys
 import urllib.error
 import urllib.request
@@ -36,6 +37,26 @@ FAILURE_STREAK_WARN = 2
 # ревью, чтобы это считалось перекосом (лимиты слишком строгие либо
 # студент пушит слишком часто).
 SKIP_RATIO_WARN = 2
+
+
+def course_review_limit():
+    """MAX_REVIEWS_PER_DAY_TOTAL из .github/review/config.env.
+
+    Читаем напрямую, а не через source: это Python, и запускать bash ради
+    одного числа незачем. Если файл не найден или значение не задано,
+    возвращаем None — тогда подсказка про лимит просто не печатается.
+    """
+    config = (pathlib.Path(__file__).resolve().parent.parent.parent
+              / ".github" / "review" / "config.env")
+    try:
+        for line in config.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("MAX_REVIEWS_PER_DAY_TOTAL="):
+                value = line.split("=", 1)[1].strip().strip('"').strip("'")
+                return int(value)
+    except (OSError, ValueError):
+        return None
+    return None
 
 
 def gh_json(args, default):
@@ -172,12 +193,18 @@ def openrouter_quota():
             payload = json.load(resp).get("data", {})
     except (urllib.error.URLError, json.JSONDecodeError, OSError, TimeoutError) as exc:
         return {"error": str(exc)}
+    # is_free_tier=true означает "кредиты никогда не покупались". Именно от
+    # этого зависит дневной лимит бесплатных моделей: без покупки — 50
+    # запросов в сутки, после пополнения хотя бы на 10 кредитов — 1000
+    # (см. https://openrouter.ai/docs/api-reference/limits).
+    is_free = payload.get("is_free_tier")
     return {
         "usage": payload.get("usage"),
         "limit": payload.get("limit"),
         "limit_remaining": payload.get("limit_remaining"),
         "usage_daily": payload.get("usage_daily"),
-        "is_free_tier": payload.get("is_free_tier"),
+        "is_free_tier": is_free,
+        "free_model_rpd": 50 if is_free else 1000,
     }
 
 
@@ -368,15 +395,34 @@ def main():
     elif "error" in quota:
         print(f"  Не удалось получить: {quota['error']}")
     else:
-        tier = "бесплатный" if quota.get("is_free_tier") else "платный"
-        print(f"  Тариф: {tier}")
+        is_free = quota.get("is_free_tier")
+        rpd = quota.get("free_model_rpd", 50)
+        print(f"  Тариф: {'бесплатный (кредиты не покупались)' if is_free else 'платный'}")
         print(f"  Использовано всего: {quota.get('usage')}")
         if quota.get("usage_daily") is not None:
             print(f"  За сутки:           {quota.get('usage_daily')}")
         if quota.get("limit") is not None:
             print(f"  Лимит по ключу:     {quota.get('limit')} "
                   f"(остаток {quota.get('limit_remaining')})")
-        print("  Лимит запросов бесплатных моделей: 20/мин и 50/сутки на аккаунт.")
+        print(f"  Лимит запросов бесплатных моделей: 20/мин и {rpd}/сутки на аккаунт.")
+
+        # Одно ревью — это 3-8 запросов к модели (агент работает итеративно).
+        # Считаем консервативно по 8, чтобы оценка не оказалась завышенной.
+        reviews_per_day = rpd // 8
+        print(f"  Это примерно {reviews_per_day} ревью в сутки "
+              f"(одно ревью — 3-8 запросов).")
+        if is_free:
+            print("  Пополнение аккаунта на 10 кредитов поднимает лимит до 1000/сутки:")
+            print("    https://openrouter.ai/settings/credits")
+        else:
+            # После пополнения узким местом становится не провайдер, а наш
+            # собственный лимит в config.env — о нём легко забыть.
+            course_limit = course_review_limit()
+            if course_limit is not None and reviews_per_day > course_limit:
+                print("  ВНИМАНИЕ: провайдер позволяет больше, чем настроено в курсе.")
+                print(f"  Сейчас MAX_REVIEWS_PER_DAY_TOTAL={course_limit} "
+                      f"(.github/review/config.env).")
+                print("  Поднимите значение и выполните ./manage.sh sync-reviewer.")
     print()
 
     print("=== По репозиториям ===")

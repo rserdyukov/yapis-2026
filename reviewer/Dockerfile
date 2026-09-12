@@ -44,9 +44,14 @@ RUN mkdir -p /opt/antlr \
     && chmod +x /usr/local/bin/antlr4 /usr/local/bin/grun
 
 # Maven ставим тарболом: пакет из apt тянет лишний JDK 17 в образ.
-RUN curl -fsSL https://dlcdn.apache.org/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz \
+#
+# Берём с archive.apache.org, а НЕ с dlcdn.apache.org: зеркало dlcdn хранит
+# только актуальные версии и удаляет старые — сборка образа падала с 404,
+# когда 3.9.9 оттуда убрали. В архиве версии остаются навсегда.
+ARG MAVEN_VERSION=3.9.16
+RUN curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
       | tar -xz -C /opt \
-    && mv /opt/apache-maven-3.9.9 /opt/maven
+    && mv "/opt/apache-maven-${MAVEN_VERSION}" /opt/maven
 
 # Python-рантаймы ANTLR и типовые зависимости студенческих работ.
 RUN pip3 install --break-system-packages --no-cache-dir \

@@ -1303,6 +1303,259 @@ test_discover_respects_prefix() {
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# enroll: массовое заведение репозиториев (admin/lib/enroll.py)
+# ══════════════════════════════════════════════════════════════════════════
+
+_enroller() { echo "${REPO_ROOT}/admin/lib/enroll.py"; }
+
+# Мок gh для enroll: подставляет ответы через переменные окружения.
+#   ENROLL_EXISTING  — имена «существующих» репозиториев через пробел
+#   ENROLL_COLLABS   — логины коллабораторов
+#   ENROLL_INVITES   — логины с отправленным приглашением
+#   ENROLL_LOG       — файл, куда мок пишет все изменяющие вызовы
+_make_enroll_mock() {
+  local dir="$1"
+  mkdir -p "${dir}/bin"
+  cat > "${dir}/bin/gh" <<'MOCK'
+#!/usr/bin/env bash
+log() { [ -n "${ENROLL_LOG:-}" ] && echo "$*" >> "${ENROLL_LOG}"; }
+has() { case " ${2:-} " in *" $1 "*) return 0 ;; *) return 1 ;; esac; }
+
+case "$1 $2" in
+  "repo view")
+    name="${3##*/}"
+    has "${name}" "${ENROLL_EXISTING:-}" && exit 0
+    exit 1 ;;
+  "repo create")
+    log "CREATE $3"
+    exit 0 ;;
+esac
+
+if [ "$1" = "api" ]; then
+  case "$2" in
+    users/*)
+      # Несуществующим считаем только логин с префиксом ghost-
+      case "${2#users/}" in
+        ghost-*) exit 1 ;;
+        *) echo "${2#users/}"; exit 0 ;;
+      esac ;;
+    */collaborators)
+      for l in ${ENROLL_COLLABS:-}; do echo "$l"; done; exit 0 ;;
+    */invitations)
+      for l in ${ENROLL_INVITES:-}; do echo "$l"; done; exit 0 ;;
+    */collaborators/*)
+      log "INVITE ${2##*/} -> $2"
+      exit 0 ;;
+  esac
+fi
+exit 0
+MOCK
+  chmod +x "${dir}/bin/gh"
+}
+
+_run_enroll() {
+  local dir="${TMP_ROOT}/enroll.$$.${RANDOM}"
+  _make_enroll_mock "${dir}"
+  ENROLL_LOG="${dir}/actions.log"; : > "${ENROLL_LOG}"
+  export ENROLL_LOG
+  ENROLL_OUT="$(env PATH="${dir}/bin:${PATH}" "$@" \
+    python3 "$(_enroller)" --org test-org --prefix yapis-2026- \
+    --template owner/tpl --csv "${ENROLL_CSV}" ${ENROLL_ARGS:-} 2>&1)"
+  ENROLL_RC=$?
+  ENROLL_ACTIONS="$(cat "${ENROLL_LOG}")"
+  unset ENROLL_LOG
+}
+
+_write_csv() {
+  ENROLL_CSV="${TMP_ROOT}/students.$$.csv"
+  cat > "${ENROLL_CSV}"
+}
+
+test_enroll_is_valid_python() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$(_enroller)" 2>/dev/null \
+    || { fail "enroll.py не парсится как Python"; return 1; }
+  return 0
+}
+
+# Фамилия из ФИО превращается в имя репозитория предсказуемо, включая
+# белорусские буквы и двойные фамилии.
+test_enroll_translit() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  local out
+  out="$(python3 - "$(_enroller)" <<'PY'
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("e", sys.argv[1])
+m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print("|".join(m.translit(x) for x in
+      ["Астахов", "Хачатрян", "Щукин", "Іваноў", "Петров-Водкин", "Ёлкин"]))
+PY
+)"
+  assert_eq "${out}" "astakhov|khachatryan|shchukin|ivanou|petrov-vodkin|elkin" \
+    "транслитерация фамилий"
+}
+
+# Сухой прогон не должен менять НИЧЕГО: именно им преподаватель проверяет
+# план перед раскаткой на всю группу.
+test_enroll_dry_run_changes_nothing() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Астахов Артём Сергеевич,321701,student1
+CSV
+  ENROLL_ARGS="" _run_enroll
+  [ -z "${ENROLL_ACTIONS}" ] \
+    || { fail "сухой прогон выполнил действия: ${ENROLL_ACTIONS}"; return 1; }
+  assert_contains "${ENROLL_OUT}" "сухой прогон" "должно быть сказано, что это сухой прогон"
+}
+
+# КЛЮЧЕВОЕ СВОЙСТВО: повторный запуск не трогает готовые репозитории.
+# Список студентов заполняется постепенно, поэтому enroll запускают много раз.
+test_enroll_skips_existing_repos() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Астахов Артём Сергеевич,321701,student1
+Бедарик Захар Александрович,321701,student2
+CSV
+  ENROLL_ARGS="--apply" \
+    _run_enroll ENROLL_EXISTING="yapis-2026-321701-astakhov" \
+                ENROLL_COLLABS="student1"
+
+  case "${ENROLL_ACTIONS}" in
+    *"CREATE test-org/yapis-2026-321701-astakhov"*)
+      fail "существующий репозиторий не должен пересоздаваться"; return 1 ;;
+  esac
+  case "${ENROLL_ACTIONS}" in
+    *"INVITE student1"*)
+      fail "уже добавленный коллаборатор не должен приглашаться повторно"; return 1 ;;
+  esac
+  case "${ENROLL_ACTIONS}" in
+    *"CREATE test-org/yapis-2026-321701-bedarik"*) ;;
+    *) fail "новый репозиторий должен создаваться"; return 1 ;;
+  esac
+  return 0
+}
+
+# Приглашение не делает студента коллаборатором, пока он его не принял.
+# Если проверять только коллабораторов, каждый запуск слал бы приглашение
+# заново — студент получал бы письмо каждые несколько дней.
+test_enroll_does_not_reinvite_pending() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Астахов Артём Сергеевич,321701,student1
+CSV
+  ENROLL_ARGS="--apply" \
+    _run_enroll ENROLL_EXISTING="yapis-2026-321701-astakhov" \
+                ENROLL_COLLABS="rserdyukov" \
+                ENROLL_INVITES="student1"
+  case "${ENROLL_ACTIONS}" in
+    *INVITE*) fail "повторное приглашение при неприня́том: ${ENROLL_ACTIONS}"; return 1 ;;
+  esac
+  assert_contains "${ENROLL_OUT}" "приглашение отправлено" "статус должен быть виден"
+}
+
+# Студент без логина: репозиторий создаётся, приглашение ждёт таблицы.
+test_enroll_creates_repo_without_login() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Войшнис Глеб Викторович,321701,
+CSV
+  ENROLL_ARGS="--apply" _run_enroll
+  case "${ENROLL_ACTIONS}" in
+    *"CREATE test-org/yapis-2026-321701-voyshnis"*) ;;
+    *) fail "репозиторий должен создаваться и без логина"; return 1 ;;
+  esac
+  case "${ENROLL_ACTIONS}" in
+    *INVITE*) fail "без логина приглашать некого"; return 1 ;;
+  esac
+  assert_contains "${ENROLL_OUT}" "Ждут логина" "студент должен попасть в список ожидания"
+}
+
+# Когда логин появился в таблице, следующий запуск только приглашает.
+test_enroll_invites_into_existing_repo() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Войшнис Глеб Викторович,321701,student9
+CSV
+  ENROLL_ARGS="--apply" \
+    _run_enroll ENROLL_EXISTING="yapis-2026-321701-voyshnis" \
+                ENROLL_COLLABS="rserdyukov"
+  case "${ENROLL_ACTIONS}" in
+    *CREATE*) fail "репозиторий уже есть, создавать нельзя"; return 1 ;;
+  esac
+  case "${ENROLL_ACTIONS}" in
+    *"INVITE student9"*) return 0 ;;
+    *) fail "должно быть отправлено приглашение"; return 1 ;;
+  esac
+}
+
+# Два студента не должны претендовать на одно имя репозитория: иначе один
+# перезапишет другого. Это должно быть ошибкой ДО любых изменений.
+test_enroll_detects_name_collision() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Иванов Иван Иванович,321701,student1
+Иванов Пётр Петрович,321701,student2
+CSV
+  ENROLL_ARGS="--apply" _run_enroll
+  [ "${ENROLL_RC}" -ne 0 ] || { fail "коллизия имён должна быть ошибкой"; return 1; }
+  [ -z "${ENROLL_ACTIONS}" ] || { fail "при коллизии ничего делать нельзя"; return 1; }
+  assert_contains "${ENROLL_OUT}" "одно имя репозитория" "причина должна быть названа"
+}
+
+# Опечатка в логине не должна превращаться в приглашение в никуда.
+test_enroll_reports_unknown_login() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Астахов Артём Сергеевич,321701,ghost-typo
+CSV
+  ENROLL_ARGS="--apply" _run_enroll
+  assert_contains "${ENROLL_OUT}" "не существует" "несуществующий логин должен быть отмечен" || return 1
+  case "${ENROLL_ACTIONS}" in
+    *INVITE*) fail "нельзя приглашать по несуществующему логину"; return 1 ;;
+  esac
+  # Репозиторий при этом создать нужно: работа студента от логина не зависит.
+  case "${ENROLL_ACTIONS}" in
+    *CREATE*) return 0 ;;
+    *) fail "репозиторий всё равно должен быть создан"; return 1 ;;
+  esac
+}
+
+# Фильтр по группе: enroll не должен трогать чужую группу.
+test_enroll_group_filter() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  _write_csv <<'CSV'
+ФИО,Группа,Github
+Астахов Артём Сергеевич,321701,student1
+Агеенко Александр Сергеевич,321702,student2
+CSV
+  ENROLL_ARGS="--apply --group 321702" _run_enroll
+  case "${ENROLL_ACTIONS}" in
+    *321701*) fail "чужая группа не должна затрагиваться"; return 1 ;;
+  esac
+  case "${ENROLL_ACTIONS}" in
+    *"CREATE test-org/yapis-2026-321702-ageenko"*) return 0 ;;
+    *) fail "репозиторий своей группы должен создаваться"; return 1 ;;
+  esac
+}
+
+# Команда должна быть зарегистрирована, иначе её просто не найти.
+test_enroll_registered_in_manage() {
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  grep -q 'enroll)' "${mg}" || { fail "enroll не зарегистрирован в диспетчере"; return 1; }
+  grep -q 'cmd_enroll' "${mg}" || { fail "нет функции cmd_enroll"; return 1; }
+  grep -q 'manage.sh enroll' "${mg}" || { fail "enroll не описан в справке"; return 1; }
+  return 0
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # Манифест ревьюера (admin/reviewer-manifest.txt)
 # ══════════════════════════════════════════════════════════════════════════
 

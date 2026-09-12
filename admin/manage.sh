@@ -57,6 +57,10 @@
 #   ./manage.sh list                                   — список репозиториев студентов в ORG
 #   ./manage.sh create <фамилия> [github-login]        — создать репозиторий из шаблона,
 #                                                          опционально сразу пригласить студента
+#   ./manage.sh enroll <students.csv> [--apply]        — завести репозитории всей группы
+#                                                          по списку (ФИО,Группа,Github);
+#                                                          без --apply только показывает план,
+#                                                          безопасна для повторных запусков
 #   ./manage.sh invite <фамилия> <github-login>        — пригласить/добавить коллаборатора
 #                                                          в уже существующий репозиторий
 #   ./manage.sh set-secret <NAME>                      — положить секрет (ключ API модели)
@@ -1003,6 +1007,77 @@ cmd_set_secret() {
   echo "Проверить настройку целиком: ./manage.sh doctor"
 }
 
+# Массовое заведение репозиториев по списку студентов (CSV).
+#
+# Команда идемпотентна и рассчитана на многократный запуск: список
+# заполняется постепенно, логины GitHub появляются не сразу. Каждый прогон
+# доделывает недостающее и не трогает уже существующие репозитории.
+# Подробности — admin/lib/enroll.py.
+cmd_enroll() {
+  local csv="" group_arg="" apply=0 as_json=0 arg prev=""
+  for arg in "$@"; do
+    case "${arg}" in
+      --apply)   apply=1 ;;
+      --json)    as_json=1 ;;
+      --yes)     ;;
+      --csv)     ;;                      # значение заберём по prev
+      --csv=*)   csv="${arg#--csv=}" ;;
+      *)
+        if [ "${prev}" = "--csv" ]; then
+          csv="${arg}"
+        elif [ -z "${csv}" ]; then
+          csv="${arg}"                   # позиционный путь к файлу
+        fi
+        ;;
+    esac
+    prev="${arg}"
+  done
+
+  : "${csv:?Укажите файл со списком: ./manage.sh enroll students.csv}"
+  if [ ! -f "${csv}" ]; then
+    echo "Файл со списком не найден: ${csv}" >&2
+    exit 1
+  fi
+
+  local enroller="${SCRIPT_DIR}/lib/enroll.py"
+  if [ ! -f "${enroller}" ]; then
+    echo "Не найден ${enroller}." >&2
+    exit 1
+  fi
+  if ! command -v python3 >/dev/null 2>&1; then
+    echo "Нужен python3." >&2
+    exit 1
+  fi
+
+  require_gh_auth
+
+  # Фильтр --group здесь означает номер группы из таблицы (321701).
+  [ -n "${GROUP}" ] && group_arg="${GROUP}"
+
+  local extra=()
+  [ -n "${group_arg}" ] && extra+=(--group "${group_arg}")
+  [ "${as_json}" -eq 1 ] && extra+=(--json)
+
+  if [ "${apply}" -eq 0 ]; then
+    # Сухой прогон: только план, без подтверждения — ничего не меняется.
+    python3 "${enroller}" \
+      --org "${ORG}" --prefix "${REPO_PREFIX}" --template "${TEMPLATE_REPO}" \
+      --csv "${csv}" "${extra[@]+"${extra[@]}"}"
+    return $?
+  fi
+
+  # Показываем план и спрашиваем подтверждение перед изменениями.
+  python3 "${enroller}" \
+    --org "${ORG}" --prefix "${REPO_PREFIX}" --template "${TEMPLATE_REPO}" \
+    --csv "${csv}" "${extra[@]+"${extra[@]}"}" || return $?
+  echo
+  confirm "Выполнить перечисленные действия?"
+
+  python3 "${enroller}" \
+    --org "${ORG}" --prefix "${REPO_PREFIX}" --template "${TEMPLATE_REPO}" \
+    --csv "${csv}" "${extra[@]+"${extra[@]}"}" --apply
+}
+
 # Ручной запуск ревьюера вне расписания.
 #
 # Полезно, когда студент ждёт ревью прямо сейчас (на занятии) или когда надо
@@ -1497,6 +1572,7 @@ main() {
     audit)             cmd_audit "$@" ;;
     list)             cmd_list "$@" ;;
     create)            cmd_create "$@" ;;
+    enroll)             cmd_enroll "$@" ;;
     invite)            cmd_invite "$@" ;;
     set-secret)         cmd_set_secret "$@" ;;
     status)            cmd_status "$@" ;;

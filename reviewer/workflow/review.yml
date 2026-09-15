@@ -66,6 +66,52 @@ permissions:
   contents: read
 
 jobs:
+  # Назначение преподавателя ревьюером. Вынесено в ОТДЕЛЬНУЮ job, не
+  # зависящую от discover и review: лимиты ИИ-ревью (дневные квоты, размер
+  # diff, MAX_REVIEWS_PER_PR) не должны мешать работе попасть в очередь
+  # преподавателя. Job дешёвая — несколько вызовов API, без контейнера и
+  # без обращений к модели.
+  assign-reviewers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Получить токен GitHub App
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ vars.ORG }}
+
+      - name: Назначить преподавателя ревьюером в открытых PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          ORG: ${{ vars.ORG }}
+          REPO_PREFIX: ${{ vars.REPO_PREFIX }}
+          ONLY: ${{ inputs.only }}
+          PREFIX_OVERRIDE: ${{ inputs.prefix }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          ARGS=()
+          [ -n "${ONLY:-}" ] && ARGS+=(--only "${ONLY}")
+          [ "${DRY_RUN:-false}" = "true" ] && ARGS+=(--dry-run)
+          PREFIX="${PREFIX_OVERRIDE:-${REPO_PREFIX:-yapis-2026-}}"
+          bash reviewer/lib/assign-reviewers.sh \
+            "${ORG}" "${PREFIX}" "${ARGS[@]+"${ARGS[@]}"}" 2>&1 | tee /tmp/assign.log
+          {
+            echo "## Назначение ревьюеров"
+            echo
+            echo '```text'
+            tail -n 20 /tmp/assign.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+        shell: bash
+
   discover:
     runs-on: ubuntu-latest
     timeout-minutes: 10

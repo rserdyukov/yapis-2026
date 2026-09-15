@@ -66,6 +66,7 @@ reviewer/                      # централизованный ревьюер
 │   ├── review.yml             #   обход PR по расписанию + ревью
 │   └── build-check-image.yml  #   сборка образа для проверок
 ├── lib/
+│   ├── assign-reviewers.sh    #   review request на преподавателя группы
 │   ├── discover.sh            #   какие PR проверять, лимиты
 │   ├── review-pr.sh           #   ревью одного PR
 │   └── run-check.sh           #   check.sh в контейнере без сети
@@ -104,6 +105,7 @@ admin/
 |---|---|---|
 | Название курса | `config.env` → `COURSE_NAME` | 1 строка |
 | Файлы с требованиями | `config.env` → `COURSE_DOCS` | 1 строка |
+| Преподаватели по группам | `config.env` → `TEACHER_BY_GROUP` | 1 строка |
 | Промпты по работам | `tasks/task*/prompt.md` | **основная работа** |
 | Структурные проверки | `tasks/task*/check.sh` | опционально |
 | Требования практикума | `template-TASK.md` | переписать под предмет |
@@ -119,10 +121,11 @@ admin/
 Заработает уже на этом:
 
 ```bash
-# 1. Название курса
+# 1. Название курса и кому назначать PR на проверку
 vim .github/review/config.env
 #    COURSE_NAME="Базы данных"
 #    COURSE_DOCS="README.md"
+#    TEACHER_DEFAULT="ваш-логин"    # если преподаватель один
 
 # 2. Оставить одну папку задания
 cd .github/review/tasks
@@ -288,6 +291,7 @@ exit "${STATUS}"
 [ ] Прочитать SETUP.md — понять модель и требования
 [ ] Скопировать .github/ и admin/ в свой репозиторий
 [ ] config.env: COURSE_NAME, COURSE_DOCS
+[ ] config.env: TEACHER_BY_GROUP / TEACHER_DEFAULT — кому назначать PR
 [ ] tasks/: удалить лишние, написать prompt.md под свои работы
 [ ] tasks/: при желании написать check.sh
 [ ] template-TASK.md: требования вашего практикума

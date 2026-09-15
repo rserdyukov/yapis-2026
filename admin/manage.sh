@@ -71,6 +71,13 @@
 #                                                        — запустить ревьюер вне расписания;
 #                                                          --force перепроверяет уже
 #                                                          проверенный коммит (после сбоя)
+#   ./manage.sh assign-reviewers [<репозиторий>[:<PR>]] [--dry-run]
+#                                                        — назначить преподавателя ревьюером
+#                                                          в открытых PR (кто какую группу
+#                                                          ведёт — TEACHER_BY_GROUP в
+#                                                          .github/review/config.env);
+#                                                          в штатном режиме это делает
+#                                                          ревьюер по расписанию
 #   ./manage.sh sync-reviewer                            — раскатать движок ревью в приватный
 #                                                          репозиторий ревьюера (состав —
 #                                                          admin/reviewer-manifest.txt)
@@ -88,6 +95,9 @@
 # broadcast-issue) перед выполнением показывают, что будет затронуто, и
 # требуют подтверждения (кроме случая, когда передан --yes).
 # Команды doctor, list, status и audit только читают данные.
+# assign-reviewers подтверждения не требует: она идемпотентна и обратима
+# (лишний review request снимается кнопкой в PR), а её штатный вызов —
+# автоматический, из ревьюера по расписанию. Для проверки есть --dry-run.
 #
 # ГДЕ ВЫПОЛНЯЕТСЯ ИИ-РЕВЬЮ. Не в репозиториях студентов, а централизованно —
 # в приватном репозитории REVIEWER_REPO по расписанию (см. reviewer/ и
@@ -285,6 +295,8 @@ cmd_doctor() {
     echo "  ЗАМЕЧАНИЕ: на плане Free защита ветки main (protected branches),"
     echo "  обязательное ревью и CODEOWNERS для ПРИВАТНЫХ репозиториев недоступны."
     echo "  Студент технически может смержить свой PR сам или запушить прямо в main."
+    echo "  Преподаватель назначается ревьюером не через CODEOWNERS, а ревьюером"
+    echo "  по расписанию (см. TEACHER_BY_GROUP ниже и ./manage.sh assign-reviewers)."
     echo "  Рекомендация: оформить GitHub Education / Teacher benefits — организация"
     echo "  получает план Team бесплатно (protected branches + 3000 минут Actions):"
     echo "  https://education.github.com/discount_requests/application"
@@ -564,6 +576,130 @@ cmd_doctor() {
     echo
   fi
 
+
+  # === Назначение преподавателя ревьюером ===
+  #
+  # Две реальные причины, по которым работа не попадёт в очередь
+  # преподавателя: группа отсутствует в TEACHER_BY_GROUP и у назначенного
+  # логина нет доступа к репозиториям (GitHub отклоняет review request от
+  # не-коллаборатора). Обе видны только в логе ревьюера, поэтому проверяем.
+  echo "=== Назначение преподавателя ревьюером PR ==="
+  local review_cfg="${SCRIPT_DIR}/../.github/review/config.env"
+  if [ ! -f "${review_cfg}" ]; then
+    echo "  Не найден .github/review/config.env — проверка пропущена."
+  else
+    local teacher_map teacher_default
+    teacher_map="$(
+      # shellcheck source=/dev/null
+      source "${review_cfg}" >/dev/null 2>&1
+      printf '%s' "${TEACHER_BY_GROUP:-}"
+    )"
+    teacher_default="$(
+      # shellcheck source=/dev/null
+      source "${review_cfg}" >/dev/null 2>&1
+      printf '%s' "${TEACHER_DEFAULT:-}"
+    )"
+
+    if [ -z "${teacher_map}" ] && [ -z "${teacher_default}" ]; then
+      echo "  ПРОБЛЕМА: не задан ни TEACHER_BY_GROUP, ни TEACHER_DEFAULT."
+      echo "  PR студентов не будут попадать в очередь преподавателя."
+      echo "  Заполните .github/review/config.env и выполните ./manage.sh sync-reviewer"
+      problems=$((problems + 1))
+    else
+      echo "  Преподаватели по группам: ${teacher_map:-<не задано>}"
+      [ -n "${teacher_default}" ] && echo "  Для прочих групп: ${teacher_default}"
+
+      # Группы, фактически присутствующие в организации. Правило разбора
+      # имени обязано СОВПАДАТЬ с group_of_repo в
+      # reviewer/lib/assign-reviewers.sh, иначе doctor отчитается об
+      # успехе для группы, которую скрипт назначения молча пропустит.
+      local groups_present="" repo_name rest
+      if [ -n "${repos_for_check}" ]; then
+        while IFS= read -r repo_name; do
+          [ -z "${repo_name}" ] && continue
+          rest="${repo_name#"${REPO_PREFIX}"}"
+          case "${rest}" in
+            [a-z][0-9]-*|[a-z][0-9][0-9]-*|[0-9]*-*)
+              groups_present="${groups_present}${rest%%-*}"$'\n' ;;
+          esac
+        done <<< "${repos_for_check}"
+        groups_present="$(printf '%s' "${groups_present}" | sort -u | sed '/^$/d')"
+      fi
+
+      local grp mapped pair uncovered=""
+      while IFS= read -r grp; do
+        [ -z "${grp}" ] && continue
+        mapped=""
+        for pair in ${teacher_map}; do
+          case "${pair}" in "${grp}:"*) mapped="${pair#*:}" ;; esac
+        done
+        [ -z "${mapped}" ] && mapped="${teacher_default}"
+        if [ -z "${mapped}" ]; then
+          uncovered="${uncovered} ${grp}"
+        fi
+      done <<< "${groups_present}"
+
+      if [ -n "${uncovered}" ]; then
+        echo "  ПРОБЛЕМА: для групп${uncovered} преподаватель не задан."
+        echo "  Их PR останутся без ревьюера. Добавьте в TEACHER_BY_GROUP."
+        problems=$((problems + 1))
+      fi
+
+      # Репозитории, из имени которых группа не читается вовсе: скрипт
+      # назначения их пропустит, и работы не попадут ни к кому.
+      local unparsed=""
+      while IFS= read -r repo_name; do
+        [ -z "${repo_name}" ] && continue
+        rest="${repo_name#"${REPO_PREFIX}"}"
+        case "${rest}" in
+          [a-z][0-9]-*|[a-z][0-9][0-9]-*|[0-9]*-*) ;;
+          *) unparsed="${unparsed}  - ${repo_name}"$'\n' ;;
+        esac
+      done <<< "${repos_for_check}"
+      # Без TEACHER_DEFAULT такие репозитории остаются без ревьюера; с ним
+      # они штатно обслуживаются (схема курса с одним преподавателем).
+      if [ -n "${unparsed}" ] && [ -z "${teacher_default}" ]; then
+        echo "  ПРОБЛЕМА: из имени этих репозиториев не читается группа:"
+        printf '%s' "${unparsed}"
+        echo "  Их PR останутся без ревьюера. Либо приведите имя к схеме"
+        echo "  <префикс><группа>-<фамилия>, либо задайте TEACHER_DEFAULT"
+        echo "  в .github/review/config.env."
+        problems=$((problems + 1))
+      fi
+
+      # Доступ назначаемых преподавателей к репозиториям. Проверяем на одном
+      # репозитории каждой группы: права выдаются единообразно при enroll.
+      local checked_logins="" login sample_repo perm
+      while IFS= read -r grp; do
+        [ -z "${grp}" ] && continue
+        login=""
+        for pair in ${teacher_map}; do
+          case "${pair}" in "${grp}:"*) login="${pair#*:}" ;; esac
+        done
+        [ -z "${login}" ] && login="${teacher_default}"
+        [ -z "${login}" ] && continue
+        case " ${checked_logins} " in *" ${login} "*) continue ;; esac
+        checked_logins="${checked_logins} ${login}"
+
+        sample_repo="$(printf '%s\n' "${repos_for_check}" \
+          | grep -m1 -E "^${REPO_PREFIX}${grp}-" || true)"
+        [ -z "${sample_repo}" ] && continue
+
+        perm="$(gh api "repos/${ORG}/${sample_repo}/collaborators/${login}/permission" \
+          --jq '.permission' 2>/dev/null || echo "none")"
+        case "${perm}" in
+          admin|maintain|write)
+            echo "  ${login}: доступ к репозиториям есть (${perm}) — хорошо." ;;
+          *)
+            echo "  ПРОБЛЕМА: у ${login} нет доступа к ${sample_repo} (${perm})."
+            echo "  GitHub отклоняет запрос ревью у не-коллаборатора, и PR"
+            echo "  группы ${grp} останутся без ревьюера."
+            problems=$((problems + 1)) ;;
+        esac
+      done <<< "${groups_present}"
+    fi
+  fi
+  echo
 
   if [ "${problems}" -eq 0 ]; then
     echo "Проблем не найдено."
@@ -1139,6 +1275,48 @@ cmd_review() {
   echo "  gh run list --repo ${REVIEWER_REPO} --workflow review.yml --limit 5"
 }
 
+# Назначить преподавателя ревьюером в открытых PR — локально, своим токеном.
+#
+# В штатном режиме это делает ревьюер по расписанию (job assign-reviewers в
+# reviewer/workflow/review.yml). Команда нужна, когда результат нужен сразу:
+# после заведения новой группы, правки TEACHER_BY_GROUP или разбора PR,
+# который почему-то не попал в очередь.
+#
+# Запускается напрямую, а не через workflow_dispatch: преподаватель и так
+# админ во всех репозиториях студентов, лишний прогон Actions не нужен.
+cmd_assign_reviewers() {
+  local only="" dry_run=0 arg
+  for arg in "$@"; do
+    case "${arg}" in
+      --dry-run) dry_run=1 ;;
+      --yes)     ;;
+      *)         [ -z "${only}" ] && only="${arg}" ;;
+    esac
+  done
+
+  require_gh_auth
+
+  local script="${SCRIPT_DIR}/../reviewer/lib/assign-reviewers.sh"
+  if [ ! -f "${script}" ]; then
+    echo "Не найден ${script}." >&2
+    exit 1
+  fi
+
+  # Фамилию принимаем наравне с именем репозитория — как в cmd_review.
+  if [ -n "${only}" ]; then
+    local only_repo="${only%%:*}" only_pr=""
+    case "${only}" in *:*) only_pr="${only#*:}" ;; esac
+    only_repo="$(repo_for_student "${only_repo}")"
+    only="${only_repo}${only_pr:+:${only_pr}}"
+  fi
+
+  local args=("${ORG}" "$(group_prefix)")
+  [ -n "${only}" ] && args+=(--only "${only}")
+  [ "${dry_run}" -eq 1 ] && args+=(--dry-run)
+
+  bash "${script}" "${args[@]}"
+}
+
 cmd_status() {
   local student="${1:-}"
   require_gh_auth
@@ -1577,6 +1755,7 @@ main() {
     set-secret)         cmd_set_secret "$@" ;;
     status)            cmd_status "$@" ;;
     review)             cmd_review "$@" ;;
+    assign-reviewers)   cmd_assign_reviewers "$@" ;;
     sync-reviewer)      cmd_sync_reviewer "$@" ;;
     sync-template)      cmd_sync_template "$@" ;;
     sync-workflow)      cmd_sync_workflow "$@" ;;

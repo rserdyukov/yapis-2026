@@ -123,6 +123,21 @@ case "$1" in
     emit "${GH_PRS:-${GH_COMMENTS:-[]}}" ;;
   api)
     case "$2" in
+      */requested_reviewers)
+                    # Запись review request. Пишем в лог, чтобы тесты могли
+                    # проверить, кого и куда назначили. GH_FAIL_ASSIGN=1
+                    # эмулирует отказ (нет доступа у преподавателя).
+                    who=""; prevr=""
+                    for a in "$@"; do
+                      case "$a" in reviewers\[\]=*) who="${a#reviewers[]=}" ;; esac
+                      prevr="$a"
+                    done
+                    if [ "${GH_FAIL_ASSIGN:-0}" = "1" ]; then
+                      echo '{"message":"Reviews may only be requested from collaborators"}'
+                      exit 1
+                    fi
+                    [ -n "${GH_ASSIGN_LOG:-}" ] && echo "$2 <- ${who}" >> "${GH_ASSIGN_LOG}"
+                    exit 0 ;;
       */pulls)      [ "${GH_FAIL_PULLS:-0}" = "1" ] && { echo '{"message":"403"}'; exit 1; }
                     emit "${GH_PULLS:-[]}" ;;
       */permission) [ "${GH_FAIL_PERM:-0}" = "1" ] && { echo '{"message":"403"}'; exit 1; }
@@ -374,6 +389,241 @@ test_discover_dry_run_does_not_comment() {
       bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- --dry-run \
       >/dev/null 2>&1
   [ ! -s "${log}" ] || { fail "в режиме --dry-run комментарии публиковаться не должны"; return 1; }
+  return 0
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Тесты: assign-reviewers.sh — назначение преподавателя ревьюером
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Закрывают то, что легко сломать правкой:
+#   - PR уезжает не тому преподавателю (разбор группы из имени репозитория);
+#   - повторный запуск по расписанию дёргает преподавателя снова;
+#   - служебные PR синхронизации требуют ревью преподавателя;
+#   - двойная фамилия принимается за группу.
+
+# Ответ `gh pr list --json number,headRefName,isDraft,author,reviewRequests,latestReviews`
+# в том же виде, что у настоящего gh.
+#   make_apr <номер> <ветка> <автор> <draft> [requested:<логин>] [reviewed:<логин>]
+make_apr() {
+  local number="$1" branch="$2" author="$3" draft="$4"; shift 4
+  local a req="" rev=""
+  for a in "$@"; do
+    case "${a}" in
+      requested:*) req="${req}{\"__typename\":\"User\",\"login\":\"${a#requested:}\"}," ;;
+      reviewed:*)  rev="${rev}{\"author\":{\"login\":\"${a#reviewed:}\"},\"state\":\"COMMENTED\"}," ;;
+    esac
+  done
+  printf '{"number":%s,"headRefName":"%s","isDraft":%s,"author":{"login":"%s"},"reviewRequests":[%s],"latestReviews":[%s]}' \
+    "${number}" "${branch}" "${draft}" "${author}" "${req%,}" "${rev%,}"
+}
+
+# Запускает assign-reviewers.sh с моком gh.
+# Лог — в $ASSIGN_LOG, фактические назначения — в $ASSIGN_CALLS.
+#
+# Используется НАСТОЯЩИЙ .github/review/config.env, а не подставленный:
+# config.env читается через `source` и присваивает значения безусловно, так
+# что переменной окружения его не переопределить. Заодно это проверяет
+# реальную таблицу TEACHER_BY_GROUP, которая уезжает в ревьюер.
+run_assign() {
+  local dir="${TMP_ROOT}/asg.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local calls="${dir}/assigned.txt"; : > "${calls}"
+  env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+      GH_ASSIGN_LOG="${calls}" \
+      "$@" bash "${REPO_ROOT}/reviewer/lib/assign-reviewers.sh" org yapis-2026- \
+      > "${dir}/stdout.txt" 2> "${dir}/stderr.txt"
+  ASSIGN_RC=$?
+  ASSIGN_LOG="$(cat "${dir}/stderr.txt")"
+  ASSIGN_CALLS="$(cat "${calls}")"
+}
+
+# То же, но с подменённым config.env: нужно для проверки настроек, отличных
+# от боевых (например, заполненного TEACHER_DEFAULT).
+run_assign_with_config() {
+  local teachers="$1" default="$2"; shift 2
+  local dir="${TMP_ROOT}/asgc.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  mkdir -p "${dir}/review"
+  {
+    echo "TEACHER_BY_GROUP=\"${teachers}\""
+    echo "TEACHER_DEFAULT=\"${default}\""
+  } > "${dir}/review/config.env"
+  local calls="${dir}/assigned.txt"; : > "${calls}"
+  env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${dir}/review" \
+      GH_ASSIGN_LOG="${calls}" \
+      "$@" bash "${REPO_ROOT}/reviewer/lib/assign-reviewers.sh" org yapis-2026- \
+      > "${dir}/stdout.txt" 2> "${dir}/stderr.txt"
+  ASSIGN_RC=$?
+  ASSIGN_LOG="$(cat "${dir}/stderr.txt")"
+  ASSIGN_CALLS="$(cat "${calls}")"
+}
+
+test_assign_requests_group_teacher() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 Glentas false)]"
+  assert_contains "${ASSIGN_CALLS}" "<- kvetkod" "группу 321703 ведёт kvetkod" || return 1
+  assert_contains "${ASSIGN_CALLS}" "yapis-2026-321703-karp/pulls/1" "адрес PR"
+}
+
+# Главная ошибка, которую нельзя допустить: работа уходит чужому
+# преподавателю. Проверяем обе группы в одном прогоне.
+test_assign_routes_by_group() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321701-losik"},{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 student false)]"
+  assert_contains "${ASSIGN_CALLS}" "yapis-2026-321701-losik/pulls/1/requested_reviewers <- rserdyukov" "321701 -> rserdyukov" || return 1
+  assert_contains "${ASSIGN_CALLS}" "yapis-2026-321703-karp/pulls/1/requested_reviewers <- kvetkod" "321703 -> kvetkod"
+}
+
+# Ревьюер работает по расписанию каждые 10 минут: повторное назначение
+# засыпало бы преподавателя уведомлениями по уже принятой в работу задаче.
+test_assign_is_idempotent() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 Glentas false requested:kvetkod)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "повторное назначение: ${ASSIGN_CALLS}"; return 1; }
+  assert_contains "${ASSIGN_LOG}" "уже запрошено" "причина пропуска в логе"
+}
+
+# Логины GitHub регистронезависимы: Kvetkod и kvetkod — один человек.
+test_assign_login_compare_ignores_case() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 Glentas false requested:KVETKOD)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "регистр логина не должен приводить к повтору"; return 1; }
+  return 0
+}
+
+# Преподаватель уже отсмотрел работу. Повторный запрос ревью — его решение
+# ("Re-request review"), а не автоматики.
+test_assign_skips_after_review_left() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 Glentas false reviewed:kvetkod)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "ревью уже оставлено, назначать снова не нужно"; return 1; }
+  assert_contains "${ASSIGN_LOG}" "уже оставил ревью" "причина пропуска в логе"
+}
+
+# PR из ci/sync-review-tooling создаёт сам преподаватель (sync-workflow).
+test_assign_skips_service_branches() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 7 ci/sync-review-tooling rserdyukov false)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "служебный PR не требует ревью преподавателя"; return 1; }
+  return 0
+}
+
+# Draft — работа ещё не сдана.
+test_assign_skips_draft() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 Glentas true)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "draft не должен попадать в очередь"; return 1; }
+  assert_contains "${ASSIGN_LOG}" "draft" "причина пропуска в логе"
+}
+
+# GitHub отклоняет запрос ревью у автора PR (422).
+test_assign_skips_own_pr() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 kvetkod false)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "нельзя назначить преподавателя на его же PR"; return 1; }
+  return 0
+}
+
+# Двойная фамилия не должна приниматься за идентификатор группы: условие
+# разбора имени здесь обязано совпадать с discover.sh. Без TEACHER_DEFAULT
+# назначать такой PR некому.
+test_assign_does_not_mistake_surname_for_group() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-petrov-sidorov"}]' \
+             GH_PRS="[$(make_apr 1 task1 student false)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "petrov принят за группу: ${ASSIGN_CALLS}"; return 1; }
+  assert_contains "${ASSIGN_LOG}" "группа не читается" "понятная причина"
+}
+
+# Курс с ОДНИМ преподавателем: репозитории без префикса группы
+# (yapis-2026-ivanov) — штатная схема, назначение обязано работать через
+# TEACHER_DEFAULT. Иначе у такого курса PR не попадают никому.
+test_assign_default_teacher_without_group_in_name() {
+  run_assign_with_config "" "rserdyukov" \
+             GH_REPOS='[{"name":"yapis-2026-ivanov"}]' \
+             GH_PRS="[$(make_apr 1 task1 student false)]"
+  assert_contains "${ASSIGN_CALLS}" "yapis-2026-ivanov/pulls/1/requested_reviewers <- rserdyukov" \
+    "TEACHER_DEFAULT должен работать без группы в имени"
+}
+
+# Незнакомая группа без TEACHER_DEFAULT — заметное предупреждение, а не
+# молчаливый пропуск: иначе работы новой группы никто не увидит.
+test_assign_warns_on_unknown_group() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321799-ivanov"}]' \
+             GH_PRS="[$(make_apr 1 task1 student false)]"
+  [ -z "${ASSIGN_CALLS}" ] || { fail "для неизвестной группы назначать некого"; return 1; }
+  assert_contains "${ASSIGN_LOG}" "не задан преподаватель" "предупреждение в логе"
+}
+
+test_assign_default_teacher_covers_unknown_group() {
+  run_assign_with_config "321703:kvetkod" "rserdyukov" \
+             GH_REPOS='[{"name":"yapis-2026-321799-ivanov"}]' \
+             GH_PRS="[$(make_apr 1 task1 student false)]"
+  assert_contains "${ASSIGN_CALLS}" "<- rserdyukov" "TEACHER_DEFAULT для прочих групп"
+}
+
+test_assign_dry_run_changes_nothing() {
+  local dir="${TMP_ROOT}/asgdry.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local calls="${dir}/assigned.txt"; : > "${calls}"
+  env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+      GH_ASSIGN_LOG="${calls}" \
+      TEACHER_BY_GROUP="321703:kvetkod" \
+      GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+      GH_PRS="[$(make_apr 1 task1 Glentas false)]" \
+      bash "${REPO_ROOT}/reviewer/lib/assign-reviewers.sh" org yapis-2026- --dry-run \
+      >/dev/null 2>&1
+  [ ! -s "${calls}" ] || { fail "--dry-run не должен ничего менять"; return 1; }
+  return 0
+}
+
+# Отказ в назначении (например, преподавателя забыли добавить в репозиторий)
+# не должен ронять ревьюера: ИИ-ревью важнее и идёт в соседней job.
+test_assign_failure_is_visible_but_not_fatal() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_PRS="[$(make_apr 1 task1 Glentas false)]" \
+             GH_FAIL_ASSIGN=1
+  assert_eq "${ASSIGN_RC}" "0" "код возврата при отказе назначения" || return 1
+  assert_contains "${ASSIGN_LOG}" "НЕ УДАЛОСЬ" "ошибка должна быть видна в логе"
+}
+
+# Недоступный репозиторий не должен прерывать обход остальных.
+test_assign_api_failure_does_not_stop_others() {
+  run_assign GH_REPOS='[{"name":"yapis-2026-321703-karp"}]' \
+             GH_FAIL_PRS=1 GH_PRS='{"message":"403"}'
+  assert_eq "${ASSIGN_RC}" "0" "код возврата при ошибке API" || return 1
+  assert_contains "${ASSIGN_LOG}" "неожиданный ответ" "ошибка видна в логе"
+}
+
+# Назначение не должно зависеть от бюджета ИИ-ревью: работа обязана попасть
+# к преподавателю даже когда лимиты модели исчерпаны.
+test_assign_job_independent_of_review_limits() {
+  local deps
+  deps="$(python3 - "${REPO_ROOT}/reviewer/workflow/review.yml" <<'PY'
+import yaml, sys
+d = yaml.safe_load(open(sys.argv[1]))
+job = d["jobs"].get("assign-reviewers")
+if job is None:
+    print("MISSING")
+else:
+    print(f"needs={job.get('needs')};if={job.get('if')}")
+PY
+)"
+  assert_eq "${deps}" "needs=None;if=None" "job назначения не должна зависеть от discover/review"
+}
+
+# Скрипт назначения обязан уезжать в репозиторий ревьюера, иначе job упадёт.
+test_assign_script_shipped_to_reviewer() {
+  local covered=0 src dst
+  while IFS= read -r line; do
+    case "${line}" in ''|'#'*) continue ;; esac
+    src="$(printf '%s' "${line}" | sed 's/ *->.*//')"
+    case "${src}" in
+      reviewer/lib|reviewer/lib/assign-reviewers.sh) covered=1 ;;
+    esac
+  done < "$(_rv_manifest)"
+  [ "${covered}" -eq 1 ] || { fail "assign-reviewers.sh не попадает в репозиторий ревьюера"; return 1; }
   return 0
 }
 

@@ -67,6 +67,10 @@
 #                                                          в репозиторий ревьюера
 #   ./manage.sh status [<фамилия>]                     — сводка по PR/веткам во всех репозиториях
 #                                                          студентов (или по одному, если указана фамилия)
+#   ./manage.sh prs [<фамилия>]                        — все открытые PR одной таблицей: ссылка,
+#                                                          дата создания и дата последнего коммита,
+#                                                          число комментариев ИИ-ревьюера. Сортировка:
+#                                                          группа, фамилия, дата коммита (старые сверху)
 #   ./manage.sh review [<репозиторий>[:<PR>]] [--dry-run] [--force]
 #                                                        — запустить ревьюер вне расписания;
 #                                                          --force перепроверяет уже
@@ -94,7 +98,7 @@
 # Все деструктивные операции (create, protect, set-secret, sync-*, review,
 # broadcast-issue) перед выполнением показывают, что будет затронуто, и
 # требуют подтверждения (кроме случая, когда передан --yes).
-# Команды doctor, list, status и audit только читают данные.
+# Команды doctor, list, status, prs и audit только читают данные.
 # assign-reviewers подтверждения не требует: она идемпотентна и обратима
 # (лишний review request снимается кнопкой в PR), а её штатный вызов —
 # автоматический, из ревьюера по расписанию. Для проверки есть --dry-run.
@@ -1340,6 +1344,339 @@ cmd_status() {
   done <<< "${repos}"
 }
 
+# Маркеры комментариев бота. Единственный источник правды —
+# .github/review/messages.env: по этим же строкам ревьюер считает свои
+# лимиты (reviewer/lib/discover.sh). Дублировать их здесь нельзя — при
+# правке messages.env команда prs молча начала бы показывать нули.
+#
+# Читаем в субшелле: messages.env — обычный bash-файл, и его переменные
+# не должны перетирать переменные этого скрипта.
+load_review_markers() {
+  local messages="${SCRIPT_DIR}/../.github/review/messages.env"
+  if [ ! -f "${messages}" ]; then
+    echo "Не найден ${messages} — без него не отличить комментарии бота." >&2
+    exit 1
+  fi
+  MARKER_REVIEW="$(
+    # shellcheck source=/dev/null
+    source "${messages}" >/dev/null 2>&1
+    printf '%s' "${MARKER_REVIEW:-}"
+  )"
+  MARKER_SKIPPED="$(
+    # shellcheck source=/dev/null
+    source "${messages}" >/dev/null 2>&1
+    printf '%s' "${MARKER_SKIPPED:-}"
+  )"
+  MARKER_FAILED="$(
+    # shellcheck source=/dev/null
+    source "${messages}" >/dev/null 2>&1
+    printf '%s' "${MARKER_FAILED:-}"
+  )"
+  if [ -z "${MARKER_REVIEW}" ] || [ -z "${MARKER_SKIPPED}" ] || [ -z "${MARKER_FAILED}" ]; then
+    echo "В ${messages} не заданы MARKER_REVIEW/MARKER_SKIPPED/MARKER_FAILED." >&2
+    exit 1
+  fi
+}
+
+# Группа из имени репозитория: yapis-2026-g1-ivanov -> g1.
+# Правило обязано СОВПАДАТЬ с group_of_repo в
+# reviewer/lib/assign-reviewers.sh и с разбором в discover.sh: первый
+# сегмент считается группой, только если похож на её идентификатор
+# (g1, 2, 321701). Иначе двойная фамилия petrov-sidorov дала бы группу
+# "petrov", и список разъехался бы с очередью ревью.
+group_of_repo() {
+  local rest="${1#"${REPO_PREFIX}"}"
+  case "${rest}" in
+    [a-z][0-9]-*|[a-z][0-9][0-9]-*|[0-9]*-*) printf '%s' "${rest%%-*}" ;;
+    *) printf '%s' "" ;;
+  esac
+}
+
+# Фамилия студента из имени репозитория: yapis-2026-g1-ivanov -> ivanov.
+# Отрезаем префикс курса и затем префикс группы — по тому же правилу.
+student_of_repo() {
+  local rest="${1#"${REPO_PREFIX}"}"
+  case "${rest}" in
+    [a-z][0-9]-*|[a-z][0-9][0-9]-*|[0-9]*-*) printf '%s' "${rest#*-}" ;;
+    *) printf '%s' "${rest}" ;;
+  esac
+}
+
+# Все открытые PR курса одним списком, отсортированные по группе, фамилии и
+# дате последнего коммита (старые сверху).
+#
+# ЗАЧЕМ ОТДЕЛЬНО ОТ status. Команда status печатает секции "=== репозиторий
+# ===" и отвечает на вопрос "что происходит у этого студента". Здесь нужен
+# ровно обратный разрез: один плоский список работ, ждущих проверки,
+# упорядоченный так, чтобы сверху оказалось то, что ждёт дольше всех.
+# Сквозная сортировка по дате внутри секций невозможна в принципе.
+#
+# ПОЧЕМУ ДАТА ПОСЛЕДНЕГО КОММИТА, А НЕ updatedAt. updatedAt меняется от
+# любого действия в PR, включая комментарий бота и назначение ревьюера.
+# Сортировка по нему поднимала бы наверх свежеотревьюированные PR. Дата
+# коммита отвечает на нужный вопрос: как давно студент прислал работу.
+#
+# Берётся committedDate последнего коммита, а не authoredDate: при rebase
+# и cherry-pick authoredDate сохраняет исходное время, и давно лежащая
+# ветка выглядела бы новой (и наоборот).
+cmd_prs() {
+  local student="${1:-}"
+  require_gh_auth
+  load_review_markers
+
+  local repos
+  if [ -n "${student}" ]; then
+    repos="$(repo_for_student "${student}")"
+  else
+    repos="$(list_student_repos)"
+  fi
+
+  if [ -z "${repos}" ]; then
+    echo "Репозиториев студентов не найдено (префикс $(group_prefix))."
+    return 0
+  fi
+
+  # Строки собираем в TSV: группа, фамилия, дата коммита — ключи сортировки,
+  # остальное — для печати. Дата в ISO 8601 (UTC), поэтому лексикографическая
+  # сортировка совпадает с хронологической.
+  local rows="" repo failed="" errors=""
+
+  # Индикатор прогресса. Опрос идёт по одному репозиторию, а на курсе их
+  # под сотню — без индикатора минута работы выглядит как зависание.
+  # Печатается в stderr, чтобы не попасть в перенаправленную таблицу
+  # (./manage.sh prs > list.txt), и только в интерактивном терминале.
+  local total_repos done_repos=0 show_progress=0
+  total_repos="$(printf '%s\n' "${repos}" | grep -c '^' || true)"
+  if [ -t 2 ] && [ "${total_repos}" -gt 1 ]; then
+    show_progress=1
+  fi
+
+  while IFS= read -r repo; do
+    [ -z "${repo}" ] && continue
+
+    if [ "${show_progress}" -eq 1 ]; then
+      done_repos=$((done_repos + 1))
+      printf '\rОпрос репозиториев: %s/%s' "${done_repos}" "${total_repos}" >&2
+    fi
+
+    # ПОЧЕМУ GraphQL, А НЕ `gh pr list --json commits`. Поле commits у gh
+    # тянет до 100 коммитов на каждый PR вместе с объектами авторов, и
+    # запрос упирается в лимит GraphQL на сложность (500 000 узлов):
+    #   "This query requests up to 505,050 possible nodes".
+    # Нужен же ровно один — последний. Уменьшать число PR вместо этого
+    # нельзя: это молча отрезало бы работы студентов.
+    #
+    # В discover.sh тот же `gh pr list` работает именно потому, что commits
+    # он не запрашивает.
+    #
+    # СТОИМОСТЬ ЗАПРОСА (измерено, сервер сообщает её при превышении):
+    #   узлов = PR * (COMMENTS + 1) + 100
+    # При 50 PR и comments(last:30) это ~1650 узлов — от лимита в 500 000
+    # запас 300-кратный. Поэтому обход идёт ПО ОДНОМУ репозиторию, а не
+    # пакетом: пакет из 86 репозиториев с comments(first:100) стоил бы
+    # ~443 000 узлов, то есть работал бы на грани и ломался по мере роста
+    # курса — ровно тот же класс ошибки, что и исходный баг.
+    #
+    # comments(last:30), а не first: считаются комментарии бота, а они
+    # свежие. Если комментариев больше 30, totalCount это покажет, и
+    # счётчик будет помечен как неполный, — но молча не соврёт.
+    local prs_json err_file="${TMPDIR:-/tmp}/prs-err.$$"
+    if ! prs_json="$(gh api graphql \
+        -f owner="${ORG}" -f name="${repo}" -f query='
+        query($owner:String!, $name:String!) {
+          repository(owner:$owner, name:$name) {
+            pullRequests(states:OPEN, first:50) {
+              nodes {
+                number url createdAt isDraft headRefName
+                commits(last:1) { nodes { commit { committedDate } } }
+                comments(last:30) { totalCount nodes { body } }
+              }
+            }
+          }
+        }' --jq '.data.repository.pullRequests.nodes' 2>"${err_file}")"; then
+      failed="${failed}  - ${repo}"$'\n'
+      # Причину сохраняем: молчаливое "нет доступа" для всех репозиториев
+      # скрыло бы ошибку в самом запросе (ровно так и случилось с лимитом
+      # GraphQL). Одинаковые сообщения печатаем один раз.
+      local msg
+      msg="$(sed 's/^[[:space:]]*//' "${err_file}" | grep -v '^$' | head -1)"
+      case "${errors}" in
+        *"${msg}"*) ;;
+        *) [ -n "${msg}" ] && errors="${errors}${msg}"$'\n' ;;
+      esac
+      rm -f "${err_file}"
+      continue
+    fi
+    rm -f "${err_file}"
+
+    # gh при нехватке прав печатает ошибку в stdout с нулевым кодом возврата
+    # (на этом уже ломались лимиты ревьюера, см. discover.sh). Поэтому
+    # проверяем, что пришёл именно массив, а не объект с message.
+    if ! printf '%s' "${prs_json}" | jq -e 'type == "array"' >/dev/null 2>&1; then
+      failed="${failed}  - ${repo}"$'\n'
+      continue
+    fi
+
+    local group student_name
+    group="$(group_of_repo "${repo}")"
+    student_name="$(student_of_repo "${repo}")"
+
+    # Подсчёт комментариев бота делает jq, а не shell: тело комментария
+    # многострочное, и в TSV его не разобрать. Отказы (MARKER_SKIPPED) и
+    # сбои (MARKER_FAILED) считаются отдельно от фактических ревью — так же,
+    # как их разделяет discover.sh при учёте лимитов. Иначе "0 ревью" у PR,
+    # упёршегося в лимит, читалось бы как "бот до него не дошёл".
+    local tsv
+    tsv="$(printf '%s' "${prs_json}" | jq -r \
+      --arg group "${group:--}" \
+      --arg student "${student_name}" \
+      --arg repo "${repo}" \
+      --arg m "${MARKER_REVIEW}" \
+      --arg s "${MARKER_SKIPPED}" \
+      --arg f "${MARKER_FAILED}" '
+      .[]
+      | ([ .comments.nodes[]? | select(.body | contains($m)) ]) as $bot
+      # Последний коммит ветки. У PR без коммитов (такое бывает сразу после
+      # создания) список пуст — подставляем дату создания PR, иначе строка
+      # уехала бы в начало списка как самая старая.
+      | ((.commits.nodes[0].commit.committedDate) // .createdAt) as $last
+      | [ $group,
+          $student,
+          $last,
+          .createdAt,
+          $repo,
+          (.number | tostring),
+          .url,
+          .headRefName,
+          (if .isDraft then "draft" else "" end),
+          ([ $bot[] | select((.body | contains($s)) or (.body | contains($f))) ]
+            | length | tostring),
+          ([ $bot[]
+             | select(.body | contains($s) | not)
+             | select(.body | contains($f) | not)
+           ] | length | tostring),
+          # Возраст последнего коммита в днях. Считается здесь, а не в awk:
+          # в awk на macOS нет mktime (это BWK awk, а не GNU), и разбор даты
+          # пришлось бы писать руками с учётом високосных лет.
+          (((now - ($last | fromdateiso8601)) / 86400) | floor | tostring),
+          # Признак того, что прочитаны не все комментарии (их больше, чем
+          # запрошено). Тогда счётчик ревью — нижняя оценка, и это должно
+          # быть видно в таблице, а не проглочено.
+          (if (.comments.totalCount > (.comments.nodes | length))
+           then "~" else "" end)
+        ] | @tsv')"
+    [ -n "${tsv}" ] && rows="${rows}${tsv}"$'\n'
+  done <<< "${repos}"
+
+  # Стираем строку прогресса, иначе она останется висеть над таблицей.
+  # Ширины 60 символов достаточно: строка короткая и фиксированного вида.
+  [ "${show_progress}" -eq 1 ] && printf '\r%60s\r' "" >&2
+
+  rows="$(printf '%s' "${rows}" | sed '/^$/d')"
+
+  # Отчёт о нечитаемых репозиториях. Печатается в обоих случаях — и когда
+  # таблица пуста, и когда она есть, поэтому вынесен в функцию.
+  #
+  # Причину показываем обязательно. Если ошибка одна и та же во всех
+  # репозиториях, дело почти наверняка не в правах, а в самом запросе:
+  # именно так выглядел баг с лимитом GraphQL, когда «нет доступа»
+  # печаталось для всех 86 репозиториев курса.
+  report_prs_failures() {
+    [ -z "${failed}" ] && return 0
+    local n
+    n="$(printf '%s' "${failed}" | grep -c '^' || true)"
+    echo
+    echo "Не удалось прочитать репозиториев: ${n}"
+    if [ -n "${errors}" ]; then
+      echo "Причина:"
+      printf '%s' "${errors}" | sed 's/^/  /'
+      # Одинаковая ошибка на всех репозиториях — признак ошибки запроса,
+      # а не прав доступа.
+      if [ "${n}" -gt 1 ] && [ "$(printf '%s' "${errors}" | grep -c '^' || true)" -eq 1 ]; then
+        echo "  (одна и та же ошибка во всех репозиториях — вероятно, дело не в правах)"
+      fi
+    fi
+    printf '%s' "${failed}"
+  }
+
+  if [ -z "${rows}" ]; then
+    echo "Открытых PR нет."
+    report_prs_failures
+    return 0
+  fi
+
+  # Сортировка: группа, фамилия, дата последнего коммита по возрастанию —
+  # более старые сверху. LC_ALL=C делает порядок детерминированным и
+  # независимым от локали машины преподавателя.
+  #
+  # Ключи заданы по номерам полей (-k1,1 -k2,2 -k3,3), а не как -k1 -k2:
+  # в последнем случае sort сравнивает «от поля до конца строки», и порядок
+  # начал бы зависеть от URL и заголовка.
+  rows="$(printf '%s\n' "${rows}" | LC_ALL=C sort -t $'\t' -k1,1 -k2,2 -k3,3)"
+
+  # Печать таблицы. Ширину колонок awk считает по факту, чтобы длинные
+  # фамилии и имена веток не ломали выравнивание. Возраст последнего
+  # коммита — то, ради чего таблицу читают: он сразу показывает, что зависло.
+  #
+  # LC_ALL=C обязателен: при нём length() считает байты, и вычитание
+  # продолжающих байтов UTF-8 в dwidth даёт верное число символов. Без
+  # него поведение length() зависит от локали машины, и ширина колонок
+  # стала бы неповторяемой.
+  printf '%s\n' "${rows}" | LC_ALL=C awk -F'\t' '
+    # Ширина в символах, а не в байтах: кириллица в UTF-8 занимает два
+    # байта, и на заголовках колонок length() съехал бы. Продолжающие
+    # байты UTF-8 (10xxxxxx) не занимают позицию на экране.
+    function dwidth(s,   t) { t = s; gsub(/[\200-\277]/, "", t); return length(t) }
+    function pad(s, w,   n) { n = w - dwidth(s); return n > 0 ? s sprintf("%" n "s", "") : s }
+    {
+      n = NR
+      # Репозиторий ($5) в колонку не выносим: группа и фамилия уже задают
+      # его однозначно, а полное имя втрое шире номера. Ссылка под строкой
+      # содержит и то, и другое.
+      group[n]=$1; pr[n]="#" $6; url[n]=$7; branch[n]=$8
+      # Пометка draft добавляется до расчёта ширины колонки, иначе
+      # выравнивание разъехалось бы ровно на этих строках.
+      student[n] = ($9 != "") ? $2 " [draft]" : $2
+      created[n] = substr($4,1,10)
+      commit[n]  = substr($3,1,10) " (" $12 " дн.)"
+      # Колонка ИИ: число опубликованных ревью, а следом — отказы и сбои,
+      # если они были. Без этой пометки "0" у PR, упёршегося в лимит,
+      # читалось бы как "бот до него не дошёл".
+      #
+      # Префикс "~" ($13) значит, что комментариев в PR больше, чем было
+      # прочитано, и счётчик — нижняя оценка. Лучше показать приблизительное
+      # число явно, чем молча соврать точным.
+      ai[n] = $13 $11
+      if ($10 + 0 > 0) ai[n] = ai[n] " (+" $13 $10 " без ревью)"
+    }
+    END {
+      if (n == 0) exit 0
+      h[1]="ГРУППА"; h[2]="СТУДЕНТ"; h[3]="PR"; h[4]="ВЕТКА"
+      h[5]="СОЗДАН"; h[6]="КОММИТ"; h[7]="ИИ"
+      for (c=1; c<=6; c++) w[c] = dwidth(h[c])
+      for (i=1; i<=n; i++) {
+        if (dwidth(group[i])   > w[1]) w[1]=dwidth(group[i])
+        if (dwidth(student[i]) > w[2]) w[2]=dwidth(student[i])
+        if (dwidth(pr[i])      > w[3]) w[3]=dwidth(pr[i])
+        if (dwidth(branch[i])  > w[4]) w[4]=dwidth(branch[i])
+        if (dwidth(created[i]) > w[5]) w[5]=dwidth(created[i])
+        if (dwidth(commit[i])  > w[6]) w[6]=dwidth(commit[i])
+      }
+      print pad(h[1],w[1]) "  " pad(h[2],w[2]) "  " pad(h[3],w[3]) "  " \
+            pad(h[4],w[4]) "  " pad(h[5],w[5]) "  " pad(h[6],w[6]) "  " h[7]
+      for (i=1; i<=n; i++) {
+        print pad(group[i],w[1]) "  " pad(student[i],w[2]) "  " pad(pr[i],w[3]) "  " \
+              pad(branch[i],w[4]) "  " pad(created[i],w[5]) "  " \
+              pad(commit[i],w[6]) "  " ai[i]
+        print "    " url[i]
+      }
+      print ""
+      print "Всего открытых PR: " n
+    }'
+
+  report_prs_failures
+}
+
 # Манифесты состава репозиториев (единый источник правды, см. сами файлы).
 TEMPLATE_MANIFEST="${SCRIPT_DIR}/template-manifest.txt"
 REVIEWER_MANIFEST="${SCRIPT_DIR}/reviewer-manifest.txt"
@@ -1754,6 +2091,7 @@ main() {
     invite)            cmd_invite "$@" ;;
     set-secret)         cmd_set_secret "$@" ;;
     status)            cmd_status "$@" ;;
+    prs)                cmd_prs "$@" ;;
     review)             cmd_review "$@" ;;
     assign-reviewers)   cmd_assign_reviewers "$@" ;;
     sync-reviewer)      cmd_sync_reviewer "$@" ;;

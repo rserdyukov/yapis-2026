@@ -43,6 +43,7 @@
 cd admin
 cp .env.example .env        # заполнить ORG и TEMPLATE_REPO
 ./manage.sh doctor          # проверить настройки организации
+./manage.sh prs             # открытые PR: что дольше всех ждёт проверки
 ./manage.sh stats           # расход квот и проблемные репозитории
 ```
 

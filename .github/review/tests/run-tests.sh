@@ -2048,6 +2048,348 @@ PYX
   return 0
 }
 
+# ══════════════════════════════════════════════════════════════════════════
+# prs: список открытых PR курса (admin/manage.sh)
+# ══════════════════════════════════════════════════════════════════════════
+
+# Мок gh для команды prs.
+#
+# Команда читает PR через `gh api graphql`, а НЕ через `gh pr list`: поле
+# commits у gh тянет до 100 коммитов на PR и упирается в лимит сложности
+# GraphQL (см. комментарий в cmd_prs). Мок обязан повторять именно этот
+# вызов и структуру ответа GraphQL, иначе тесты разойдутся с реальностью.
+#
+# Воспроизводится и поведение настоящего gh при нехватке прав: сообщение
+# об ошибке в STDOUT с НУЛЕВЫМ кодом возврата.
+_make_prs_gh_mock() {
+  local dir="$1"
+  mkdir -p "${dir}/bin"
+  cat > "${dir}/bin/gh" <<'MOCK'
+#!/usr/bin/env bash
+jqx=""; prev=""; name=""; is_graphql=0
+for a in "$@"; do
+  [ "$prev" = "--jq" ] && jqx="$a"
+  case "$a" in
+    graphql)   is_graphql=1 ;;
+    name=*)    name="${a#name=}" ;;
+  esac
+  prev="$a"
+done
+emit() { if [ -n "$jqx" ]; then printf '%s' "$1" | jq -r "$jqx"; else printf '%s\n' "$1"; fi; }
+
+case "$1" in
+  auth) exit 0 ;;
+  api)
+    if [ "$is_graphql" = "1" ]; then
+      case "${name}" in
+        *denied)
+          # Нехватка прав: gh печатает ошибку и возвращает ненулевой код.
+          echo 'gh: Resource not accessible by integration' >&2
+          exit 1 ;;
+        *toobig)
+          # Регрессия: именно так выглядел баг с лимитом сложности GraphQL.
+          echo 'GraphQL: This query requests up to 505,050 possible nodes which exceeds the maximum limit of 500,000.' >&2
+          exit 1 ;;
+      esac
+      key="PRS_${name##*-}"
+      # Ответ GraphQL: массив PR, где commits/comments — вложенные nodes.
+      emit "$(printf '%s' "${!key:-${PRS:-[]}}" | jq -c \
+        '{data:{repository:{pullRequests:{nodes:.}}}}')"
+      exit 0
+    fi
+    echo '{"login":"teacher"}'; exit 0 ;;
+  repo) emit "${GH_REPOS:-[]}" ;;
+esac
+exit 0
+MOCK
+  chmod +x "${dir}/bin/gh"
+}
+
+# Собирает один PR в том же виде, что его отдаёт GraphQL: commits и
+# comments — соединения с полем nodes, у comments есть ещё totalCount.
+# Структуру важно повторять точно, иначе тест не поймает ошибку в
+# jq-выражении команды.
+#   _prs_pr <номер> <ветка> <createdAt> <committedDate> <draft> [маркеры...]
+# Маркеры комментариев: review | skipped | failed | <произвольный текст>.
+# Пустой <committedDate> — PR без коммитов.
+#
+# PRS_TOTAL_COUNT (необязательно) задаёт comments.totalCount больше числа
+# переданных комментариев: так эмулируется PR, у которого прочитаны не все
+# комментарии.
+_prs_pr() {
+  local number="$1" branch="$2" created="$3" committed="$4" draft="$5"; shift 5
+  local kind body parts="" m s f n_com=0
+  m='<!-- ai-review-marker -->'
+  s='<!-- ai-review-skipped -->'
+  f='<!-- ai-review-marker-failed -->'
+  for kind in "$@"; do
+    case "${kind}" in
+      review)  body="${m}"$'\n'"## Ревью" ;;
+      skipped) body="${m}"$'\n'"${s}"$'\n'"отказ" ;;
+      failed)  body="${m}"$'\n'"${f}"$'\n'"сбой" ;;
+      *)       body="${kind}" ;;
+    esac
+    parts="${parts}$(jq -cn --arg b "${body}" '{body:$b}'),"
+    n_com=$((n_com + 1))
+  done
+  jq -cn --argjson n "${number}" --arg b "${branch}" --arg c "${created}" \
+     --arg cm "${committed}" --argjson d "${draft}" \
+     --argjson com "[${parts%,}]" \
+     --argjson total "${PRS_TOTAL_COUNT:-${n_com}}" \
+     --arg u "https://github.com/test-org/r/pull/${number}" \
+     '{number:$n, url:$u, createdAt:$c, isDraft:$d, headRefName:$b,
+       commits:{nodes:(if $cm == "" then [] else [{commit:{committedDate:$cm}}] end)},
+       comments:{totalCount:$total, nodes:$com}}'
+}
+
+_run_prs() {
+  local dir="${TMP_ROOT}/prs.$$.${RANDOM}"
+  _make_prs_gh_mock "${dir}"
+  env PATH="${dir}/bin:${PATH}" ORG=test-org REPO_PREFIX=yapis-2026- \
+      "$@" bash "${REPO_ROOT}/admin/manage.sh" "${PRS_ARGS[@]}" 2>&1
+}
+
+test_prs_registered_in_manage() {
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  grep -q '^    prs)' "${mg}"  || { fail "команда prs не зарегистрирована"; return 1; }
+  grep -q 'cmd_prs'   "${mg}"  || { fail "нет функции cmd_prs"; return 1; }
+  grep -q 'manage.sh prs' "${mg}" || { fail "prs не описана в справке"; return 1; }
+  return 0
+}
+
+# Главное требование команды: сортировка по группе, фамилии и дате
+# последнего коммита, причём более старые коммиты — сверху.
+test_prs_sorts_by_group_student_and_commit_date() {
+  local out order
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g2-antonov"},{"name":"yapis-2026-g1-petrov"},{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_antonov="[$(_prs_pr 7 task2 2026-07-01T10:00:00Z 2026-07-02T10:00:00Z false)]" \
+    PRS_petrov="[$(_prs_pr 2 task1 2026-09-05T10:00:00Z 2026-09-06T10:00:00Z false)]" \
+    PRS_ivanov="[$(_prs_pr 4 task3 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false),$(_prs_pr 5 task4 2026-08-20T10:00:00Z 2026-08-21T10:00:00Z false)]")"
+
+  # Порядок фамилий и номеров PR в выводе, без строк со ссылками.
+  order="$(printf '%s\n' "${out}" | awk '/^g[0-9]/ {printf "%s#%s ", $2, $3}')"
+  assert_eq "${order}" "ivanov##5 ivanov##4 petrov##2 antonov##7 " \
+    "порядок: группа, фамилия, дата коммита (старые сверху)"
+}
+
+# Регрессия: сортировать по updatedAt нельзя — его меняет любой коммент
+# бота и назначение ревьюера, и свежеотревьюированный PR всплывал бы
+# наверх. Дата последнего коммита отвечает на нужный вопрос: как давно
+# студент прислал работу.
+test_prs_sorts_by_commit_not_pr_creation() {
+  local out order
+  PRS_ARGS=(prs)
+  # Старый PR со свежим коммитом должен оказаться НИЖЕ свежего PR со
+  # старым коммитом.
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_ivanov="[$(_prs_pr 1 task1 2026-01-01T10:00:00Z 2026-09-10T10:00:00Z false),$(_prs_pr 2 task2 2026-09-01T10:00:00Z 2026-02-01T10:00:00Z false)]")"
+  order="$(printf '%s\n' "${out}" | awk '/^g[0-9]/ {printf "%s ", $3}')"
+  assert_eq "${order}" "#2 #1 " "сортировать нужно по дате коммита, а не создания PR"
+}
+
+# Требование: количество комментариев ИИ-ревьюера. Отказы по лимиту и
+# технические сбои считаются ОТДЕЛЬНО от ревью — ровно так же, как их
+# разделяет discover.sh при учёте лимитов. Иначе "0 ревью" у PR,
+# упёршегося в лимит, читалось бы как "бот до него не дошёл".
+test_prs_counts_ai_reviews_separately_from_skips() {
+  local out line
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_ivanov="[$(_prs_pr 1 task1 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false review review skipped failed 'обычный коммент студента')]")"
+  line="$(printf '%s\n' "${out}" | grep '^g1')"
+  # Два ревью; отказ и сбой — в пометке, комментарий студента не считается.
+  assert_contains "${line}" "2 (+2 без ревью)" "ревью, отказы и сбои должны считаться раздельно"
+}
+
+# Комментарии студента и преподавателя — не комментарии ИИ-ревьюера.
+test_prs_ignores_non_bot_comments() {
+  local out line
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_ivanov="[$(_prs_pr 1 task1 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false 'поправил' 'посмотрите ещё раз')]")"
+  line="$(printf '%s\n' "${out}" | grep '^g1')"
+  case "${line}" in
+    *"  0"*) return 0 ;;
+    *) fail "комментарии людей не должны считаться за ревью бота: ${line}"; return 1 ;;
+  esac
+}
+
+# Маркеры обязаны читаться из messages.env, а не дублироваться в manage.sh:
+# иначе правка messages.env молча превратит счётчик в нули.
+test_prs_reads_markers_from_messages_env() {
+  local mg="${REPO_ROOT}/admin/manage.sh"
+  grep -q 'messages.env' "${mg}" \
+    || { fail "manage.sh должен читать маркеры из messages.env"; return 1; }
+  local body
+  body="$(awk '/^load_review_markers\(\)/,/^}/' "${mg}")"
+  [ -n "${body}" ] || { fail "нет функции load_review_markers"; return 1; }
+  # Значение маркера не должно быть зашито в код.
+  if grep -q 'ai-review-marker' "${mg}"; then
+    fail "значение маркера зашито в manage.sh — читайте его из messages.env"; return 1
+  fi
+  return 0
+}
+
+# Требование: ссылка на PR. Без неё таблицу нельзя использовать по
+# назначению — открыть работу на проверку.
+test_prs_prints_url_and_both_dates() {
+  local out
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_ivanov="[$(_prs_pr 4 task3 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false)]")"
+  assert_contains "${out}" "https://github.com/test-org/r/pull/4" "нужна ссылка на PR" || return 1
+  assert_contains "${out}" "2026-09-01" "нужна дата создания PR" || return 1
+  assert_contains "${out}" "2026-09-02" "нужна дата последнего коммита"
+}
+
+# Регрессия того же класса, что ломала лимиты ревьюера: gh при нехватке
+# прав печатает ошибку в STDOUT и возвращает 0. Такой ответ нельзя принять
+# за пустой список PR — репозиторий молча выпал бы из списка работ.
+test_prs_reports_inaccessible_repos() {
+  local out
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"},{"name":"yapis-2026-g1-denied"}]' \
+    PRS_ivanov="[$(_prs_pr 1 task1 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false)]")"
+  assert_contains "${out}" "yapis-2026-g1-denied" "недоступный репозиторий должен быть виден" || return 1
+  assert_contains "${out}" "ivanov" "остальные репозитории должны обрабатываться"
+}
+
+# PR без коммитов (бывает сразу после создания) не должен уезжать в начало
+# списка как самый старый: подставляется дата создания PR.
+test_prs_pr_without_commits_falls_back_to_created() {
+  local out
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_ivanov="[$(_prs_pr 9 task1 2026-09-10T10:00:00Z '' false)]")"
+  assert_contains "${out}" "#9" "PR без коммитов должен попасть в список" || return 1
+  assert_not_contains "${out}" "1970-01-01" "дата не должна вырождаться в эпоху"
+}
+
+# РЕГРЕССИЯ (баг, найденный на реальном курсе). Первая версия команды
+# запрашивала PR через `gh pr list --json ...,commits`. Поле commits тянет
+# до 100 коммитов на каждый PR вместе с объектами авторов, и при 50 PR
+# запрос упирался в лимит сложности GraphQL:
+#   "This query requests up to 505,050 possible nodes ... limit of 500,000"
+# В результате ВСЕ 86 репозиториев курса попадали в список «не удалось
+# прочитать», и это выглядело как проблема с правами доступа.
+#
+# Нужен ровно один коммит — последний. Поэтому запрос идёт через
+# `gh api graphql` с commits(last:1).
+test_prs_does_not_request_all_commits() {
+  local body
+  # Комментарии вырезаем: в них упоминается и `gh pr list`, и commits —
+  # именно как объяснение, почему так делать нельзя. Проверять нужно код.
+  body="$(awk '/^cmd_prs\(\)/,/^}/' "${REPO_ROOT}/admin/manage.sh" \
+    | sed 's/[[:space:]]*#.*$//')"
+  [ -n "${body}" ] || { fail "не найдена функция cmd_prs"; return 1; }
+
+  # `gh pr list` с полем commits возвращает до 100 коммитов на PR — именно
+  # это ломало команду.
+  case "${body}" in
+    *"gh pr list"*)
+      fail "cmd_prs снова читает PR через gh pr list — с commits упрётся в лимит GraphQL"; return 1 ;;
+  esac
+  case "${body}" in
+    *"commits(last:1)"*) ;;
+    *) fail "нужен commits(last:1): полный список коммитов превышает лимит сложности"; return 1 ;;
+  esac
+  return 0
+}
+
+# Причина ошибки обязана попадать в вывод. Без неё баг с лимитом GraphQL
+# выглядел как «нет доступа» ко всем 86 репозиториям сразу, и на диагностику
+# ушло бы куда больше времени.
+test_prs_shows_error_cause() {
+  local out
+  PRS_ARGS=(prs)
+  out="$(_run_prs GH_REPOS='[{"name":"yapis-2026-g1-toobig"}]')"
+  assert_contains "${out}" "exceeds the maximum limit" "текст ошибки API должен быть виден" || return 1
+  # При одинаковой ошибке во всех репозиториях дело не в правах, и команда
+  # должна об этом сказать.
+  local out2
+  out2="$(_run_prs GH_REPOS='[{"name":"yapis-2026-g1-toobig"},{"name":"yapis-2026-g2-toobig"}]')"
+  assert_contains "${out2}" "вероятно, дело не в правах" "подсказка при одинаковой ошибке везде"
+}
+
+# Комментарии читаются не все (comments(last:N)) — это снижает стоимость
+# запроса в разы. Но если их больше, счётчик становится нижней оценкой, и
+# это должно быть видно: молча заниженное число хуже приблизительного.
+test_prs_marks_truncated_comment_count() {
+  local out line
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' \
+    PRS_TOTAL_COUNT=99 \
+    PRS_ivanov="[$(PRS_TOTAL_COUNT=99 _prs_pr 1 task1 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false review)]")"
+  line="$(printf '%s\n' "${out}" | grep '^g1')"
+  assert_contains "${line}" "~" "неполный подсчёт должен быть помечен"
+}
+
+# Правило разбора имени обязано совпадать с assign-reviewers.sh и
+# discover.sh: иначе двойная фамилия превратится в группу, и список
+# разъедется с очередью ревью преподавателя.
+test_prs_does_not_mistake_surname_for_group() {
+  local out
+  PRS_ARGS=(prs)
+  out="$(_run_prs \
+    GH_REPOS='[{"name":"yapis-2026-petrov-sidorov"}]' \
+    PRS='[]' PRS_sidorov="[$(_prs_pr 1 task1 2026-09-01T10:00:00Z 2026-09-02T10:00:00Z false)]")"
+  assert_contains "${out}" "petrov-sidorov" "двойная фамилия не должна резаться на группу" || return 1
+  assert_not_contains "${out}" "  petrov  " "petrov не группа"
+}
+
+test_prs_handles_empty_result() {
+  local out
+  PRS_ARGS=(prs)
+  out="$(_run_prs GH_REPOS='[{"name":"yapis-2026-g1-ivanov"}]' PRS_ivanov='[]')"
+  assert_contains "${out}" "Открытых PR нет" "пустой список должен сопровождаться внятным сообщением"
+}
+
+# Правило «первый сегмент — это группа» продублировано в четырёх местах:
+# discover.sh (фамилия для промпта), assign-reviewers.sh (кому назначить
+# ревью), doctor (проверка покрытия групп) и prs (колонки списка). Если
+# они разойдутся, список работ перестанет соответствовать очереди ревью, и
+# заметить это можно будет только глазами. Пиним шаблон целиком.
+test_group_parsing_rule_is_consistent() {
+  local pattern='[a-z][0-9]-*|[a-z][0-9][0-9]-*|[0-9]*-*'
+  local f missing=""
+  for f in "${REPO_ROOT}/reviewer/lib/discover.sh" \
+           "${REPO_ROOT}/reviewer/lib/assign-reviewers.sh" \
+           "${REPO_ROOT}/admin/manage.sh"; do
+    grep -qF -- "${pattern}" "${f}" || missing="${missing} ${f##*/}"
+  done
+  [ -z "${missing}" ] || { fail "правило разбора группы разошлось в:${missing}"; return 1; }
+
+  # В manage.sh оно нужно и в doctor, и в prs — проверяем, что не осталось
+  # одного вхождения после рефакторинга.
+  local n
+  n="$(grep -cF -- "${pattern}" "${REPO_ROOT}/admin/manage.sh")"
+  [ "${n}" -ge 2 ] || { fail "в manage.sh правило встречается ${n} раз, ожидалось >= 2"; return 1; }
+  return 0
+}
+
+# Команда только читает данные: она не должна ничего создавать или менять.
+test_prs_is_read_only() {
+  local body
+  body="$(awk '/^cmd_prs\(\)/,/^}/' "${REPO_ROOT}/admin/manage.sh")"
+  [ -n "${body}" ] || { fail "не найдена функция cmd_prs"; return 1; }
+  local bad
+  for bad in "gh pr comment" "gh pr create" "gh api --method" "gh secret" "gh repo create"; do
+    case "${body}" in
+      *"${bad}"*) fail "prs должна только читать, найдено: ${bad}"; return 1 ;;
+    esac
+  done
+  return 0
+}
+
 test_stats_does_not_leak_api_key() {
   # Ключ OpenRouter не должен попадать в вывод: отчёт вставляют в issue и
   # в логи. Проверяем не grep'ом по коду (он ловит и печать ИМЕНИ

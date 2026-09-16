@@ -1,10 +1,77 @@
-int count = 10;
-float rate = 2.5;
-string label = "total";
+// StatLang, пример 1 — задача предметной области.
+// Считываем ряд чисел, строим статистику: сумма, среднее, минимум,
+// максимум, дисперсия, доля чётных. Печатаем отчёт.
 
-if (count > 5) {
-    write(label);
-    write(count * rate);
-} else {
-    write("too small");
+float toFloat(int x) {
+    float y = x;
+    return y;
 }
+
+int isEven(int x) {
+    if (x % 2 == 0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+float square(float x) {
+    return x * x;
+}
+
+string verdict(float mean, float variance) {
+    if (variance < 1.0 && mean > 0.0) {
+        return "stable positive";
+    }
+    if (variance >= 1.0 || mean <= 0.0) {
+        return "noisy";
+    }
+    return "unknown";
+}
+
+int n = read();
+int i = 0;
+int sum = 0;
+int minValue = 0;
+int maxValue = 0;
+int evenCount = 0;
+float sumSquares = 0.0;
+
+while (i < n) {
+    int x = read();
+    if (i == 0) {
+        minValue = x;
+        maxValue = x;
+    }
+    if (x < minValue) {
+        minValue = x;
+    }
+    if (x > maxValue) {
+        maxValue = x;
+    }
+    sum = sum + x;
+    sumSquares = sumSquares + square(toFloat(x));
+    evenCount = evenCount + isEven(x);
+    i = i + 1;
+}
+
+float mean = 0.0;
+float variance = 0.0;
+if (n != 0) {
+    mean = sum / n;
+    variance = sumSquares / n - square(mean);
+}
+
+float evenShare = 0.0;
+if (!(n == 0)) {
+    evenShare = toFloat(evenCount) / toFloat(n);
+}
+
+write("count = " + n);
+write("sum = " + sum);
+write("min = " + minValue);
+write("max = " + maxValue);
+write("mean = " + mean);
+write("variance = " + variance);
+write("even share = " + evenShare);
+write("verdict: " + verdict(mean, variance));

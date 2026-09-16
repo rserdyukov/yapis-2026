@@ -1416,6 +1416,114 @@ test_sync_template_removes_legacy_paths() {
 }
 
 # ══════════════════════════════════════════════════════════════════════════
+# Генерируемые документы (docs/_partials -> template-TASK.md, сайт)
+# ══════════════════════════════════════════════════════════════════════════
+
+_builder() { echo "${REPO_ROOT}/tools/build-docs.py"; }
+
+# КЛЮЧЕВАЯ ГАРАНТИЯ: текст задания живёт в docs/_partials/ в одном
+# экземпляре. Если кто-то поправил сгенерированный template-TASK.md
+# руками, следующая сборка затрёт правку — тест ловит это сразу.
+test_generated_docs_are_up_to_date() {
+  local out rc
+  out="$(python3 "$(_builder)" --check 2>&1)"; rc=$?
+  [ "${rc}" -eq 0 ] || {
+    fail "сгенерированные документы разошлись с docs/_partials: ${out}"
+    return 1
+  }
+  return 0
+}
+
+# Партиалы уезжают студентам внутри TASK.md, поэтому в них не должно быть
+# ни синтаксиса MkDocs, ни неподставленных токенов: GitHub их не отрендерит.
+test_partials_are_plain_markdown() {
+  local f bad=""
+  for f in "${REPO_ROOT}"/docs/_partials/*.md; do
+    [ -e "${f}" ] || continue
+    grep -q -- '--8<--' "${f}" && bad="${bad} $(basename "${f}"):snippets"
+    grep -qE '^(!!!|\?\?\?) ' "${f}" && bad="${bad} $(basename "${f}"):admonition"
+  done
+  [ -z "${bad}" ] || { fail "в партиалах есть синтаксис MkDocs:${bad}"; return 1; }
+  return 0
+}
+
+# Токены {{README}}/{{GUIDE}} обязаны быть подставлены при сборке.
+# Утёкший токен в документе студента — видимый мусор в тексте задания.
+test_generated_docs_have_no_tokens() {
+  local f
+  for f in "${REPO_ROOT}/admin/template-TASK.md" "${REPO_ROOT}/docs/labs/index.md"; do
+    [ -e "${f}" ] || { fail "нет сгенерированного файла ${f}"; return 1; }
+    grep -q '{{' "${f}" && { fail "в ${f} остались неподставленные токены"; return 1; }
+  done
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# Сайт курса (docs/, mkdocs.yml, слайды лекций)
+# ══════════════════════════════════════════════════════════════════════════
+
+# Оглавление лекций генерируется из колод. Если добавили колоду и забыли
+# пересобрать индекс, лекция просто не появится на сайте — молча.
+test_lectures_index_is_up_to_date() {
+  local idx="${REPO_ROOT}/docs/lectures/index.md"
+  [ -f "${idx}" ] || { fail "нет docs/lectures/index.md"; return 1; }
+
+  local decks listed
+  decks="$(find "${REPO_ROOT}/docs/lectures/slides" -name '*.md' -type f 2>/dev/null | wc -l | tr -d ' ')"
+  listed="$(grep -c 'lectures/html/\|(html/' "${idx}" 2>/dev/null || echo 0)"
+  [ "${decks}" = "${listed}" ] \
+    || { fail "колод ${decks}, в индексе ${listed}: запустите tools/build-slides.py"; return 1; }
+  return 0
+}
+
+# Колода без frontmatter с темой соберётся дефолтным стилем и будет
+# выбиваться из остальных. Тема одна на курс — custom_academic.
+test_slides_use_course_theme() {
+  local f bad=""
+  for f in "${REPO_ROOT}"/docs/lectures/slides/*.md; do
+    [ -e "${f}" ] || continue
+    grep -q '^theme: custom_academic$' "${f}" || bad="${bad} $(basename "${f}")"
+  done
+  [ -z "${bad}" ] || { fail "колоды не на теме курса:${bad}"; return 1; }
+  return 0
+}
+
+# Obsidian-синтаксис ![[...]] marp-cli не понимает: вставка молча
+# превращается в текст прямо на слайде.
+test_slides_have_no_obsidian_syntax() {
+  local bad
+  bad="$(grep -rl '\[\[' "${REPO_ROOT}/docs/lectures/slides" 2>/dev/null || true)"
+  [ -z "${bad}" ] || { fail "вики-ссылки Obsidian в колодах: ${bad}"; return 1; }
+  return 0
+}
+
+# Картинки лежат в docs/lectures/img/ и подключаются как ../img/.
+# Битая ссылка в слайде не ловится mkdocs strict: HTML собирается marp-cli.
+test_slide_images_exist() {
+  local f ref bad=""
+  for f in "${REPO_ROOT}"/docs/lectures/slides/*.md; do
+    [ -e "${f}" ] || continue
+    while IFS= read -r ref; do
+      [ -n "${ref}" ] || continue
+      [ -e "${REPO_ROOT}/docs/lectures/${ref#../}" ] \
+        || bad="${bad} $(basename "${f}"):${ref}"
+    done < <(grep -oE '\(\.\./img/[^)]+\)' "${f}" 2>/dev/null | tr -d '()')
+  done
+  [ -z "${bad}" ] || { fail "в колодах битые ссылки на картинки:${bad}"; return 1; }
+  return 0
+}
+
+# strict обязателен: без него битая перекрёстная ссылка тихо превращается
+# в 404 у студента, а не валит сборку.
+test_mkdocs_is_strict() {
+  local cfg="${REPO_ROOT}/mkdocs.yml"
+  [ -f "${cfg}" ] || { fail "нет mkdocs.yml"; return 1; }
+  grep -qE '^strict:[[:space:]]*true$' "${cfg}" \
+    || { fail "в mkdocs.yml должен быть strict: true"; return 1; }
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
 # Фильтр по группе (--group): одна организация, группы через префикс
 # ══════════════════════════════════════════════════════════════════════════
 

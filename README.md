@@ -28,14 +28,16 @@
 
 | Путь | Назначение |
 |---|---|
-| [`TASKS.md`](TASKS.md) | Задания практикума **со всеми вариантами** (остаётся у преподавателя) |
+| [`TASKS.md`](TASKS.md) | Где что лежит: источники текста задания и сборка производных документов |
+| [`docs/`](docs/) | Сайт курса для студентов: практикум, варианты, лекции, допматериалы |
 | [`admin/SETUP.md`](admin/SETUP.md) | Пошаговое развёртывание системы для новой группы |
 | [`admin/manage.sh`](admin/manage.sh) | Управление репозиториями: создание, доступы, статистика, аудит, синхронизация |
 | [`admin/PORTING.md`](admin/PORTING.md) | Перенос системы на другой курс — для коллег |
 | [`admin/PROMPTS.md`](admin/PROMPTS.md) | Как устроены и отлаживаются промпты ИИ-ревью |
 | [`admin/template-*.md`](admin/) | Документы, уходящие в шаблон студента |
 | [`.github/review/`](.github/review/) | Движок ИИ-ревью: промпты, проверки, лимиты |
-| [`.github/workflows/`](.github/workflows/) | `ai-review` и `guard-main` |
+| [`.github/workflows/`](.github/workflows/) | `tests`, `guard-main` и `pages` |
+| [`tools/`](tools/) | Сборка производных документов и слайдов |
 
 ## Быстрый старт
 
@@ -73,6 +75,29 @@ cd admin
 ```
 
 Подробнее — [`admin/STUDENT_GUIDE.md`](admin/STUDENT_GUIDE.md).
+
+## Сайт курса
+
+Публикуется на GitHub Pages: <https://rserdyukov.github.io/yapis-2026/>
+Собирается workflow `pages` из каталога [`docs/`](docs/) при push в `main`.
+
+| Что | Источник |
+|---|---|
+| Требования практикума | `docs/_partials/` → сайт **и** `TASK.md` студента |
+| Варианты заданий | `docs/labs/variants.md` |
+| Лекции | `docs/lectures/slides/*.md` (Marp) → HTML |
+| Дополнительные материалы | `docs/materials/` |
+
+Текст задания хранится в одном экземпляре: `admin/template-TASK.md` и
+`docs/labs/index.md` **собираются из партиалов** и руками не правятся.
+
+```bash
+python3 tools/build-docs.py     # пересобрать документы из docs/_partials/
+python3 tools/build-slides.py   # индекс лекций + HTML слайдов (Docker или npx)
+
+pip install -r docs/requirements.txt
+mkdocs serve                    # локальный просмотр сайта
+```
 
 ## Тесты
 

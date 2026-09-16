@@ -197,9 +197,12 @@ done
 
 if [ -n "${BASE_REF}" ] && [ "$(git rev-parse HEAD)" != "$(git rev-parse "${BASE_REF}")" ]; then
   {
-    echo "### Список изменённых файлов"
+    echo "### Список изменённых файлов (добавлено/удалено строк)"
     echo
-    git diff --stat "${BASE_REF}...HEAD" -- "${WORK_DIR}" 2>/dev/null
+    # --numstat, а не --stat: гистограммы «++++» провоцируют модели на
+    # зацикливание (тот же формат, что в reviewer/lib/review-pr.sh).
+    git diff --numstat "${BASE_REF}...HEAD" -- "${WORK_DIR}" 2>/dev/null \
+      | awk -F'\t' '{ printf "  +%s -%s  %s\n", $1, $2, $3 }'
     echo
     echo "### Полный diff"
     echo

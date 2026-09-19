@@ -185,7 +185,13 @@ log "diff: $(wc -l < "${DIFF_FILE}" | tr -d ' ') строк (сгенериро�
 
 CHECK_FILE="${WORK}/check.out"
 log "структурная проверка (${CHECK_RUNNER:-docker})..."
-bash "${SCRIPT_DIR}/run-check.sh" "${TASK_DIR}" "${STUDENT_DIR}" "${WORK_DIR}" "${CHECK_FILE}"
+# Лимиты из config.env передаём явно: source не экспортирует переменные, и
+# без этого run-check.sh работал со своими значениями по умолчанию.
+CHECK_TIMEOUT_SECONDS="${CHECK_TIMEOUT_SECONDS:-300}" \
+DEPS_TIMEOUT_SECONDS="${DEPS_TIMEOUT_SECONDS:-300}" \
+CHECK_MEMORY_LIMIT="${CHECK_MEMORY_LIMIT:-1g}" \
+CHECK_CPU_LIMIT="${CHECK_CPU_LIMIT:-1.0}" \
+  bash "${SCRIPT_DIR}/run-check.sh" "${TASK_DIR}" "${STUDENT_DIR}" "${WORK_DIR}" "${CHECK_FILE}"
 CHECK_EXIT=$?
 log "check.sh завершился с кодом ${CHECK_EXIT}"
 if [ "${CHECK_EXIT}" -eq 125 ]; then

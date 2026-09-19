@@ -20,7 +20,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     DOTNET_NOLOGO=1 \
-    JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 \
     ANTLR_JAR=/opt/antlr/antlr-4.13.2-complete.jar \
     M2_HOME=/opt/maven \
     PATH=/opt/maven/bin:/usr/share/dotnet:$PATH
@@ -42,6 +41,12 @@ RUN mkdir -p /opt/antlr \
     && printf '#!/bin/sh\nexec java -jar %s "$@"\n' "${ANTLR_JAR}" > /usr/local/bin/antlr4 \
     && printf '#!/bin/sh\nexec java -cp %s:"$CLASSPATH" org.antlr.v4.gui.TestRig "$@"\n' "${ANTLR_JAR}" > /usr/local/bin/grun \
     && chmod +x /usr/local/bin/antlr4 /usr/local/bin/grun
+
+# JAVA_HOME — через symlink, а не захардкоженный путь с архитектурой:
+# на раннере образ amd64, а локально у преподавателя на Apple Silicon —
+# arm64, и mvn с неверным JAVA_HOME отказывался стартовать.
+RUN ln -s "$(dirname "$(dirname "$(readlink -f "$(which java)")")")" /opt/java
+ENV JAVA_HOME=/opt/java
 
 # Maven ставим тарболом: пакет из apt тянет лишний JDK 17 в образ.
 #

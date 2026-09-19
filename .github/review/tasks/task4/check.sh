@@ -17,6 +17,8 @@ TIMEOUT_SECONDS=120
 
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
 
 EXAMPLES_DIR=""
 for candidate in "examples" "example" "samples"; do
@@ -57,6 +59,10 @@ if [ "${#ERROR_EXAMPLES[@]}" -eq 0 ]; then
   echo
   STATUS=1
 fi
+
+echo "== Раскладка репозитория =="
+check_layout "${WORK_DIR}" || STATUS=1
+echo
 
 echo "== Проверка компилятора через compile.sh =="
 run_compile_checks "${WORK_DIR}" "${TIMEOUT_SECONDS}" 6 "${EXAMPLES_DIR}" || STATUS=1

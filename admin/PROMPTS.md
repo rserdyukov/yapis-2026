@@ -15,6 +15,8 @@
 | `.github/review/tasks/taskN/check.sh` | Структурные проверки: наличие файлов, сборка грамматики (ЛР2), запуск `compile.sh` (ЛР3–5) |
 | `.github/review/lib/antlr-check.sh` | Сборка `.g4` в Java и прогон примеров через `TestRig` — аналог lab.antlr.org |
 | `.github/review/lib/compile-check.sh` | Прогон `compile.sh` на примерах, отличает падение компилятора от диагностики |
+| `.github/review/lib/install-deps.sh` | Фаза зависимостей (с сетью, без секретов): pip/maven/gradle/npm/dotnet по манифестам или `install-deps.sh` студента |
+| `.github/review/lib/layout-check.sh` | Раскладка по GUIDE.md: код в `compiler/`, `compile.sh` в корне |
 | `.github/review/lib/generated-files.sh` | Какие файлы считаются сгенерированными (исключаются из размера PR и diff) |
 | `.github/review/common-footer.md` | Общие правила: обязательное чтение файлов, формат ответа, запрет вердикта, защита от инъекций |
 | `.github/review/config.env` | Модель, лимиты, объём промпта, название курса |

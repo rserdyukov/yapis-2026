@@ -296,8 +296,8 @@ test_discover_skipped_comments_do_not_count() {
 
 test_discover_per_pr_limit_blocks() {
   run_discover GH_REPOS="$(_one_repo)" \
-    GH_PRS="[$(make_pr 4 task3 aaa111 100 review review)]"
-  assert_eq "${DISC_OUT}" "[]" "лимит ревью на PR (2) должен сработать" || return 1
+    GH_PRS="[$(make_pr 4 task3 aaa111 100 review review review)]"
+  assert_eq "${DISC_OUT}" "[]" "лимит ревью на PR (MAX_REVIEWS_PER_PR=3) должен сработать" || return 1
   assert_contains "${DISC_LOG}" "лимит ревью на PR" "причина в логе"
 }
 
@@ -359,7 +359,7 @@ test_discover_small_pr_skips_files_api() {
 test_discover_skip_comment_has_sha_marker() {
   local log="${TMP_ROOT}/comments.$$.md"; : > "${log}"
   run_discover GH_REPOS="$(_one_repo)" GH_COMMENT_LOG="${log}" \
-    GH_PRS="[$(make_pr 4 task5 eee555 100 review review)]"
+    GH_PRS="[$(make_pr 4 task5 eee555 100 review review review)]"
   local body; body="$(cat "${log}")"
   assert_contains "${body}" "ai-review-sha:eee555" "в отказе должен быть SHA-маркер" || return 1
   assert_contains "${body}" "ai-review-skipped" "в отказе должен быть маркер отказа" || return 1
@@ -371,7 +371,7 @@ test_discover_skip_comment_has_sha_marker() {
 test_discover_skip_comment_is_valid_alert() {
   local log="${TMP_ROOT}/comments2.$$.md"; : > "${log}"
   run_discover GH_REPOS="$(_one_repo)" GH_COMMENT_LOG="${log}" \
-    GH_PRS="[$(make_pr 4 task5 eee555 100 review review)]"
+    GH_PRS="[$(make_pr 4 task5 eee555 100 review review review)]"
   local bad
   bad="$(sed -n '/^> \[!/,$p' "${log}" | grep -vE '^>' || true)"
   [ -z "${bad}" ] || { fail "строки alert без префикса '>': ${bad}"; return 1; }
@@ -1393,7 +1393,8 @@ test_all_shell_scripts_valid() {
 # ошибочным, если внутри встречается слово BAD.
 _make_student_work() {
   local dir="$1" with_compile="${2:-yes}"
-  rm -rf "${dir}"; mkdir -p "${dir}/examples"
+  rm -rf "${dir}"; mkdir -p "${dir}/examples" "${dir}/compiler"
+  printf '# заглушка компилятора\n' > "${dir}/compiler/main.py"
   printf 'var x = 1;\n' > "${dir}/examples/1.txt"
   printf 'BAD token here\n' > "${dir}/examples/error-1.txt"
   [ "${with_compile}" = "no" ] && return 0
@@ -1665,6 +1666,155 @@ test_task2_check_reports_missing_grammar() {
   local out rc; out="$(bash "${REVIEW_DIR}/tasks/task2/check.sh" "${w}" 2>&1)"; rc=$?
   assert_contains "${out}" "не найдены" "отсутствие .g4 названо" || return 1
   [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# Тесты: layout-check.sh — раскладка репозитория по GUIDE.md
+# ══════════════════════════════════════════════════════════════════════════
+
+_run_layout() { bash -c "source '${REVIEW_DIR}/lib/layout-check.sh'; check_layout '$1'" 2>&1; }
+
+# Регрессия semenido#3: analyzer.py в корне, модель по промпту «compiler/
+# или аналогичная директория» этого не заметила.
+test_layout_detects_source_outside_compiler() {
+  local w="${TMP_ROOT}/lay-stray"; rm -rf "${w}"; mkdir -p "${w}/compiler" "${w}/examples"
+  printf 'grammar X;\n' > "${w}/compiler/X.g4"
+  printf 'print(1)\n' > "${w}/analyzer.py"
+  printf '#!/bin/bash\n' > "${w}/compile.sh"
+  local out rc; out="$(_run_layout "${w}")"; rc=$?
+  assert_contains "${out}" "ВНЕ compiler/" "исходник вне compiler/ назван" || return 1
+  assert_contains "${out}" "analyzer.py" "конкретный файл" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+test_layout_accepts_correct_tree() {
+  local w="${TMP_ROOT}/lay-ok"; rm -rf "${w}"; mkdir -p "${w}/compiler" "${w}/examples" "${w}/tests"
+  printf 'x\n' > "${w}/compiler/main.py"; printf 'x\n' > "${w}/tests/test_main.py"
+  printf '#!/bin/bash\n' > "${w}/compile.sh"; printf 'antlr4-python3-runtime\n' > "${w}/requirements.txt"
+  local out rc; out="$(_run_layout "${w}")"; rc=$?
+  assert_contains "${out}" "вне compiler/ не найдено" "чистая раскладка" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}: ${out}"; return 1; }
+  return 0
+}
+
+test_layout_reports_missing_compiler_dir() {
+  local w="${TMP_ROOT}/lay-none"; rm -rf "${w}"; mkdir -p "${w}/examples"
+  local out rc; out="$(_run_layout "${w}")"; rc=$?
+  assert_contains "${out}" "compiler/: НЕТ" "нет compiler/" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+test_task_checks_include_layout() {
+  local t
+  for t in task3 task4 task5; do
+    grep -q 'check_layout' "${REVIEW_DIR}/tasks/${t}/check.sh" \
+      || { fail "${t}/check.sh не вызывает check_layout"; return 1; }
+  done
+  return 0
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Тесты: install-deps.sh — фаза зависимостей (без обращения к сети)
+# ══════════════════════════════════════════════════════════════════════════
+
+test_deps_no_manifests_is_noop() {
+  local w="${TMP_ROOT}/deps-none"; rm -rf "${w}"; mkdir -p "${w}"
+  printf '#!/bin/bash\necho ok\n' > "${w}/compile.sh"
+  local out rc; out="$(bash "${REVIEW_DIR}/lib/install-deps.sh" "${w}" 2>&1)"; rc=$?
+  assert_contains "${out}" "манифестов зависимостей не найдено" "нечего ставить — сказано явно" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0"; return 1; }
+  return 0
+}
+
+# Собственный install-deps.sh студента заменяет стандартные шаги целиком.
+test_deps_student_script_takes_precedence() {
+  local w="${TMP_ROOT}/deps-own"; rm -rf "${w}"; mkdir -p "${w}"
+  printf 'nonexistent-package-xyz\n' > "${w}/requirements.txt"
+  printf '#!/bin/bash\necho CUSTOM_DEPS_RAN\n' > "${w}/install-deps.sh"
+  local out rc; out="$(bash "${REVIEW_DIR}/lib/install-deps.sh" "${w}" 2>&1)"; rc=$?
+  assert_contains "${out}" "CUSTOM_DEPS_RAN" "скрипт студента выполнен" || return 1
+  assert_not_contains "${out}" "pip:" "pip по requirements.txt НЕ запускался" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0"; return 1; }
+  return 0
+}
+
+test_deps_student_script_failure_is_reported() {
+  local w="${TMP_ROOT}/deps-ownfail"; rm -rf "${w}"; mkdir -p "${w}"
+  printf '#!/bin/bash\necho boom >&2\nexit 7\n' > "${w}/install-deps.sh"
+  local out rc; out="$(bash "${REVIEW_DIR}/lib/install-deps.sh" "${w}" 2>&1)"; rc=$?
+  assert_contains "${out}" "С ОШИБКОЙ" "ошибка видна" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+# ANTLR-jar по пути из compile.sh кладётся из образа, а не скачивается.
+test_deps_copies_antlr_jar_to_expected_path() {
+  local w="${TMP_ROOT}/deps-jar"; rm -rf "${w}"; mkdir -p "${w}"
+  local fakejar="${TMP_ROOT}/fake-antlr-4.13.2-complete.jar"; printf 'JAR' > "${fakejar}"
+  printf '#!/bin/bash\nANTLR_JAR="tools/antlr-4.13.2-complete.jar"\njava -jar "$ANTLR_JAR"\n' > "${w}/compile.sh"
+  local out; out="$(ANTLR_JAR="${fakejar}" bash "${REVIEW_DIR}/lib/install-deps.sh" "${w}" 2>&1)"
+  assert_contains "${out}" "compile.sh ожидает tools/antlr-4.13.2-complete.jar" "путь распознан" || return 1
+  [ -f "${w}/tools/antlr-4.13.2-complete.jar" ] || { fail "jar не скопирован"; return 1; }
+  return 0
+}
+
+test_deps_env_points_into_deps_dir() {
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/install-deps.sh'; deps_env /work" 2>&1)"
+  assert_contains "${out}" "PYTHONPATH=/work/.deps/python" "PYTHONPATH" || return 1
+  assert_contains "${out}" "MAVEN_OPTS=-Dmaven.repo.local=/work/.deps/m2" "maven repo" || return 1
+  assert_contains "${out}" "NUGET_PACKAGES=/work/.deps/nuget" "nuget"
+}
+
+# run-check.sh в direct-режиме выполняет обе фазы и передаёт окружение фазы 2.
+test_run_check_direct_runs_deps_phase() {
+  local w="${TMP_ROOT}/rc-deps"; rm -rf "${w}"; mkdir -p "${w}/examples" "${w}/compiler"
+  printf 'x\n' > "${w}/examples/1.txt"; printf 'BAD\n' > "${w}/examples/error-1.txt"
+  printf '#!/bin/bash\necho DEPS_PHASE_RAN\n' > "${w}/install-deps.sh"
+  cat > "${w}/compile.sh" <<'EOF'
+#!/usr/bin/env bash
+case "${PYTHONPATH:-}" in */.deps/python*) ;; *) echo "no deps env" >&2; exit 3 ;; esac
+grep -q BAD "$1" && { echo "line 1: error" >&2; exit 1; }
+echo ok
+EOF
+  local out="${TMP_ROOT}/rc-deps.out"
+  CHECK_RUNNER=direct REVIEW_ROOT="${REVIEW_DIR}" bash "${REPO_ROOT}/reviewer/lib/run-check.sh" task3 "${w}" . "${out}"
+  local rc=$?
+  assert_contains "$(cat "${out}")" "Фаза 1: зависимости" "фаза 1 в отчёте" || return 1
+  assert_contains "$(cat "${out}")" "DEPS_PHASE_RAN" "install-deps.sh студента выполнен" || return 1
+  assert_contains "$(cat "${out}")" "Фаза 2" "фаза 2 в отчёте" || return 1
+  assert_contains "$(cat "${out}")" "все проверенные примеры отработали ожидаемо" "compile.sh видит окружение .deps" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
+  return 0
+}
+
+# Для ЛР1-2 фаза зависимостей не нужна и не запускается.
+test_run_check_direct_skips_deps_for_task1() {
+  local w="${TMP_ROOT}/rc-t1"; rm -rf "${w}"; mkdir -p "${w}/examples"
+  printf 'a\nb\nc\n' > "${w}/examples/1.txt"; printf 'x\n' > "${w}/examples/2.txt"; printf 'x\n' > "${w}/examples/3.txt"
+  printf '#!/bin/bash\necho SHOULD_NOT_RUN\n' > "${w}/install-deps.sh"
+  local out="${TMP_ROOT}/rc-t1.out"
+  CHECK_RUNNER=direct REVIEW_ROOT="${REVIEW_DIR}" bash "${REPO_ROOT}/reviewer/lib/run-check.sh" task1 "${w}" . "${out}"
+  assert_not_contains "$(cat "${out}")" "SHOULD_NOT_RUN" "для ЛР1 зависимости не ставятся"
+}
+
+# Фаза 2 обязана идти без сети, фаза 1 — без секретов (только таймаут и HOME).
+test_run_check_phases_isolation() {
+  local s="${REPO_ROOT}/reviewer/lib/run-check.sh"
+  grep -q -- '--network none' "${s}" || { fail "фаза 2 должна запускаться с --network none"; return 1; }
+  # В блоке фазы 1 не должно быть -e с чем-то похожим на ключ/токен.
+  local phase1
+  phase1="$(sed -n '/--- Фаза 1/,/--- Фаза 2/p' "${s}")"
+  case "${phase1}" in
+    *OPENROUTER*|*GH_TOKEN*|*API_KEY*) fail "в фазу 1 не должны передаваться секреты"; return 1 ;;
+  esac
+  case "${phase1}" in
+    *'--network none'*) fail "фаза 1 должна иметь сеть — иначе установка бессмысленна"; return 1 ;;
+  esac
   return 0
 }
 

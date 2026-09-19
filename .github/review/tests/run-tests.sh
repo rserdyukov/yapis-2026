@@ -107,6 +107,12 @@ case "$1" in
       view)
         for a in "$@"; do
           [ "$a" = "headRefName" ] && { echo "${GH_BRANCH:-task1}"; exit 0; }
+          # gh pr view --json files — список файлов PR для подсчёта размера
+          # без сгенерированных. GH_FAIL_FILES=1 эмулирует отказ API.
+          [ "$a" = "files" ] && {
+            if [ "${GH_FAIL_FILES:-0}" = "1" ]; then echo '{"message":"403"}'; exit 1; fi
+            emit "${GH_FILES:-{\"files\":[]}}"; exit 0
+          }
         done
         emit "${GH_COMMENTS:-[]}"; exit 0 ;;
       comment)
@@ -295,19 +301,65 @@ test_discover_per_pr_limit_blocks() {
   assert_contains "${DISC_LOG}" "лимит ревью на PR" "причина в логе"
 }
 
-test_discover_big_pr_blocked() {
+# Большой PR больше НЕ отвергается: он идёт в матрицу с oversize=true, и
+# ревьюер проводит сокращённое ревью (проверки без анализа кода). Раньше
+# студент с 5000 строк оставался без проверки compile.sh вовсе.
+test_discover_big_pr_goes_oversize() {
   run_discover GH_REPOS="$(_one_repo)" \
     GH_PRS="[$(make_pr 4 task5 eee555 99999)]"
-  assert_eq "${DISC_OUT}" "[]" "слишком большой PR не проверяется" || return 1
-  assert_contains "${DISC_LOG}" "слишком большой" "причина в логе"
+  assert_contains "${DISC_OUT}" '"pr":4' "большой PR отобран" || return 1
+  assert_contains "${DISC_OUT}" '"oversize":true' "помечен как oversize" || return 1
+  assert_contains "${DISC_LOG}" "сокращённый режим" "причина в логе"
 }
 
-# Комментарий-отказ должен ставиться один раз и нести SHA-маркер, иначе
-# ревьюер будет писать его на каждом запуске.
+test_discover_small_pr_is_not_oversize() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 4 task3 aaa111 100)]"
+  assert_contains "${DISC_OUT}" '"oversize":false' "обычный PR — полное ревью" || return 1
+  assert_contains "${DISC_OUT}" '"changed":100' "размер передаётся в матрицу"
+}
+
+# Размер PR считается БЕЗ сгенерированных файлов ANTLR. Регрессия:
+# yapis-2026-321702-semenido#3 — 5439 строк, из них 4352 в
+# graph_grammarLexer.py/graph_grammarParser.py; рукописного кода 1087.
+test_discover_size_excludes_generated_files() {
+  local files='{"files":[
+    {"path":"compiler/graph_grammarParser.py","additions":4042,"deletions":0},
+    {"path":"compiler/graph_grammarLexer.py","additions":310,"deletions":0},
+    {"path":"compiler/__pycache__/x.cpython-314.pyc","additions":0,"deletions":0},
+    {"path":"compiler/graph_grammar.g4","additions":267,"deletions":0},
+    {"path":"analyzer.py","additions":126,"deletions":0},
+    {"path":"compile.sh","additions":64,"deletions":0}
+  ]}'
+  run_discover GH_REPOS="$(_one_repo)" GH_FILES="${files}" \
+    GH_PRS="[$(make_pr 3 task3 c0ffee 5439)]"
+  assert_contains "${DISC_OUT}" '"oversize":false' "без сгенерированных PR в лимите" || return 1
+  assert_contains "${DISC_OUT}" '"changed":457' "размер = только рукописные файлы" || return 1
+  assert_contains "${DISC_LOG}" "без сгенерированных файлов — 457" "лог объясняет пересчёт"
+}
+
+# Если список файлов получить не удалось — размер берётся с GitHub как есть:
+# переоценить безопаснее, чем недооценить.
+test_discover_size_fallback_when_files_api_fails() {
+  run_discover GH_REPOS="$(_one_repo)" GH_FAIL_FILES=1 \
+    GH_PRS="[$(make_pr 3 task3 c0ffee 5439)]"
+  assert_contains "${DISC_OUT}" '"oversize":true' "при сбое API — консервативно oversize" || return 1
+  assert_contains "${DISC_OUT}" '"changed":5439' "исходный размер"
+}
+
+# Для маленьких PR лишний вызов API за списком файлов не делается.
+test_discover_small_pr_skips_files_api() {
+  run_discover GH_REPOS="$(_one_repo)" GH_FAIL_FILES=1 \
+    GH_PRS="[$(make_pr 4 task3 aaa111 100)]"
+  assert_contains "${DISC_OUT}" '"oversize":false' "маленький PR не зависит от files API"
+}
+
+# Комментарий-отказ (лимит на PR) должен ставиться один раз и нести
+# SHA-маркер, иначе ревьюер будет писать его на каждом запуске.
 test_discover_skip_comment_has_sha_marker() {
   local log="${TMP_ROOT}/comments.$$.md"; : > "${log}"
   run_discover GH_REPOS="$(_one_repo)" GH_COMMENT_LOG="${log}" \
-    GH_PRS="[$(make_pr 4 task5 eee555 99999)]"
+    GH_PRS="[$(make_pr 4 task5 eee555 100 review review)]"
   local body; body="$(cat "${log}")"
   assert_contains "${body}" "ai-review-sha:eee555" "в отказе должен быть SHA-маркер" || return 1
   assert_contains "${body}" "ai-review-skipped" "в отказе должен быть маркер отказа" || return 1
@@ -319,7 +371,7 @@ test_discover_skip_comment_has_sha_marker() {
 test_discover_skip_comment_is_valid_alert() {
   local log="${TMP_ROOT}/comments2.$$.md"; : > "${log}"
   run_discover GH_REPOS="$(_one_repo)" GH_COMMENT_LOG="${log}" \
-    GH_PRS="[$(make_pr 4 task5 eee555 99999)]"
+    GH_PRS="[$(make_pr 4 task5 eee555 100 review review)]"
   local bad
   bad="$(sed -n '/^> \[!/,$p' "${log}" | grep -vE '^>' || true)"
   [ -z "${bad}" ] || { fail "строки alert без префикса '>': ${bad}"; return 1; }
@@ -342,11 +394,22 @@ test_discover_daily_repo_limit_defers() {
 
 # Глобальный лимит курса считается по всем репозиториям сразу: именно его
 # не существовало в прежней схеме, где каждый репозиторий считал сам себя.
+# Общий дневной лимит курса. Тест не должен зависеть от конкретного значения
+# в config.env, поэтому лимит подставляется через переопределённый конфиг.
 test_discover_global_daily_limit() {
-  local repos prs
+  local repos prs cfg
   repos='[{"name":"yapis-2026-a"},{"name":"yapis-2026-b"},{"name":"yapis-2026-c"},{"name":"yapis-2026-d"}]'
   prs="[$(make_pr 1 task1 sha001 50 review review review),$(make_pr 2 task2 sha002 50)]"
-  run_discover GH_REPOS="${repos}" GH_PRS="${prs}"
+  cfg="${TMP_ROOT}/cfg-global.$$"
+  rm -rf "${cfg}"; cp -R "${REVIEW_DIR}" "${cfg}"
+  sed -i.bak 's/^MAX_REVIEWS_PER_DAY_TOTAL=.*/MAX_REVIEWS_PER_DAY_TOTAL=12/' "${cfg}/config.env"
+  local dir="${TMP_ROOT}/disc-global.$$"
+  make_gh_mock "${dir}"
+  env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${cfg}" GH_REPOS="${repos}" GH_PRS="${prs}" \
+      bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- \
+      > "${dir}/stdout.txt" 2> "${dir}/stderr.txt"
+  DISC_OUT="$(cat "${dir}/stdout.txt")"
+  DISC_LOG="$(cat "${dir}/stderr.txt")"
   assert_eq "${DISC_OUT}" "[]" "общий лимит курса (12) должен сработать" || return 1
   assert_contains "${DISC_LOG}" "Общий дневной лимит исчерпан" "причина в логе"
 }
@@ -793,6 +856,92 @@ test_prompt_has_no_verdict_instruction() {
   assert_contains "${out}" "работа принята" "промпт должен запрещать вердикт"
 }
 
+# Модель без явного требования не читает файлы инструментами и пишет ревью
+# по одному diff (gemma-4: 6-12 секунд на ревью, 62% «замечаний не найдено»).
+# Общие правила обязаны требовать чтения README и файлов чеклиста.
+test_prompt_requires_reading_files() {
+  local diff="${TMP_ROOT}/d7.txt"; printf 'x\n' > "${diff}"
+  local out
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task1 "." "s" 1 "${diff}" 2>&1)"
+  assert_contains "${out}" "обязательно прочитай инструментом" "промпт требует read" || return 1
+  assert_contains "${out}" "Diff в промпте — не вся работа" "объяснено, почему diff недостаточно" || return 1
+  assert_contains "${out}" "в полном объёме" "запрещены фразы-вердикты"
+}
+
+# Сокращённый режим для большого PR: diff не включается, есть явная
+# инструкция не анализировать код и написать об этом в начале ответа.
+test_prompt_oversize_mode_drops_diff() {
+  local diff="${TMP_ROOT}/d8.txt"
+  {
+    echo "### Список изменённых файлов (добавлено/удалено строк)"; echo
+    echo "  +100 -0  analyzer.py"; echo
+    echo "### Полный diff (без сгенерированных файлов)"; echo
+    echo "diff --git a/analyzer.py b/analyzer.py"; echo "+SECRET_MARKER_LINE"
+  } > "${diff}"
+  local out
+  out="$(OVERSIZE_MODE=1 bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 "." "s" 3 "${diff}" 2>&1)"
+  assert_contains "${out}" "Режим ревью: сокращённый" "режим объявлен" || return 1
+  assert_contains "${out}" "Анализ кода пропущен из-за размера PR" "модель обязана сообщить об этом" || return 1
+  assert_contains "${out}" "+100 -0  analyzer.py" "список файлов остаётся" || return 1
+  assert_not_contains "${out}" "SECRET_MARKER_LINE" "сам diff в сокращённом режиме не включается"
+}
+
+test_prompt_normal_mode_keeps_diff() {
+  local diff="${TMP_ROOT}/d9.txt"
+  printf '### Список\n\n### Полный diff (без сгенерированных файлов)\n\n+SECRET_MARKER_LINE\n' > "${diff}"
+  local out
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 "." "s" 3 "${diff}" 2>&1)"
+  assert_contains "${out}" "SECRET_MARKER_LINE" "в обычном режиме diff включён" || return 1
+  assert_not_contains "${out}" "Режим ревью: сокращённый" "обычный режим не объявляет сокращённый"
+}
+
+# Список сгенерированных файлов попадает в промпт отдельной секцией с
+# указанием, что это замечание.
+test_prompt_lists_generated_files() {
+  local diff="${TMP_ROOT}/d10.txt"; printf 'x\n' > "${diff}"
+  local gen="${TMP_ROOT}/gen10.txt"
+  printf 'compiler/graph_grammarParser.py\ncompiler/graph_grammarLexer.py\n' > "${gen}"
+  local out
+  out="$(GENERATED_FILES_LIST="${gen}" bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 "." "s" 3 "${diff}" 2>&1)"
+  assert_contains "${out}" "Сгенерированные файлы в PR" "секция есть" || return 1
+  assert_contains "${out}" "закоммичено 2 файлов" "число" || return 1
+  assert_contains "${out}" "compiler/graph_grammarParser.py" "путь перечислен" || return 1
+  assert_contains "${out}" "**замечание**" "коммит сгенерированного — замечание"
+}
+
+test_prompt_without_generated_has_no_section() {
+  local diff="${TMP_ROOT}/d11.txt"; printf 'x\n' > "${diff}"
+  local gen="${TMP_ROOT}/gen11.txt"; : > "${gen}"
+  local out
+  out="$(GENERATED_FILES_LIST="${gen}" bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 "." "s" 3 "${diff}" 2>&1)"
+  assert_not_contains "${out}" "Сгенерированные файлы в PR" "пустой список — секции нет"
+}
+
+# Промпт ЛР2 опирается на фактическую сборку, а не на regex-статистику.
+test_prompt_task2_mentions_antlr_run() {
+  local diff="${TMP_ROOT}/d12.txt"; printf 'x\n' > "${diff}"
+  local out
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task2 "." "s" 2 "${diff}" 2>&1)"
+  assert_contains "${out}" "фактической сборки грамматики" "ЛР2: сборка — главный критерий" || return 1
+  assert_contains "${out}" "Корректный пример не разбирается" "ЛР2: падение примера — замечание"
+}
+
+# Лимиты объёма промпта берутся из config.env, а не зашиты в скрипт.
+test_prompt_limits_come_from_config() {
+  grep -qE '^MAX_DIFF_LINES_IN_PROMPT=[0-9]+' "${REVIEW_DIR}/config.env" \
+    || { fail "MAX_DIFF_LINES_IN_PROMPT должен быть в config.env"; return 1; }
+  grep -qE '^MAX_PROMPT_BYTES=[0-9]+' "${REVIEW_DIR}/config.env" \
+    || { fail "MAX_PROMPT_BYTES должен быть в config.env"; return 1; }
+  grep -qE '^MAX_CHECK_LINES_IN_PROMPT=[0-9]+' "${REVIEW_DIR}/config.env" \
+    || { fail "MAX_CHECK_LINES_IN_PROMPT должен быть в config.env"; return 1; }
+  # Значение из config должно применяться: при лимите 2 строки diff режется.
+  local diff="${TMP_ROOT}/d13.txt"; printf 'l1\nl2\nl3\nl4\nLASTLINE\n' > "${diff}"
+  local out
+  out="$(MAX_DIFF_LINES_IN_PROMPT=2 bash "${REVIEW_DIR}/lib/build-prompt.sh" task1 "." "s" 1 "${diff}" 2>&1)"
+  assert_not_contains "${out}" "LASTLINE" "diff обрезан по лимиту" || return 1
+  assert_contains "${out}" "diff обрезан" "модели сообщается об обрезке"
+}
+
 test_messages_are_valid_shell() {
   ( set -e; cd "${REPO_ROOT}"; source .github/review/messages.env ) 2>/dev/null \
     || { fail "messages.env не читается через source (проверьте кавычки и \`)"; return 1; }
@@ -953,6 +1102,43 @@ test_reviewer_does_not_pass_all_secrets() {
 
 # Агент запускается с чистым окружением: токен GitHub в него попасть не
 # должен, иначе prompt injection сможет выманить его в текст ревью.
+# Промпт передаётся через stdin, а не аргументом: иначе Linux режет argv
+# на ~128 КБ и лимиты объёма промпта из config.env не имеют смысла.
+test_agent_reads_prompt_from_stdin() {
+  local run_line
+  run_line="$(grep -n 'opencode run' "${REPO_ROOT}/reviewer/lib/review-pr.sh" | grep -v '^\s*#' | grep -v 'grep -qE' | head -1)"
+  [ -n "${run_line}" ] || { fail "не найден вызов opencode run"; return 1; }
+  case "${run_line}" in
+    *'$(cat '*) fail "промпт не должен передаваться через \$(cat ...) — предел argv"; return 1 ;;
+  esac
+  grep -A1 'opencode run --auto --pure' "${REPO_ROOT}/reviewer/lib/review-pr.sh" | grep -q '< "${PROMPT_FILE}"' \
+    || { fail "opencode run должен читать промпт из PROMPT_FILE через stdin"; return 1; }
+  return 0
+}
+
+# Восьмой аргумент review-pr.sh — oversize; workflow обязан его передавать,
+# иначе сокращённый режим из discover никогда не сработает.
+test_workflow_passes_oversize_to_reviewer() {
+  local wf="${REPO_ROOT}/reviewer/workflow/review.yml"
+  grep -q 'matrix.pr.oversize' "${wf}" || { fail "workflow не читает matrix.pr.oversize"; return 1; }
+  grep -q 'PR_OVERSIZE' "${wf}" || { fail "workflow не передаёт PR_OVERSIZE в review-pr.sh"; return 1; }
+  grep -q 'OVERSIZE="${8:-false}"' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
+    || { fail "review-pr.sh должен принимать oversize восьмым аргументом"; return 1; }
+  return 0
+}
+
+# Сгенерированные файлы исключаются из diff, который видит модель, и
+# передаются в build-prompt отдельным списком.
+test_reviewer_excludes_generated_from_diff() {
+  local s="${REPO_ROOT}/reviewer/lib/review-pr.sh"
+  grep -q 'generated-files.sh' "${s}" || { fail "review-pr.sh не подключает generated-files.sh"; return 1; }
+  grep -q 'filter_generated_numstat' "${s}" || { fail "diff должен фильтроваться filter_generated_numstat"; return 1; }
+  grep -q 'GENERATED_FILES_LIST=' "${s}" || { fail "список сгенерированных не передаётся в build-prompt"; return 1; }
+  grep -q 'generated-files.sh' "${REPO_ROOT}/reviewer/lib/discover.sh" \
+    || { fail "discover.sh не подключает generated-files.sh"; return 1; }
+  return 0
+}
+
 test_agent_runs_with_clean_env() {
   grep -q 'env -i' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
     || { fail "агент должен запускаться через env -i с минимальным окружением"; return 1; }
@@ -1258,6 +1444,28 @@ test_compile_check_detects_broken_valid_example() {
   assert_contains "${out}" "НЕ скомпилировался" "падение на корректном примере должно быть видно"
 }
 
+# Регрессия: компилятор падал с Traceback (нет модуля antlr4) на КАЖДОМ
+# примере, и error-примеры засчитывались как «ошибка обнаружена». Падение
+# компилятора — не диагностика программы, оно не должно проходить как успех.
+test_compile_check_distinguishes_crash_from_error() {
+  local w="${TMP_ROOT}/cc-crash"
+  _make_student_work "${w}"
+  cat > "${w}/compile.sh" <<'EOF'
+#!/usr/bin/env bash
+echo 'Traceback (most recent call last):' >&2
+echo '  File "analyzer.py", line 15, in <module>' >&2
+echo 'ModuleNotFoundError: No module named '"'"'antlr4'"'"'' >&2
+exit 1
+EOF
+  local out rc
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; run_compile_checks '${w}' 20 6 '${w}/examples'" 2>&1)"
+  rc=$?
+  assert_contains "${out}" "ПАДЕНИЕ компилятора" "трасса должна распознаваться как падение" || return 1
+  assert_not_contains "${out}" "ошибка обнаружена, как и ожидается" "падение не засчитывается как найденная ошибка" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
 test_compile_check_handles_timeout() {
   local w="${TMP_ROOT}/cc-hang"
   _make_student_work "${w}"
@@ -1265,6 +1473,187 @@ test_compile_check_handles_timeout() {
   local out
   out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; run_compile_checks '${w}' 1 6 '${w}/examples'" 2>&1)"
   assert_contains "${out}" "таймаут" "зависший compile.sh должен отсекаться по таймауту"
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# Тесты: generated-files.sh — распознавание сгенерированных файлов
+# ══════════════════════════════════════════════════════════════════════════
+
+_gen() { bash -c "source '${REVIEW_DIR}/lib/generated-files.sh'; $*"; }
+
+test_generated_detects_antlr_output() {
+  local p
+  for p in compiler/graph_grammarLexer.py compiler/graph_grammarParser.py \
+           src/MyLangBaseListener.java src/MyLangVisitor.cs out/Calc.interp Calc.tokens \
+           compiler/__pycache__/x.cpython-314.pyc target/classes/A.class node_modules/x/index.js \
+           build/out.jar package-lock.json; do
+    _gen "is_generated_path '${p}'" || { fail "«${p}» должен считаться сгенерированным"; return 1; }
+  done
+  return 0
+}
+
+test_generated_keeps_source_files() {
+  local p
+  for p in compiler/graph_grammar.g4 analyzer.py compile.sh README.md examples/error-1.txt \
+           src/main/java/Main.java src/Parser.py src/lexer.py doc/report.md \
+           src/SemanticAnalyzer.java src/CodeGenerator.cs; do
+    if _gen "is_generated_path '${p}'"; then fail "«${p}» НЕ должен считаться сгенерированным"; return 1; fi
+  done
+  return 0
+}
+
+# Регрессия: студент назвал свой рукописный файл parser.py / lexer.py —
+# это не вывод ANTLR (у того имя грамматики с заглавной + суффикс).
+test_generated_does_not_match_handwritten_parser() {
+  local p
+  for p in parser.py lexer.py src/parser.py my_parser.py Parser.java; do
+    if _gen "is_generated_path '${p}'"; then fail "«${p}» — рукописный файл, не генерация"; return 1; fi
+  done
+  return 0
+}
+
+test_generated_numstat_filter_and_sum() {
+  local numstat out
+  numstat=$'4042\t0\tcompiler/graph_grammarParser.py\n310\t0\tcompiler/graph_grammarLexer.py\n-\t-\tcompiler/__pycache__/a.pyc\n267\t0\tcompiler/graph_grammar.g4\n126\t0\tanalyzer.py'
+  out="$(printf '%s\n' "${numstat}" | _gen "filter_generated_numstat | sum_numstat_lines")"
+  assert_eq "${out}" "393" "сумма без сгенерированных" || return 1
+  out="$(printf '%s\n' "${numstat}" | _gen "generated_paths_from_numstat" | wc -l | tr -d ' ')"
+  assert_eq "${out}" "3" "три сгенерированных пути"
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════
+# Тесты: antlr-check.sh — сборка грамматики и прогон примеров
+# (требуют java и antlr-*-complete.jar; без них — пропускаются с пометкой)
+# ══════════════════════════════════════════════════════════════════════════
+
+_antlr_available() {
+  command -v java >/dev/null 2>&1 \
+    && bash -c "source '${REVIEW_DIR}/lib/antlr-check.sh'; _antlr_find_jar" >/dev/null 2>&1
+}
+
+_make_grammar_work() {
+  local dir="$1" kind="${2:-good}"
+  rm -rf "${dir}"; mkdir -p "${dir}/compiler" "${dir}/examples"
+  case "${kind}" in
+    good)
+      cat > "${dir}/compiler/Calc.g4" <<'EOF'
+// Тестовая грамматика
+grammar Calc;
+prog : stat+ EOF ;
+stat : expr ';' ;
+expr : NUM ('+' NUM)* ;
+NUM  : [0-9]+ ;
+WS   : [ \t\r\n]+ -> skip ;
+EOF
+      printf '1 + 2;\n3;\n' > "${dir}/examples/ok.txt"
+      printf '1 + ;\n' > "${dir}/examples/error-missing-operand.txt" ;;
+    mismatch)
+      # Грамматика требует ';', а пример его не содержит — типовой случай
+      # «грамматика не разбирает собственные примеры ЛР1».
+      cat > "${dir}/compiler/Calc.g4" <<'EOF'
+grammar Calc;
+prog : stat+ EOF ;
+stat : expr ';' ;
+expr : NUM ('+' NUM)* ;
+NUM  : [0-9]+ ;
+WS   : [ \t\r\n]+ -> skip ;
+EOF
+      printf '1 + 2\n' > "${dir}/examples/ok.txt" ;;
+    broken)
+      cat > "${dir}/compiler/Calc.g4" <<'EOF'
+grammar Calc;
+prog : stat+ EOF
+stat : expr ';' ;
+NUM  : [0-9]+ ;
+EOF
+      printf '1;\n' > "${dir}/examples/ok.txt" ;;
+    python)
+      cat > "${dir}/compiler/Calc.g4" <<'EOF'
+grammar Calc;
+@header {
+import sys
+}
+prog : NUM EOF ;
+NUM  : [0-9]+ ;
+EOF
+      printf '1\n' > "${dir}/examples/ok.txt" ;;
+  esac
+}
+
+_run_antlr() { bash -c "source '${REVIEW_DIR}/lib/antlr-check.sh'; run_antlr_checks '$1' 30 6" 2>&1; }
+
+test_antlr_check_passes_good_grammar() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-good"; _make_grammar_work "${w}" good
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "Стартовое правило: prog" "первое правило парсера" || return 1
+  assert_contains "${out}" "разобран без ошибок" "корректный пример проходит" || return 1
+  assert_contains "${out}" "ошибка обнаружена, как и ожидается" "error-пример даёт ошибку" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
+  return 0
+}
+
+test_antlr_check_detects_unparsed_example() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-mismatch"; _make_grammar_work "${w}" mismatch
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "НЕ разбирается грамматикой" "падение корректного примера видно" || return 1
+  assert_contains "${out}" "missing ';'" "ошибка ANTLR процитирована" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+test_antlr_check_detects_broken_grammar() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-broken"; _make_grammar_work "${w}" broken
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "НЕ собирается" "ошибка сборки видна" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+# Грамматика с Python-кодом в @header в Java не соберётся — это ограничение
+# проверки, а не ошибка студента: код 0 и явное сообщение.
+test_antlr_check_skips_foreign_actions() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-py"; _make_grammar_work "${w}" python
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "ПРОПУЩЕНА" "пропуск объявлен явно" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ограничение окружения не должно давать ненулевой код"; return 1; }
+  return 0
+}
+
+test_antlr_first_rule_skips_comments_and_options() {
+  local f="${TMP_ROOT}/rule.g4"
+  cat > "${f}" <<'EOF'
+parser grammar P;
+options { tokenVocab = L; }
+// start: не правило
+/* block
+   comment : also not */
+program
+  : stat* EOF ;
+stat : ID ;
+EOF
+  local r; r="$(bash -c "source '${REVIEW_DIR}/lib/antlr-check.sh'; _antlr_first_parser_rule '${f}'")"
+  assert_eq "${r}" "program" "стартовое правило — первое парсерное, не options и не комментарий"
+}
+
+test_task2_check_runs_antlr() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/t2"; _make_grammar_work "${w}" good
+  local out; out="$(bash "${REVIEW_DIR}/tasks/task2/check.sh" "${w}" 2>&1)"
+  assert_contains "${out}" "Сборка грамматики и прогон примеров" "task2/check.sh вызывает antlr-check" || return 1
+  assert_contains "${out}" "разобран без ошибок" "примеры прогоняются"
+}
+
+test_task2_check_reports_missing_grammar() {
+  local w="${TMP_ROOT}/t2-none"; rm -rf "${w}"; mkdir -p "${w}/examples"
+  local out rc; out="$(bash "${REVIEW_DIR}/tasks/task2/check.sh" "${w}" 2>&1)"; rc=$?
+  assert_contains "${out}" "не найдены" "отсутствие .g4 названо" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
 }
 
 test_task_checks_require_compile_script() {

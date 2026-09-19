@@ -12,17 +12,24 @@
 #        - MAX_REVIEWS_PER_PR        на один PR за всё время;
 #        - MAX_REVIEWS_PER_DAY       на репозиторий за последние 24 часа;
 #        - MAX_REVIEWS_PER_DAY_TOTAL на все репозитории за последние 24 часа;
-#        - MAX_DIFF_LINES            размер PR (additions + deletions).
-#      При превышении PR-лимита или размера — в PR ставится комментарий-отказ
-#      (один раз на SHA). При исчерпании дневных лимитов комментарий НЕ
-#      ставится: PR просто дождётся следующего запуска.
+#        - MAX_DIFF_LINES            размер PR (additions + deletions) БЕЗ
+#                                    сгенерированных файлов (см.
+#                                    .github/review/lib/generated-files.sh).
+#      При превышении PR-лимита — в PR ставится комментарий-отказ (один раз
+#      на SHA). При исчерпании дневных лимитов комментарий НЕ ставится: PR
+#      просто дождётся следующего запуска.
+#      Слишком большой PR НЕ пропускается: он помечается oversize=true и
+#      ревью проводится в сокращённом режиме — только по результатам
+#      автоматических проверок (compile.sh, сборка грамматики), без анализа
+#      кода. Раньше такой PR отвергался целиком, и студент оставался без
+#      проверки работоспособности компилятора.
 #   4. Отбирает не более MAX_REVIEWS_PER_RUN PR, самые старые по времени
 #      обновления первыми (справедливость: кто раньше запушил, тот раньше
 #      получит ревью).
 #
 # Результат — JSON-массив в stdout, по элементу на PR:
 #   {"repo":"yapis-2026-ivanov","pr":4,"head_sha":"...","base_sha":"...",
-#    "branch":"task3","student":"ivanov"}
+#    "branch":"task3","student":"ivanov","oversize":false,"changed":812}
 # Он используется как matrix в reviewer/workflow/review.yml.
 #
 # Требования: gh (аутентифицирован токеном с доступом ко всем репозиториям
@@ -80,8 +87,30 @@ source "${REVIEW_ROOT}/config.env"
 source "${REVIEW_ROOT}/messages.env"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/lib/generated-files.sh"
 
 log() { echo "$*" >&2; }
+
+# Размер PR без сгенерированных файлов. GitHub отдаёт additions/deletions по
+# всему PR одним числом, поэтому для точного счёта берём список файлов
+# (`gh pr view --json files`). При сбое API возвращаем исходное число —
+# лучше переоценить размер, чем пропустить проверку лимита.
+# Печатает: <changed_without_generated> <generated_files_count>
+pr_changed_lines() {
+  local repo_full="$1" number="$2" fallback="$3"
+  local files_json
+  if ! files_json="$(gh pr view "${number}" --repo "${repo_full}" --json files --jq '.files[] | [(.additions|tostring), (.deletions|tostring), .path] | @tsv' 2>/dev/null)"; then
+    echo "${fallback} 0"; return 0
+  fi
+  if [ -z "${files_json}" ]; then
+    echo "${fallback} 0"; return 0
+  fi
+  local changed generated
+  changed="$(printf '%s\n' "${files_json}" | filter_generated_numstat | sum_numstat_lines)"
+  generated="$(printf '%s\n' "${files_json}" | list_generated_numstat | wc -l | tr -d ' ')"
+  echo "${changed} ${generated}"
+}
 
 # --- Список репозиториев ---------------------------------------------------
 
@@ -196,16 +225,28 @@ while IFS= read -r repo; do
       continue
     fi
 
-    changed=$((additions + deletions))
-    if [ "${changed}" -gt "${MAX_DIFF_LINES}" ]; then
-      log "${repo}#${number}: слишком большой PR (${changed} > ${MAX_DIFF_LINES})."
-      # shellcheck disable=SC2034  # подставляется в MSG_DIFF_TOO_BIG через render_msg
-      CHANGED_LINES="${changed}"
-      post_skip "${ORG}/${repo}" "${number}" "${head_sha}" "$(render_msg "${MSG_DIFF_TOO_BIG}")"
-      continue
-    fi
-    if [ "${changed}" -eq 0 ]; then
+    changed_raw=$((additions + deletions))
+    if [ "${changed_raw}" -eq 0 ]; then
       log "${repo}#${number}: нет изменений, пропускаю."; continue
+    fi
+
+    # Точный размер — без сгенерированных файлов. Запрашиваем список файлов
+    # только когда суммарный размер вообще приближается к лимиту: для
+    # маленьких PR лишний вызов API не нужен.
+    changed="${changed_raw}"; generated_count=0
+    if [ "${changed_raw}" -gt "${MAX_DIFF_LINES}" ]; then
+      read -r changed generated_count <<< "$(pr_changed_lines "${ORG}/${repo}" "${number}" "${changed_raw}")"
+      if [ "${changed}" -ne "${changed_raw}" ]; then
+        log "${repo}#${number}: ${changed_raw} строк, из них без сгенерированных файлов — ${changed} (${generated_count} файлов исключено)."
+      fi
+    fi
+
+    oversize=false
+    if [ "${changed}" -gt "${MAX_DIFF_LINES}" ]; then
+      # Не отказ, а сокращённый режим: проверки запускаются, анализ кода —
+      # нет. Сообщение об этом добавит сам ревьюер в шапку комментария.
+      log "${repo}#${number}: большой PR (${changed} > ${MAX_DIFF_LINES}) — ревью в сокращённом режиме."
+      oversize=true
     fi
 
     if [ "${repo_today}" -ge "${MAX_REVIEWS_PER_DAY}" ]; then
@@ -222,7 +263,8 @@ while IFS= read -r repo; do
     item="$(jq -cn \
       --arg repo "${repo}" --argjson pr "${number}" --arg head "${head_sha}" \
       --arg base "${base_sha}" --arg branch "${branch}" --arg student "${student}" \
-      '{repo:$repo, pr:$pr, head_sha:$head, base_sha:$base, branch:$branch, student:$student}')"
+      --argjson oversize "${oversize}" --argjson changed "${changed}" \
+      '{repo:$repo, pr:$pr, head_sha:$head, base_sha:$base, branch:$branch, student:$student, oversize:$oversize, changed:$changed}')"
     CANDIDATES="${CANDIDATES}${updated_at}"$'\t'"${repo}"$'\t'"${item}"$'\n'
   done < <(printf '%s' "${prs_json}" | jq -r '.[] |
     [.number, .headRefName, .headRefOid, .baseRefName, (.isDraft|tostring),
@@ -264,6 +306,6 @@ if [ -z "${SELECTED}" ]; then
 fi
 
 log "Отобрано для ревью (лимит ${LIMIT}, за сутки уже ${GLOBAL_TODAY}/${MAX_REVIEWS_PER_DAY_TOTAL}):"
-printf '%s\n' "${SELECTED}" | jq -r '"  \(.repo)#\(.pr) (\(.branch), \(.head_sha[0:7]))"' >&2
+printf '%s\n' "${SELECTED}" | jq -r '"  \(.repo)#\(.pr) (\(.branch), \(.head_sha[0:7]), \(.changed) строк\(if .oversize then ", сокращённый режим" else "" end))"' >&2
 
 printf '%s\n' "${SELECTED}" | jq -cs '.'

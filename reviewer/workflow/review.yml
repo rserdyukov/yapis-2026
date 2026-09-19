@@ -164,7 +164,9 @@ jobs:
     needs: discover
     if: needs.discover.outputs.count != '0' && inputs.dry_run != true
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Агенту отведено AGENT_TIMEOUT_SECONDS (15 мин, config.env) плюс
+    # check.sh в контейнере (до 5 мин) плюс клонирование/установка.
+    timeout-minutes: 25
     permissions:
       contents: read
       # Нужно, чтобы GITHUB_TOKEN мог скачать образ проверок из GHCR.
@@ -173,9 +175,10 @@ jobs:
     strategy:
       # Один упавший PR не должен отменять ревью остальных.
       fail-fast: false
-      # Больше двух параллельных обращений к бесплатному API модели упираются
-      # в лимит запросов в минуту.
-      max-parallel: 2
+      # Платная модель лимита запросов в минуту не имеет; ограничение —
+      # число одновременных job на бесплатном плане Actions (20) и то, что
+      # discover отдаёт не больше MAX_REVIEWS_PER_RUN PR за запуск.
+      max-parallel: 4
       matrix:
         pr: ${{ fromJSON(needs.discover.outputs.matrix) }}
     steps:
@@ -239,10 +242,14 @@ jobs:
           PR_BASE_SHA: ${{ matrix.pr.base_sha }}
           PR_BRANCH: ${{ matrix.pr.branch }}
           PR_STUDENT: ${{ matrix.pr.student }}
+          # true — PR больше MAX_DIFF_LINES: ревью в сокращённом режиме
+          # (только результаты проверок, без анализа кода). См. discover.sh.
+          PR_OVERSIZE: ${{ matrix.pr.oversize }}
         run: |
           bash reviewer/lib/review-pr.sh \
             "${ORG}" "${PR_REPO}" "${PR_NUMBER}" \
-            "${PR_HEAD_SHA}" "${PR_BASE_SHA}" "${PR_BRANCH}" "${PR_STUDENT}"
+            "${PR_HEAD_SHA}" "${PR_BASE_SHA}" "${PR_BRANCH}" "${PR_STUDENT}" \
+            "${PR_OVERSIZE:-false}"
         shell: bash
 
       - name: Итог в summary

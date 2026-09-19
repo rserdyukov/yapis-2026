@@ -1,0 +1,74 @@
+// StatLang, пример 2 — справочник по синтаксису.
+// Каждая конструкция сопровождается комментарием.
+
+// --- Подпрограммы: объявляются до основного кода (п. 7 README).
+// Параметры передаются по значению, результат — через return.
+int addOne(int x) {
+    x = x + 1;          // меняется копия, вызывающий код этого не увидит
+    return x;
+}
+
+float half(int x) {
+    return x / 2.0;     // неявное int -> float в арифметике (п. 8)
+}
+
+// --- Объявление переменных: явное, с инициализацией (п. 2).
+int count = 10;         // целое
+float rate = 2.5;       // вещественное
+string label = "total"; // строка
+
+// --- Преобразование типов (п. 8).
+float widened = count;              // неявное int -> float при присваивании
+string shown = "count = " + count;  // неявное int -> string при конкатенации
+
+// --- Одиночный оператор присваивания (п. 9).
+count = count + 1;
+
+// --- Арифметические операции: + - * / % (п. 3).
+int a = count + 3;
+int b = count - 3;
+int c = count * 3;
+int d = count / 3;
+int e = count % 3;
+
+// --- Операции сравнения: == != < > <= >= (п. 3). Результат используется в if.
+if (count == 11) { write("eq"); }
+if (count != 11) { write("ne"); }
+if (count < 20)  { write("lt"); }
+if (count > 5)   { write("gt"); }
+if (count <= 11) { write("le"); }
+if (count >= 11) { write("ge"); }
+
+// --- Логические операции: && || ! (п. 3).
+if (count > 5 && rate > 1.0) { write("both"); }
+if (count > 50 || rate > 1.0) { write("either"); }
+if (!(count > 50)) { write("not"); }
+
+// --- Условный оператор if-else (п. 5).
+if (count > 5) {
+    write(label);
+} else {
+    write("too small");
+}
+
+// --- Цикл while (п. 5).
+int i = 0;
+while (i < 3) {
+    write(i);
+    i = i + 1;
+}
+
+// --- Блочный оператор { } (п. 6): явный маркер, области видимости не создаёт.
+{
+    int inner = 42;
+    write(inner);
+}
+write(inner);           // переменная видна и после блока
+
+// --- Ввод/вывод: read() и write() (п. 4).
+int value = read();
+write(addOne(value));
+write(half(value));
+write(shown);
+write(widened);
+write(a + b + c + d + e);

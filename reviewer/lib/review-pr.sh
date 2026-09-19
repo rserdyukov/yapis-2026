@@ -5,7 +5,10 @@
 #   1. Клонирует репозиторий студента в рабочий каталог, переключается на
 #      проверяемый коммит (head_sha).
 #   2. Определяет номер лабораторной по имени ветки (lib/detect-task.sh).
-#   3. Готовит diff base..head по рабочей директории студента.
+#   3. Готовит diff base..head по рабочей директории студента — БЕЗ
+#      сгенерированных файлов (вывод ANTLR, артефакты сборки; см.
+#      .github/review/lib/generated-files.sh). Их список передаётся модели
+#      отдельно: коммитить сгенерированное — замечание.
 #   4. Запускает структурную проверку check.sh в изолированном контейнере
 #      (run-check.sh) — на КОПИИ репозитория, без сети и без секретов.
 #   5. Очищает checkout от файлов, влияющих на поведение агента
@@ -14,13 +17,19 @@
 #   6. Собирает промпт (lib/build-prompt.sh) и запускает opencode в режиме
 #      только-чтение, с минимальным окружением: в нём ТОЛЬКО ключ провайдера
 #      модели, ни токена GitHub, ни прочих переменных раннера.
+#      Если PR помечен oversize (см. discover.sh) — промпт собирается в
+#      сокращённом режиме: модель оценивает только результаты автоматических
+#      проверок и структуру, анализ кода не проводит.
 #   7. Проверяет ответ (не пустой, не справка CLI, не содержит секретов,
 #      не слишком длинный, без зацикливания, на русском, не ход рассуждений)
 #      и публикует его в PR от имени GitHub App. При ошибке — публикует
 #      сообщение о технической ошибке и завершается с кодом 1.
 #
 # Использование:
-#   review-pr.sh <org> <repo> <pr> <head_sha> <base_sha> <branch> <student>
+#   review-pr.sh <org> <repo> <pr> <head_sha> <base_sha> <branch> <student> [oversize]
+#
+#   oversize — "true", если PR превышает MAX_DIFF_LINES (из матрицы
+#              discover.sh). По умолчанию false.
 #
 # Переменные окружения:
 #   GH_TOKEN         токен для gh (installation token GitHub App): нужен для
@@ -37,6 +46,11 @@ set -uo pipefail
 ORG="${1:?org}"; REPO="${2:?repo}"; PR="${3:?pr}"
 HEAD_SHA="${4:?head_sha}"; BASE_SHA="${5:?base_sha}"
 BRANCH="${6:?branch}"; STUDENT="${7:?student}"
+OVERSIZE="${8:-false}"
+case "${OVERSIZE}" in
+  true|1|yes) OVERSIZE=1 ;;
+  *)          OVERSIZE=0 ;;
+esac
 
 REPO_FULL="${ORG}/${REPO}"
 SHORT_SHA="${HEAD_SHA:0:7}"
@@ -50,6 +64,8 @@ source "${REVIEW_ROOT}/config.env"
 source "${REVIEW_ROOT}/messages.env"
 # shellcheck source=/dev/null
 source "${SCRIPT_DIR}/common.sh"
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/lib/generated-files.sh"
 
 log() { echo "[${REPO}#${PR}] $*" >&2; }
 
@@ -150,17 +166,20 @@ fi
 # Список файлов — через --numstat, а не --stat: у --stat гистограммы вида
 # «154 ++++++++++» провоцируют слабые модели на бесконечный повтор символа
 # (наблюдалось: модель начала цитировать бар и ушла в цикл на 18 тыс. плюсов).
-{
-  echo "### Список изменённых файлов (добавлено/удалено строк)"
-  echo
-  git -C "${STUDENT_DIR}" diff --numstat "${DIFF_BASE}" "${HEAD_SHA}" -- "${WORK_DIR}" \
-    | awk -F'\t' '{ printf "  +%s -%s  %s\n", $1, $2, $3 }'
-  echo
-  echo "### Полный diff"
-  echo
-  git -C "${STUDENT_DIR}" diff "${DIFF_BASE}" "${HEAD_SHA}" -- "${WORK_DIR}"
-} > "${DIFF_FILE}" 2>/dev/null
-log "diff: $(wc -l < "${DIFF_FILE}" | tr -d ' ') строк"
+#
+# Сгенерированные файлы (вывод ANTLR, артефакты сборки) из diff исключаются:
+# один <Grammar>Parser.py — это 4000+ строк таблиц переходов, которые
+# вытеснили бы из промпта весь рукописный код. Их список идёт в промпт
+# отдельной секцией (GENERATED_FILE) — это само по себе замечание.
+NUMSTAT_FILE="${WORK}/numstat.tsv"
+git -C "${STUDENT_DIR}" diff --numstat "${DIFF_BASE}" "${HEAD_SHA}" -- "${WORK_DIR}" > "${NUMSTAT_FILE}" 2>/dev/null
+
+GENERATED_FILE="${WORK}/generated.txt"
+generated_paths_from_numstat < "${NUMSTAT_FILE}" > "${GENERATED_FILE}"
+GENERATED_COUNT="$(wc -l < "${GENERATED_FILE}" | tr -d ' ')"
+
+build_review_diff "${STUDENT_DIR}" "${DIFF_BASE}" "${HEAD_SHA}" "${WORK_DIR}" "${NUMSTAT_FILE}" "${DIFF_FILE}"
+log "diff: $(wc -l < "${DIFF_FILE}" | tr -d ' ') строк (сгенерированных файлов исключено: ${GENERATED_COUNT})"
 
 # --- 4. Структурная проверка в контейнере -----------------------------------
 
@@ -197,25 +216,35 @@ cp "${DIFF_FILE}" "${STUDENT_DIR}/.review/pr-diff.txt"
 
 # --- 6. Промпт --------------------------------------------------------------
 
-# Промпт передаётся аргументом командной строки, а у Linux есть предел на
-# длину одного аргумента (~128 КБ). Уменьшаем долю diff в промпте, пока не
-# уложимся с запасом.
+# Промпт передаётся opencode через stdin, поэтому предел длины аргумента
+# командной строки (~128 КБ) на него не действует. Ограничение — контекст
+# модели и стоимость: MAX_PROMPT_BYTES и MAX_DIFF_LINES_IN_PROMPT из
+# config.env. Если промпт всё равно не помещается, доля diff уменьшается
+# вдвое до тех пор, пока не уложимся (минимум 200 строк); остальное агент
+# дочитывает инструментом read из .review/pr-diff.txt.
+#
+# В сокращённом режиме (OVERSIZE=1) diff в промпт не включается вовсе —
+# модель работает по результатам проверок и списку файлов.
 PROMPT_FILE="${WORK}/prompt.md"
-MAX_PROMPT_BYTES=100000
-DIFF_LINES_IN_PROMPT=1200
+MAX_PROMPT_BYTES="${MAX_PROMPT_BYTES:-400000}"
+DIFF_LINES_IN_PROMPT="${MAX_DIFF_LINES_IN_PROMPT:-6000}"
+if [ "${OVERSIZE}" -eq 1 ]; then
+  DIFF_LINES_IN_PROMPT=0
+fi
 while :; do
   MAX_DIFF_LINES_IN_PROMPT="${DIFF_LINES_IN_PROMPT}" DIFF_FILE_HINT=".review/pr-diff.txt" \
+  GENERATED_FILES_LIST="${GENERATED_FILE}" OVERSIZE_MODE="${OVERSIZE}" \
     bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
       "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
       "${DIFF_FILE}" "${CHECK_FILE}" "${CHECK_EXIT}" > "${PROMPT_FILE}" \
     || fail_review "не удалось собрать промпт."
   PROMPT_BYTES="$(wc -c < "${PROMPT_FILE}" | tr -d ' ')"
-  if [ "${PROMPT_BYTES}" -le "${MAX_PROMPT_BYTES}" ] || [ "${DIFF_LINES_IN_PROMPT}" -le 100 ]; then
+  if [ "${PROMPT_BYTES}" -le "${MAX_PROMPT_BYTES}" ] || [ "${DIFF_LINES_IN_PROMPT}" -le 200 ]; then
     break
   fi
   DIFF_LINES_IN_PROMPT=$((DIFF_LINES_IN_PROMPT / 2))
 done
-log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF_LINES_IN_PROMPT} строк)"
+log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF_LINES_IN_PROMPT} строк$([ "${OVERSIZE}" -eq 1 ] && echo ', сокращённый режим'))"
 
 # --- 7. Запуск агента --------------------------------------------------------
 
@@ -273,11 +302,13 @@ AGENT_ENV=(
   "OPENROUTER_API_KEY=${KEY_VALUE}"
 )
 
+# Промпт — через stdin (opencode run читает сообщение из него, если
+# позиционный аргумент не передан): так нет ограничения на длину argv.
 (
   cd "${STUDENT_DIR}" \
-    && timeout 600 env -i "${AGENT_ENV[@]}" \
-         opencode run --auto --pure --format default "$(cat "${PROMPT_FILE}")" \
-         > "${RESULT_FILE}" 2> "${AGENT_ERR}"
+    && timeout "${AGENT_TIMEOUT_SECONDS:-900}" env -i "${AGENT_ENV[@]}" \
+         opencode run --auto --pure --format default \
+         < "${PROMPT_FILE}" > "${RESULT_FILE}" 2> "${AGENT_ERR}"
 )
 AGENT_RC=$?
 
@@ -321,6 +352,12 @@ COMMENT_FILE="${WORK}/review-comment.md"
   echo
   echo
   echo "${MSG_REVIEW_DISCLAIMER}"
+  if [ "${OVERSIZE}" -eq 1 ]; then
+    echo ">"
+    # shellcheck disable=SC2034  # подставляется в MSG_OVERSIZE_NOTE через render_msg
+    CHANGED_LINES="$(filter_generated_numstat < "${NUMSTAT_FILE}" | sum_numstat_lines)"
+    echo "> $(render_msg "${MSG_OVERSIZE_NOTE}")"
+  fi
   echo
   cat "${RESULT_FILE}"
 } > "${COMMENT_FILE}"

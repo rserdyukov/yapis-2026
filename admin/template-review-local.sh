@@ -187,6 +187,8 @@ trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}"' EXIT
 
 # shellcheck source=/dev/null
 source "${REVIEW_ROOT}/config.env"
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/lib/generated-files.sh"
 
 BASE_REF=""
 for candidate in "origin/main" "main" "origin/master" "master"; do
@@ -195,26 +197,33 @@ for candidate in "origin/main" "main" "origin/master" "master"; do
   fi
 done
 
+GENERATED_FILE="$(mktemp)"
+NUMSTAT_FILE="$(mktemp)"
+trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}" "${GENERATED_FILE}" "${NUMSTAT_FILE}"' EXIT
+
+OVERSIZE=0
 if [ -n "${BASE_REF}" ] && [ "$(git rev-parse HEAD)" != "$(git rev-parse "${BASE_REF}")" ]; then
-  {
-    echo "### Список изменённых файлов (добавлено/удалено строк)"
-    echo
-    # --numstat, а не --stat: гистограммы «++++» провоцируют модели на
-    # зацикливание (тот же формат, что в reviewer/lib/review-pr.sh).
-    git diff --numstat "${BASE_REF}...HEAD" -- "${WORK_DIR}" 2>/dev/null \
-      | awk -F'\t' '{ printf "  +%s -%s  %s\n", $1, $2, $3 }'
-    echo
-    echo "### Полный diff"
-    echo
-    git diff "${BASE_REF}...HEAD" -- "${WORK_DIR}" 2>/dev/null
-  } > "${DIFF_FILE}"
+  MERGE_BASE="$(git merge-base "${BASE_REF}" HEAD 2>/dev/null || echo "${BASE_REF}")"
+  # Тот же diff, что увидит бот: --numstat вместо --stat (гистограммы «++++»
+  # провоцируют модели на зацикливание), сгенерированные файлы ANTLR и
+  # артефакты сборки исключены и перечислены отдельно.
+  git diff --numstat "${MERGE_BASE}" HEAD -- "${WORK_DIR}" > "${NUMSTAT_FILE}" 2>/dev/null
+  generated_paths_from_numstat < "${NUMSTAT_FILE}" > "${GENERATED_FILE}"
+  build_review_diff "${REPO_ROOT}" "${MERGE_BASE}" HEAD "${WORK_DIR}" "${NUMSTAT_FILE}" "${DIFF_FILE}"
 
-  CHANGED="$(git diff --numstat "${BASE_REF}...HEAD" -- "${WORK_DIR}" 2>/dev/null \
-    | awk '{ if ($1 != "-") a+=$1; if ($2 != "-") d+=$2 } END { print a+d+0 }')"
+  CHANGED="$(filter_generated_numstat < "${NUMSTAT_FILE}" | sum_numstat_lines)"
+  GENERATED_COUNT="$(wc -l < "${GENERATED_FILE}" | tr -d ' ')"
 
-  echo "Изменено строк относительно ${BASE_REF}: ${CHANGED} (лимит в PR: ${MAX_DIFF_LINES})"
+  echo "Изменено строк относительно ${BASE_REF}: ${CHANGED} (лимит полного ревью в PR: ${MAX_DIFF_LINES})"
+  if [ "${GENERATED_COUNT}" -gt 0 ]; then
+    warn "В изменениях ${GENERATED_COUNT} сгенерированных файлов (вывод ANTLR, артефакты сборки) — они не считаются"
+    echo "     в лимите и не показываются модели, но бот отметит их коммит как замечание:"
+    sed 's/^/       /' "${GENERATED_FILE}" | head -n 10
+  fi
   if [ "${CHANGED}" -gt "${MAX_DIFF_LINES}" ]; then
-    warn "Такой PR бот пропустит: изменений больше лимита — ревью будет делать преподаватель."
+    OVERSIZE=1
+    warn "Изменений больше лимита: в PR бот проведёт СОКРАЩЁННОЕ ревью — запустит compile.sh"
+    echo "     и проверит структуру, но анализ кода оставит преподавателю. Локально режим тот же."
   fi
   echo
 else
@@ -245,7 +254,9 @@ echo
 # --- Сборка промпта -------------------------------------------------------
 STUDENT="$(basename "$(git rev-parse --show-toplevel 2>/dev/null || echo student)")"
 
-if ! bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
+if ! GENERATED_FILES_LIST="${GENERATED_FILE}" OVERSIZE_MODE="${OVERSIZE}" DIFF_FILE_HINT=".review/pr-diff.txt" \
+     MAX_DIFF_LINES_IN_PROMPT="$([ "${OVERSIZE}" -eq 1 ] && echo 0 || echo "${MAX_DIFF_LINES_IN_PROMPT:-6000}")" \
+     bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
       "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
       "${DIFF_FILE}" "${CHECK_FILE}" "${CHECK_EXIT}" \
       > "${PROMPT_FILE}" 2>/tmp/build-prompt.err; then
@@ -313,11 +324,17 @@ if [ -n "${REQUIRED_KEY}" ] && [ -z "${!REQUIRED_KEY:-}" ]; then
 fi
 
 echo "Модель: ${MODEL}"
-echo "Запуск... (обычно 1-2 минуты)"
+echo "Запуск... (обычно 2-6 минут: модель читает файлы работы инструментами)"
 echo
 
 SANDBOX="$(mktemp -d)"
-trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}"; rm -rf "${SANDBOX}"' EXIT
+trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}" "${GENERATED_FILE}" "${NUMSTAT_FILE}"; rm -rf "${SANDBOX}"' EXIT
+
+# Полный diff кладём в рабочую копию, как делает бот: промпт ссылается на
+# него как на .review/pr-diff.txt, который агент может дочитать.
+mkdir -p "${REPO_ROOT}/.review"
+cp "${DIFF_FILE}" "${REPO_ROOT}/.review/pr-diff.txt"
+trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}" "${GENERATED_FILE}" "${NUMSTAT_FILE}"; rm -rf "${SANDBOX}" "${REPO_ROOT}/.review"' EXIT
 
 # Агент работает в режиме только для чтения — как и в PR.
 AGENT_CONFIG="$(cat <<EOF
@@ -330,6 +347,7 @@ AGENT_CONFIG="$(cat <<EOF
     "read": "allow",
     "glob": "allow",
     "grep": "allow",
+    "list": "allow",
     "bash": "deny",
     "edit": "deny",
     "write": "deny"
@@ -338,11 +356,13 @@ AGENT_CONFIG="$(cat <<EOF
 EOF
 )"
 
+# Промпт — через stdin, как в боте: аргумент командной строки ограничен
+# ~128 КБ, а промпт с большим diff может быть длиннее.
 RESULT_FILE="${SANDBOX}/result.md"
 if ! (cd "${REPO_ROOT}" && OPENCODE_CONFIG_CONTENT="${AGENT_CONFIG}" \
         OPENCODE_DISABLE_CLAUDE_CODE=true \
-        opencode run --auto --format default "$(cat "${PROMPT_FILE}")" \
-        > "${RESULT_FILE}" 2>"${SANDBOX}/err.log"); then
+        opencode run --auto --format default \
+        < "${PROMPT_FILE}" > "${RESULT_FILE}" 2>"${SANDBOX}/err.log"); then
   err "ИИ-ревью не удалось выполнить:"
   tail -5 "${SANDBOX}/err.log" | sed 's/^/     /'
   exit 1

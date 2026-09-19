@@ -41,6 +41,14 @@ find_compile_script() {
   return 1
 }
 
+# Похож ли вывод на аварийное завершение компилятора, а не на диагностику.
+# Проверяются типовые сигнатуры: Python Traceback, Java/C# stack trace,
+# Node ошибки модулей, отсутствие интерпретатора/команды.
+_looks_like_crash() {
+  printf '%s\n' "$1" | grep -qE \
+    '^Traceback \(most recent call last\)|ModuleNotFoundError|ImportError: |No module named|Exception in thread "main"|^\s+at [A-Za-z_$][A-Za-z0-9_.$<>]*\(.*\)$|Unhandled exception\.|^Error: Cannot find module|command not found|No such file or directory: .*(python|java|node|dotnet)|not recognized as an internal or external command|Could not find or load main class|Error: Could not find or load|MSBUILD : error|error CS[0-9]+:|error: package .* does not exist'
+}
+
 # Запускает compile.sh на одном примере и печатает результат.
 # Возвращает 0, если поведение совпало с ожидаемым.
 _run_one_example() {
@@ -62,6 +70,17 @@ _run_one_example() {
 
   if [ "${rc}" -eq 124 ]; then
     echo "    РЕЗУЛЬТАТ: таймаут ${timeout_s}с — компиляция не завершилась."
+    return 1
+  fi
+
+  # Падение самого компилятора — не «обнаруженная ошибка в примере».
+  # Трасса интерпретатора/JVM/.NET, отсутствующий модуль, «command not
+  # found» — признаки того, что до анализа программы дело не дошло.
+  # Без этого error-пример, на котором компилятор упал с Traceback,
+  # засчитывался бы как успешно обнаруженная ошибка.
+  if [ "${rc}" -ne 0 ] && _looks_like_crash "${out}"; then
+    echo "    РЕЗУЛЬТАТ: код ${rc}, но это ПАДЕНИЕ компилятора (трасса исключения / отсутствующая"
+    echo "    зависимость / не найден интерпретатор), а не сообщение об ошибке в программе."
     return 1
   fi
 

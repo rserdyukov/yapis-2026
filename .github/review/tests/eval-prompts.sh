@@ -149,9 +149,22 @@ run_fixture() {
       done )
   } > "${diff_file}"
 
+  # check.sh запускаем напрямую (без контейнера): фикстуры — наш код, а
+  # промпты ЛР2-5 опираются на его вывод как на главный источник фактов.
+  local check_file="${TMP_ROOT}/${fx}.check.out" check_exit=0
+  if [ -f "${REVIEW_DIR}/tasks/${task_dir}/check.sh" ]; then
+    ( cd "${work}" && timeout 300 bash "${REVIEW_DIR}/tasks/${task_dir}/check.sh" . ) \
+      > "${check_file}" 2>&1
+    check_exit=$?
+    echo "  ${C_DIM}check.sh: код ${check_exit}, $(wc -l < "${check_file}" | tr -d ' ') строк${C_OFF}"
+  else
+    check_file=""
+  fi
+
   local prompt_file="${TMP_ROOT}/${fx}.prompt.md"
   if ! ( cd "${REPO_ROOT}" && bash "${REVIEW_DIR}/lib/build-prompt.sh" \
            "${task_dir}" "${work}" "${fx}" "${TASK_NUM}" "${diff_file}" \
+           "${check_file}" "${check_exit}" \
            > "${prompt_file}" 2>"${TMP_ROOT}/${fx}.err" ); then
     echo "  ${C_RED}✗ промпт не собрался${C_OFF}"
     sed 's/^/      /' "${TMP_ROOT}/${fx}.err"
@@ -182,15 +195,16 @@ run_fixture() {
   "\$schema": "https://opencode.ai/config.json",
   "model": "${MODEL}",
   "share": "disabled",
-  "permission": { "*": "deny", "read": "allow", "glob": "allow", "grep": "allow" }
+  "permission": { "*": "deny", "read": "allow", "glob": "allow", "grep": "allow", "list": "allow" }
 }
 EOF
 
+  # Промпт — через stdin, как в ревьюере (обходит предел длины argv).
   local result="${OUT_DIR}/${fx}$([ "${REPEAT}" -gt 1 ] && echo "-${attempt}").md"
   if ! ( cd "${work}" && OPENCODE_CONFIG="${sandbox}/opencode.json" \
            OPENCODE_DISABLE_CLAUDE_CODE=true \
-           opencode run --auto --format default "$(cat "${prompt_file}")" \
-           > "${result}" 2>"${sandbox}/err.log" ); then
+           opencode run --auto --format default \
+           < "${prompt_file}" > "${result}" 2>"${sandbox}/err.log" ); then
     echo "  ${C_RED}✗ ошибка вызова модели${C_OFF}"
     tail -3 "${sandbox}/err.log" | sed 's/^/      /'
     return 1

@@ -868,6 +868,18 @@ test_prompt_requires_reading_files() {
   assert_contains "${out}" "в полном объёме" "запрещены фразы-вердикты"
 }
 
+# Вместо раздела «что сделано хорошо» — таблица выполненных проверок с
+# результатом по каждому пункту чеклиста и каждому прогону скриптов.
+test_prompt_requires_checks_table_not_praise() {
+  local diff="${TMP_ROOT}/d14.txt"; printf 'x\n' > "${diff}"
+  local out
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 "." "s" 3 "${diff}" 2>&1)"
+  assert_contains "${out}" "Выполненные проверки" "промпт требует таблицу проверок" || return 1
+  assert_contains "${out}" "не проверено:" "предусмотрен статус «не проверено»" || return 1
+  assert_contains "${out}" "**не пиши**" "похвалы запрещены явно" || return 1
+  assert_not_contains "${out}" "затем **«Что сделано хорошо»**" "раздел похвал из формата убран"
+}
+
 # Сокращённый режим для большого PR: diff не включается, есть явная
 # инструкция не анализировать код и написать об этом в начале ответа.
 test_prompt_oversize_mode_drops_diff() {

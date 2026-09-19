@@ -99,7 +99,8 @@ DESCRIPTION="Краткое описание для отчёта"
 EXPECT_PRESENT="error-"                      # обязано встретиться
 EXPECT_ANY_OF="compile.sh|запуск"       # хотя бы одно из
 EXPECT_ABSENT="работа принята|оценка 10"     # не должно быть
-MAX_LENGTH_CHARS=8000
+EXPECT_TABLE="Выполненные проверки"          # раздел-таблица проверок обязателен
+MAX_LENGTH_CHARS=9000
 ```
 
 ### Как добавить свою фикстуру

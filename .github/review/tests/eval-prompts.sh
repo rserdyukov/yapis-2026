@@ -236,6 +236,11 @@ EOF
       || problems="${problems}    - присутствует запрещённое: «${hit}»"$'\n'
   fi
 
+  if [ -n "${EXPECT_TABLE:-}" ]; then
+    grep_any "${text}" "${EXPECT_TABLE}" \
+      || problems="${problems}    - нет раздела с таблицей проверок: ${EXPECT_TABLE}"$'\n'
+  fi
+
   if [ -n "${MAX_LENGTH_CHARS:-}" ] && [ "${len}" -gt "${MAX_LENGTH_CHARS}" ]; then
     problems="${problems}    - ответ слишком длинный: ${len} > ${MAX_LENGTH_CHARS}"$'\n'
   fi

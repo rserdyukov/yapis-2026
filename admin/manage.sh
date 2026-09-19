@@ -88,9 +88,10 @@
 #   ./manage.sh sync-template                            — раскатать этот репозиторий в шаблон
 #                                                          (состав — admin/template-manifest.txt);
 #                                                          выполняется ПЕРЕД sync-workflow
-#   ./manage.sh sync-workflow                            — раскатать шаблон по репозиториям
+#   ./manage.sh sync-workflow [--no-merge]               — раскатать шаблон по репозиториям
 #                                                          студентов (TASK.md, GUIDE.md,
-#                                                          review-local.sh); README не трогает
+#                                                          review-local.sh) PR-ом, который
+#                                                          сразу мержится; README не трогает
 #   ./manage.sh broadcast-issue <title> <body-file>     — создать одинаковый issue во всех
 #                                                          репозиториях студентов (например,
 #                                                          объявление/напоминание о дедлайне)
@@ -1901,6 +1902,20 @@ cmd_sync_template() {
 cmd_sync_workflow() {
   require_gh_auth
 
+  # По умолчанию PR синхронизации сразу мержится: файлы в нём — документы и
+  # инструменты курса, которые студент не редактирует, а ждать 80 ручных
+  # мержей бессмысленно (на практике их сливал преподаватель пачкой).
+  # --no-merge оставляет PR открытым для просмотра — на случай крупных или
+  # спорных изменений.
+  local auto_merge=1 arg
+  for arg in "$@"; do
+    case "${arg}" in
+      --no-merge) auto_merge=0 ;;
+      --yes) ;;
+      *) echo "Неизвестный аргумент: ${arg}" >&2; exit 2 ;;
+    esac
+  done
+
   local repos
   repos="$(list_student_repos)"
 
@@ -1939,8 +1954,12 @@ cmd_sync_workflow() {
     echo "${keep_paths}" | sed 's/^/  - /'
   fi
   echo
-  echo "В следующих репозиториях, путём открытия PR из ветки"
-  echo "ci/sync-review-tooling в каждом (изменения не мержатся автоматически):"
+  echo "В следующих репозиториях, путём открытия PR из ветки ci/sync-review-tooling"
+  if [ "${auto_merge}" -eq 1 ]; then
+    echo "в каждом; PR сразу мержится в main (отключить: --no-merge):"
+  else
+    echo "в каждом; PR остаются открытыми для просмотра (--no-merge):"
+  fi
   echo "${repos}" | sed 's/^/  - /'
   confirm "Продолжить?"
 
@@ -2010,22 +2029,46 @@ cmd_sync_workflow() {
 
       # PR мог остаться открытым с прошлого прогона — тогда он уже указывает
       # на обновлённую ветку, создавать второй не нужно.
-      local existing
-      existing="$(gh pr list --head ci/sync-review-tooling --state open \
+      local pr_number
+      pr_number="$(gh pr list --head ci/sync-review-tooling --state open \
         --json number --jq '.[0].number // empty' 2>/dev/null || true)"
-      if [ -n "${existing}" ]; then
-        echo "  Обновлён существующий PR #${existing}."
-        exit 0
-      fi
-
-      gh pr create \
-        --title "ci: обновить документы и инструменты курса" \
-        --body "Автоматическое обновление из шаблона курса: документы практикума (\`TASK.md\`, \`GUIDE.md\`), скрипт локальной проверки (\`review-local.sh\`) и служебный workflow.
+      if [ -n "${pr_number}" ]; then
+        echo "  Обновлён существующий PR #${pr_number}."
+      else
+        local body_tail
+        if [ "${auto_merge}" -eq 1 ]; then
+          body_tail="PR слит автоматически преподавателем."
+        else
+          body_tail="Слейте PR после просмотра."
+        fi
+        # gh pr create печатает URL созданного PR; номер — последний сегмент.
+        local pr_url
+        pr_url="$(gh pr create \
+          --title "ci: обновить документы и инструменты курса" \
+          --body "Автоматическое обновление из шаблона курса: документы практикума (\`TASK.md\`, \`GUIDE.md\`), скрипт локальной проверки (\`review-local.sh\`) и служебный workflow.
 
 Ваш \`README.md\` не затронут — там описание вашего варианта.
 
-Слейте PR после просмотра. Автоматическое ИИ-ревью этот PR не проверяет: ветка \`ci/sync-review-tooling\` исключена." \
-        --base main
+${body_tail} Автоматическое ИИ-ревью этот PR не проверяет: ветка \`ci/sync-review-tooling\` исключена." \
+          --base main 2>/dev/null || true)"
+        pr_number="$(printf '%s' "${pr_url}" | grep -oE '[0-9]+$' || true)"
+        echo "  Открыт PR #${pr_number:-?}."
+      fi
+
+      [ "${auto_merge}" -eq 1 ] || exit 0
+      [ -n "${pr_number}" ] || { echo "  Не удалось определить номер PR — мерж пропущен." >&2; exit 0; }
+
+      # Мерж через PR, а не push в main: так guard-main не считает это
+      # нарушением, а в истории репозитория видно, что и когда приехало.
+      # Merge-коммит, а не squash: студент потом мержит main в свою ветку,
+      # и с merge-коммитом конфликтов по этим файлам не будет.
+      # Отдельный approve не нужен: защита ветки в репозиториях студентов
+      # не требует ревью, а свой PR GitHub одобрять не даёт.
+      if gh pr merge "${pr_number}" --merge --delete-branch >/dev/null 2>&1; then
+        echo "  PR #${pr_number} слит в main."
+      else
+        echo "  PR #${pr_number} НЕ слит (конфликт или нет прав) — слейте вручную." >&2
+      fi
     )
   done <<< "${repos}"
 }

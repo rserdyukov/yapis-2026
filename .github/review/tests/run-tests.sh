@@ -1967,6 +1967,335 @@ test_sync_template_removes_legacy_paths() {
 }
 
 # ══════════════════════════════════════════════════════════════════════════
+# Генерируемые документы (docs/_partials -> template-TASK.md, сайт)
+# ══════════════════════════════════════════════════════════════════════════
+
+_builder() { echo "${REPO_ROOT}/tools/build-docs.py"; }
+
+# КЛЮЧЕВАЯ ГАРАНТИЯ: текст задания живёт в docs/_partials/ в одном
+# экземпляре. Если кто-то поправил сгенерированный template-TASK.md
+# руками, следующая сборка затрёт правку — тест ловит это сразу.
+test_generated_docs_are_up_to_date() {
+  local out rc
+  out="$(python3 "$(_builder)" --check 2>&1)"; rc=$?
+  [ "${rc}" -eq 0 ] || {
+    fail "сгенерированные документы разошлись с docs/_partials: ${out}"
+    return 1
+  }
+  return 0
+}
+
+# Партиалы уезжают студентам внутри TASK.md, поэтому в них не должно быть
+# ни синтаксиса MkDocs, ни неподставленных токенов: GitHub их не отрендерит.
+test_partials_are_plain_markdown() {
+  local f bad=""
+  for f in "${REPO_ROOT}"/docs/_partials/*.md; do
+    [ -e "${f}" ] || continue
+    grep -q -- '--8<--' "${f}" && bad="${bad} $(basename "${f}"):snippets"
+    grep -qE '^(!!!|\?\?\?) ' "${f}" && bad="${bad} $(basename "${f}"):admonition"
+  done
+  [ -z "${bad}" ] || { fail "в партиалах есть синтаксис MkDocs:${bad}"; return 1; }
+  return 0
+}
+
+# Токены {{README}}/{{GUIDE}} обязаны быть подставлены при сборке.
+# Утёкший токен в документе студента — видимый мусор в тексте задания.
+test_generated_docs_have_no_tokens() {
+  local f
+  for f in "${REPO_ROOT}/admin/template-TASK.md" "${REPO_ROOT}/docs/labs/index.md"; do
+    [ -e "${f}" ] || { fail "нет сгенерированного файла ${f}"; return 1; }
+    grep -q '{{' "${f}" && { fail "в ${f} остались неподставленные токены"; return 1; }
+  done
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# Сайт курса (docs/, mkdocs.yml, слайды лекций)
+# ══════════════════════════════════════════════════════════════════════════
+
+# Оглавление лекций генерируется из колод. Если добавили колоду и забыли
+# пересобрать индекс, лекция просто не появится на сайте — молча.
+test_lectures_index_is_up_to_date() {
+  python3 "${REPO_ROOT}/tools/build-slides.py" --check \
+    || { fail "индекс опубликованных лекций устарел"; return 1; }
+  return 0
+}
+
+# Колода без frontmatter с темой соберётся дефолтным стилем и будет
+# выбиваться из остальных. Тема одна на курс — custom_academic.
+test_slides_use_course_theme() {
+  local f bad=""
+  for f in "${REPO_ROOT}"/docs/lectures/slides/*.md; do
+    [ -e "${f}" ] || continue
+    grep -q '^theme: custom_academic$' "${f}" || bad="${bad} $(basename "${f}")"
+  done
+  [ -z "${bad}" ] || { fail "колоды не на теме курса:${bad}"; return 1; }
+  return 0
+}
+
+# Obsidian-синтаксис ![[...]] marp-cli не понимает: вставка молча
+# превращается в текст прямо на слайде.
+test_slides_have_no_obsidian_syntax() {
+  local bad
+  bad="$(grep -rl '\[\[' "${REPO_ROOT}/docs/lectures/slides" 2>/dev/null || true)"
+  [ -z "${bad}" ] || { fail "вики-ссылки Obsidian в колодах: ${bad}"; return 1; }
+  return 0
+}
+
+# Картинки лежат в docs/lectures/img/ и подключаются как ../img/.
+# Битая ссылка в слайде не ловится mkdocs strict: HTML собирается marp-cli.
+test_slide_images_exist() {
+  local f ref bad=""
+  for f in "${REPO_ROOT}"/docs/lectures/slides/*.md; do
+    [ -e "${f}" ] || continue
+    while IFS= read -r ref; do
+      [ -n "${ref}" ] || continue
+      [ -e "${REPO_ROOT}/docs/lectures/${ref#../}" ] \
+        || bad="${bad} $(basename "${f}"):${ref}"
+    done < <(grep -oE '\(\.\./img/[^)]+\)' "${f}" 2>/dev/null | tr -d '()')
+  done
+  [ -z "${bad}" ] || { fail "в колодах битые ссылки на картинки:${bad}"; return 1; }
+  return 0
+}
+
+# strict обязателен: без него битая перекрёстная ссылка тихо превращается
+# в 404 у студента, а не валит сборку.
+test_mkdocs_is_strict() {
+  local cfg="${REPO_ROOT}/mkdocs.yml"
+  [ -f "${cfg}" ] || { fail "нет mkdocs.yml"; return 1; }
+  grep -qE '^strict:[[:space:]]*true$' "${cfg}" \
+    || { fail "в mkdocs.yml должен быть strict: true"; return 1; }
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# Каталог языков (docs/languages/_data -> docs/languages/*.md)
+# ══════════════════════════════════════════════════════════════════════════
+
+_catalog() { echo "${REPO_ROOT}/tools/build-catalog.py"; }
+_catalog_data() { echo "${REPO_ROOT}/docs/languages/_data"; }
+
+# Копия данных каталога во временный каталог для негативных тестов:
+# генератор принимает --data/--out, чтобы можно было подсунуть сломанный
+# YAML, не трогая репозиторий. Печатает путь к копии.
+_catalog_sandbox() {
+  local d="${TMP_ROOT}/catalog-$RANDOM"
+  mkdir -p "${d}/out"
+  cp -R "$(_catalog_data)" "${d}/data"
+  echo "${d}"
+}
+
+# Запуск генератора на песочнице; stdout+stderr в переменную CATALOG_OUT,
+# код возврата — в CATALOG_RC.
+_catalog_run() {
+  local sandbox="$1"; shift
+  CATALOG_OUT="$(python3 "$(_catalog)" --data "${sandbox}/data" --out "${sandbox}/out" "$@" 2>&1)"
+  CATALOG_RC=$?
+}
+
+# КЛЮЧЕВАЯ ГАРАНТИЯ: страницы каталога собираются из YAML. Правка
+# docs/languages/*.md руками затирается следующей сборкой; правка YAML без
+# пересборки оставляет сайт со старыми данными. --check ловит оба случая
+# и заодно валидирует данные по онтологии.
+test_generated_catalog_is_up_to_date() {
+  local out rc
+  out="$(python3 "$(_catalog)" --check 2>&1)"; rc=$?
+  [ "${rc}" -eq 0 ] || {
+    fail "каталог языков разошёлся с docs/languages/_data: ${out}"
+    return 1
+  }
+  return 0
+}
+
+# Сборка с нуля на копии данных даёт ровно тот набор страниц, что
+# закоммичен, и повторный --check на нём зелёный.
+test_catalog_builds_from_scratch() {
+  local sb; sb="$(_catalog_sandbox)"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -eq 0 ] || { fail "сборка каталога упала: ${CATALOG_OUT}"; return 1; }
+  local f
+  for f in index.md concepts.md python.md java.md rust.md; do
+    [ -f "${sb}/out/${f}" ] || { fail "не создан ${f}"; return 1; }
+    grep -q '^<!-- ВНИМАНИЕ. Файл собирается автоматически:' "${sb}/out/${f}" \
+      || { fail "${f} без пометки о генерации"; return 1; }
+  done
+  _catalog_run "${sb}" --check
+  [ "${CATALOG_RC}" -eq 0 ] || { fail "--check после сборки не зелёный: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Значение вне закрытого перечисления — главная защита онтологии: иначе
+# у каждого языка появится своя формулировка одной и той же концепции.
+test_catalog_rejects_unknown_value() {
+  local sb; sb="$(_catalog_sandbox)"
+  python3 - "${sb}/data/languages/python.yaml" <<'PY'
+import sys, re
+p = sys.argv[1]; s = open(p, encoding="utf-8").read()
+s = s.replace("    - value: implicit\n      note: \"двоеточие и отступ", "    - value: fuzzy\n      note: \"двоеточие и отступ", 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "значение fuzzy принято"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "variants.5" || { fail "в ошибке нет имени концепции: ${CATALOG_OUT}"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "fuzzy" || { fail "в ошибке нет значения: ${CATALOG_OUT}"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "допустимо" || { fail "в ошибке нет списка допустимых: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# max_values: 1 — утверждение о предметной области (маркер блока не может
+# быть одновременно явным и неявным). Второе значение — ошибка.
+test_catalog_rejects_extra_value_for_max_values() {
+  local sb; sb="$(_catalog_sandbox)"
+  python3 - "${sb}/data/languages/rust.yaml" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p, encoding="utf-8").read()
+s = s.replace("  variants.5:\n    - value: explicit\n", "  variants.5:\n    - value: implicit\n    - value: explicit\n", 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "два значения при max_values: 1 приняты"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "допускает 1 значение" || { fail "нет сообщения про max_values: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Фрагменты грамматик — чужой код. Лицензия из списка и зафиксированный
+# commit обязательны: без них нельзя ни воспроизвести notice, ни найти
+# правило в источнике.
+test_catalog_rejects_bad_grammar_license() {
+  local sb; sb="$(_catalog_sandbox)"
+  sed -i.bak 's/license: MIT/license: GPL-3.0/' "${sb}/data/languages/python.yaml"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "лицензия GPL-3.0 принята"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "BSD-3-Clause" || { fail "в ошибке нет списка допустимых лицензий: ${CATALOG_OUT}"; return 1; }
+
+  sb="$(_catalog_sandbox)"
+  sed -i.bak '/commit: 20efa537/d' "${sb}/data/languages/rust.yaml"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "источник без commit принят"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "commit обязателен" || { fail "нет сообщения про commit: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Отсутствующий файл примера — внятное сообщение, а не traceback.
+test_catalog_reports_missing_example_file() {
+  local sb; sb="$(_catalog_sandbox)"
+  rm "${sb}/data/examples/java/Showcase.java"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "отсутствующий showcase принят"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "Showcase.java" || { fail "в ошибке нет имени файла: ${CATALOG_OUT}"; return 1; }
+  echo "${CATALOG_OUT}" | grep -qi "traceback" && { fail "traceback вместо сообщения: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Страница без данных (язык удалили, md остался) — сирота на сайте.
+test_catalog_check_detects_orphan_page() {
+  local sb; sb="$(_catalog_sandbox)"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -eq 0 ] || { fail "сборка упала: ${CATALOG_OUT}"; return 1; }
+  cp "${sb}/out/python.md" "${sb}/out/haskell.md"
+  _catalog_run "${sb}" --check
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "лишняя страница haskell.md не замечена"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "haskell.md" || { fail "в ошибке нет имени сироты: ${CATALOG_OUT}"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "лишний" || { fail "нет пометки «лишний»: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Секции showcase — единственная связь между кодом и концепциями. Без
+# секции утверждение «пример демонстрирует свойство» непроверяемо.
+test_catalog_requires_showcase_section() {
+  local sb; sb="$(_catalog_sandbox)"
+  sed -i.bak 's/\[start:variants-3\]/[start:variants-3x]/; s/\[end:variants-3\]/[end:variants-3x]/' \
+    "${sb}/data/examples/python/showcase.py"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "showcase без секции variants-3 принят"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "variants-3" || { fail "в ошибке нет имени секции: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Маркер с точкой в имени snippets не распознаёт и публикует как строку
+# кода — на сайте это выглядит как мусор, но сборку не валит. Ловим здесь,
+# причём в --check, хотя сгенерированный md от правки примера не меняется.
+test_catalog_check_rejects_invalid_marker_without_regeneration() {
+  local sb; sb="$(_catalog_sandbox)"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -eq 0 ] || { fail "сборка упала: ${CATALOG_OUT}"; return 1; }
+  sed -i.bak 's/\[start:variants-3\]/[start:variants.3]/; s/\[end:variants-3\]/[end:variants.3]/' \
+    "${sb}/data/examples/python/showcase.py"
+  _catalog_run "${sb}" --check
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "маркер variants.3 прошёл --check"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "не распознаётся snippets" || { fail "нет сообщения про маркер: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# since ссылается на версию из versions[]: иначе на странице появится
+# «с версии 9.9», которой нет в таблице версий.
+test_catalog_rejects_unknown_version_reference() {
+  local sb; sb="$(_catalog_sandbox)"
+  sed -i.bak 's/since: "3.10"/since: "9.9"/' "${sb}/data/languages/python.yaml"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "since на несуществующую версию принят"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "9.9" || { fail "в ошибке нет версии: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# assessment ссылается на концепции онтологии — иначе ссылка в никуда.
+test_catalog_rejects_unknown_assessment_concept() {
+  local sb; sb="$(_catalog_sandbox)"
+  sed -i.bak 's/concepts: \[typing.checking, typing.strength, errors.model, errors.finally\]/concepts: [net-takoy]/' \
+    "${sb}/data/languages/python.yaml"
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "assessment с неизвестной концепцией принят"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "net-takoy" || { fail "в ошибке нет имени концепции: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Покрытие перечислений — метрика каталога. Непокрытое значение допустимо
+# только с пометкой, какой язык его покроет; порог задан в онтологии.
+test_catalog_enforces_coverage_threshold() {
+  local sb; sb="$(_catalog_sandbox)"
+  sed -i.bak 's/^  variants: 0.8$/  variants: 0.95/' "${sb}/data/ontology.yaml"
+  _catalog_run "${sb}" --check
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "покрытие ниже порога 95% принято"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "ниже порога" || { fail "нет сообщения про порог: ${CATALOG_OUT}"; return 1; }
+
+  sb="$(_catalog_sandbox)"
+  python3 - "${sb}/data/ontology.yaml" <<'PY'
+import sys
+p = sys.argv[1]; s = open(p, encoding="utf-8").read()
+s = s.replace(",\n             coverage: {pending: true, note: \"Ada out, C# out\"}", "", 1)
+open(p, "w", encoding="utf-8").write(s)
+PY
+  _catalog_run "${sb}" --check
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "непокрытое значение без pending принято"; return 1; }
+  echo "${CATALOG_OUT}" | grep -q "by_result" || { fail "в ошибке нет значения: ${CATALOG_OUT}"; return 1; }
+  return 0
+}
+
+# Свойства варианта задания должны быть в онтологии под своими номерами —
+# иначе каталог перестаёт быть справочником к variants.md.
+test_catalog_ontology_covers_variant_properties() {
+  local onto="$(_catalog_data)/ontology.yaml" n bad=""
+  for n in 1 2 3 4 5 6 7 8 9; do
+    grep -q "id: variants.${n}$" "${onto}" || bad="${bad} variants.${n}"
+  done
+  for n in req.4 req.7.2.until req.7.2.do_while req.7.3 req.8.2; do
+    grep -q "id: ${n}$" "${onto}" || bad="${bad} ${n}"
+  done
+  [ -z "${bad}" ] || { fail "в онтологии нет концепций:${bad}"; return 1; }
+  return 0
+}
+
+# Данные каталога не должны публиковаться как статика, а битые якоря
+# концепций — проходить strict-сборку.
+test_mkdocs_excludes_catalog_data_and_checks_anchors() {
+  local cfg="${REPO_ROOT}/mkdocs.yml"
+  grep -qE '^  languages/_data/$' "${cfg}" || { fail "languages/_data/ не в exclude_docs"; return 1; }
+  grep -qE '^  _design/$' "${cfg}" || { fail "_design/ не в exclude_docs"; return 1; }
+  grep -qE '^    anchors: warn$' "${cfg}" || { fail "validation.links.anchors должен быть warn"; return 1; }
+  return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
 # Фильтр по группе (--group): одна организация, группы через префикс
 # ══════════════════════════════════════════════════════════════════════════
 

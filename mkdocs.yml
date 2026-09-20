@@ -1,0 +1,120 @@
+site_name: Языковые процессоры интеллектуальных систем
+site_description: Курс ЯПИС — лабораторный практикум, лекции и дополнительные материалы
+site_url: https://rserdyukov.github.io/yapis-2026/
+repo_url: https://github.com/rserdyukov/yapis-2026
+repo_name: rserdyukov/yapis-2026
+copyright: Курс «Языковые процессоры интеллектуальных систем»
+
+docs_dir: docs
+site_dir: site
+
+hooks:
+  - tools/site_hooks.py
+
+nav:
+  - Главная: index.md
+  - Курс:
+      - course/index.md
+      - Лекции: lectures/index.md
+      - Лабораторный практикум: labs/index.md
+      - Варианты заданий: labs/variants.md
+  - Каталог языков:
+      - languages/index.md
+      - Python: languages/python.md
+      - Java: languages/java.md
+      - Rust: languages/rust.md
+  - Концепции:
+      - concepts/index.md
+      - Онтология: languages/concepts.md
+      - Книги и ресурсы: materials/index.md
+  - Цифровой сад: garden/index.md
+
+extra_css:
+  - assets/stylesheets/course.css
+
+# Ломать сборку на битой ссылке. Перекрёстных ссылок в курсе много,
+# и молча отдавать студентам 404 хуже, чем упасть в CI.
+strict: true
+
+# По умолчанию MkDocs проверяет только существование страницы, а битый
+# якорь (`page.md#net-takogo`) лишь пишет в лог уровня info. Каталог языков
+# ссылается на якоря концепций, поэтому якоря проверяются как ссылки.
+validation:
+  links:
+    anchors: warn
+
+theme:
+  name: material
+  custom_dir: overrides
+  font: false
+  language: ru
+  features:
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: red
+      accent: red
+      toggle:
+        icon: material/weather-night
+        name: Тёмная тема
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: red
+      accent: red
+      toggle:
+        icon: material/weather-sunny
+        name: Светлая тема
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search:
+      lang: ru
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path:
+        - docs/_partials
+        - docs/languages/_data
+      check_paths: true
+      # Секции кода вырезаются из тела функций — убрать общий отступ.
+      dedent_subsections: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/rserdyukov/yapis-2026
+
+# Исходники сборки: отдельными страницами не публикуются.
+#   _partials/        — фрагменты текста задания (собираются build-docs.py)
+#   _design/          — проектные документы (kickoff, обоснования решений)
+#   languages/_data/  — YAML, примеры и грамматики каталога языков
+#                       (собираются build-catalog.py)
+#   lectures/slides/  — Marp-колоды; на сайт идёт готовый HTML в lectures/html/
+#   lectures/theme/   — CSS темы Marp, нужен только на этапе сборки слайдов
+exclude_docs: |
+  _partials/
+  _design/
+  languages/_data/
+  lectures/slides/
+  lectures/theme/
+  requirements.txt

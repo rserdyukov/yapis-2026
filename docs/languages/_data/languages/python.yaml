@@ -1,0 +1,268 @@
+id: python
+publish: true
+
+meta:
+  name: Python
+  ru: Python
+  wikidata: Q28865
+  pldb: python
+  hopl: 2126
+  rosetta: Python
+  appeared:
+    value: 1991
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q28865", title: "Wikidata P571", retrieved: 2026-09-18}
+  designers: [Guido van Rossum]
+  organizations: [Python Software Foundation]
+  website: https://www.python.org/
+  spec: https://docs.python.org/3/reference/
+  summary: >
+    Интерпретируемый язык с динамической проверкой типов и неявным маркером
+    блока (отступы). Самый частый язык реализации компиляторов в практикуме
+    курса и одна из целевых платформ (байт-код CPython).
+
+# Вехи: первый выпуск, актуальная версия и версии, на которые ссылаются
+# концепции ниже. Даты — из Wikidata P348 (квалификатор P577).
+versions:
+  - id: "1.0"
+    label: Python 1.0
+    date: 1994-01-26
+    kind: release
+    role: first
+    sources:
+      - {url: "https://www.python.org/doc/versions/", title: "Python documentation by version", retrieved: 2026-09-18}
+  - id: "3.5"
+    label: Python 3.5
+    date: 2015-09-13
+    kind: release
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q28865", title: "Wikidata P348 3.5.0", retrieved: 2026-09-18}
+  - id: "3.10"
+    label: Python 3.10
+    date: 2021-10-04
+    kind: release
+    sources:
+      - {url: "https://docs.python.org/3/whatsnew/3.10.html", title: "What's New In Python 3.10", retrieved: 2026-09-18}
+  - id: "3.14"
+    label: Python 3.14
+    date: 2025-10-07
+    kind: release
+    role: latest
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q28865", title: "Wikidata P348 3.14.0", retrieved: 2026-09-18}
+
+publications:
+  - authors: [Guido van Rossum]
+    title: "Python Reference Manual"
+    year: 1995
+    venue: "CWI Report CS-R9525, Centrum voor Wiskunde en Informatica, Amsterdam"
+    url: https://ir.cwi.nl/pub/5008
+  - authors: [Guido van Rossum]
+    title: "PEP 8 — Style Guide for Python Code"
+    year: 2001
+    venue: "Python Enhancement Proposals"
+    url: https://peps.python.org/pep-0008/
+  - authors: [Guido van Rossum, Jukka Lehtosalo, Łukasz Langa]
+    title: "PEP 484 — Type Hints"
+    year: 2014
+    venue: "Python Enhancement Proposals"
+    url: https://peps.python.org/pep-0484/
+  - authors: [Brandt Bucher, Guido van Rossum]
+    title: "PEP 634 — Structural Pattern Matching: Specification"
+    year: 2020
+    venue: "Python Enhancement Proposals"
+    url: https://peps.python.org/pep-0634/
+
+concepts:
+  variants.1:
+    - value: implicit
+      note: "переменная появляется при первом присваивании; аннотация типа (с 3.6) необязательна и интерпретатором не проверяется"
+  variants.2:
+    - value: explicit
+      note: "вызов типа-конструктора: `int(s)`, `str(n)`"
+    - value: implicit
+      applies_to: числовая башня и логический контекст
+      note: "int → float в арифметике, любое значение → bool в условии; между строками и числами неявного приведения нет"
+  variants.3:
+    - value: single
+    - value: multiple
+      note: "распаковка кортежа: `a, b = b, a`; правая часть вычисляется целиком до присваивания"
+  variants.4:
+    - value: subprograms
+      note: "блоки if/for/while новую область не создают; область создают функции, классы и comprehension"
+  variants.5:
+    - value: implicit
+      note: "двоеточие и отступ; закрывающего символа нет"
+  variants.6:
+    - value: if_only
+      until: "3.10"
+      note: "до 3.10 — только if/elif/else; многовариантный выбор через словарь или цепочку elif"
+    - value: if_and_switch
+      since: "3.10"
+      note: "`match` — сопоставление с образцом (PEP 634), а не switch по константам"
+  variants.7:
+    - value: absent
+      note: "повторное `def` заменяет предыдущее; диспетчеризация по типу — `functools.singledispatch`"
+  variants.8:
+    - value: by_sharing
+      note: "передаётся ссылка на объект: изменение изменяемого объекта видно вызывающему, перепривязка имени параметра — нет"
+  variants.9:
+    - value: anywhere
+      note: "вложенные функции образуют замыкания над переменными внешней"
+
+  req.4:
+    - value: builtin
+      note: "`input()` и `print()` — встроенные функции, импорт не нужен"
+  req.7.2.until:
+    - value: false
+      note: "эквивалент — `while not cond` или `while True` с `break`"
+  req.7.2.do_while:
+    - value: false
+      note: "эквивалент — `while True` с `break` в конце тела"
+  req.7.3:
+    - value: foreach
+      note: "счётный цикл — итерация по `range()`"
+  req.8.2:
+    - value: globals
+      note: "имена уровня модуля; для записи внутри функции — `global`"
+
+  typing.checking:
+    - value: dynamic
+    - value: gradual
+      since: "3.5"
+      note: "аннотации типов (PEP 484) проверяются внешними инструментами (mypy, pyright), не интерпретатором"
+  typing.strength:
+    - value: strong
+      note: "`'1' + 2` — TypeError; неявного приведения между строками и числами нет"
+  typing.inference:
+    - value: false
+      note: "у переменных нет статических типов, выводить нечего; статические анализаторы выводят типы из аннотаций"
+  typing.nullability:
+    - value: nullable_everywhere
+      note: "`None` — обычный объект, допустим где угодно; `Optional[T]` — только аннотация"
+
+  memory.management:
+    - value: refcount
+      note: "подсчёт ссылок в CPython; объект освобождается при обнулении счётчика"
+    - value: gc
+      note: "дополнительный сборщик для циклических ссылок (модуль `gc`)"
+
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+    - value: object_oriented
+    - value: functional
+      note: "функции первого класса, замыкания, `map`/`filter`, генераторы; без хвостовой рекурсии и неизменяемости по умолчанию"
+
+  errors.model:
+    - value: exceptions
+      note: "try / except / else / finally; исключения — классы, иерархия от BaseException"
+  errors.finally:
+    - value: true
+      note: "`finally`, а также контекстные менеджеры `with`"
+  errors.checked:
+    - value: false
+
+  subprograms.lambda:
+    - value: true
+      note: "`lambda` — только одно выражение; многострочные замыкания — вложенный `def`"
+  subprograms.generics:
+    - value: true
+      since: "3.5"
+      note: "`typing.Generic`, `TypeVar`; с 3.12 — синтаксис `def f[T](x: T)`; во время выполнения не проверяются"
+  subprograms.default_args:
+    - value: true
+      note: "значение по умолчанию вычисляется один раз при определении функции"
+  subprograms.named_args:
+    - value: true
+
+  syntax.statement_terminator:
+    - value: newline
+      note: "`;` допустима для нескольких операторов в одной строке"
+  syntax.case_sensitive:
+    - value: true
+  syntax.shadowing:
+    - value: allowed
+      note: "вложенная функция может переопределить имя внешней; предупреждений нет"
+    - value: allowed_same_scope
+      note: "повторное присваивание — это перепривязка того же имени, а не новое объявление"
+
+grammar:
+  spec_url: https://docs.python.org/3/reference/grammar.html
+  sources:
+    - id: parser
+      repo: antlr/grammars-v4
+      path: python/python3_14/PythonParser.g4
+      commit: 20efa537586610f5aebd584429ac1b5993a30381
+      license: MIT
+    - id: lexer
+      repo: antlr/grammars-v4
+      path: python/python3_14/PythonLexer.g4
+      commit: 20efa537586610f5aebd584429ac1b5993a30381
+      license: MIT
+  fragments:
+    - rule: tokens
+      source: lexer
+      file: PythonParser.fragments.g4
+      line: 35
+    - rule: block
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 185
+    - rule: assignment
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 98
+    - rule: if_stmt
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 278
+    - rule: match_stmt
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 340
+    - rule: while_stmt
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 290
+    - rule: for_stmt
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 296
+    - rule: function_def_raw
+      source: parser
+      file: PythonParser.fragments.g4
+      line: 208
+  links:
+    - {title: "Официальная PEG-грамматика (Grammar/python.gram)", url: "https://github.com/python/cpython/blob/main/Grammar/python.gram"}
+    - {title: "Grammar Zoo: Python", url: "https://slebok.github.io/zoo/index.html#python"}
+    - {title: "Rosetta Code: Python", url: "https://rosettacode.org/wiki/Category:Python"}
+
+examples:
+  - role: showcase
+    file: showcase.py
+
+assessment:
+  readability:
+    text: >
+      Отступы вместо скобок и минимум служебных слов делают код коротким и
+      единообразным; отсутствие типов в сигнатурах затрудняет чтение больших
+      программ, аннотации частично это компенсируют.
+    concepts: [variants.5, variants.1, typing.checking]
+  writability:
+    text: >
+      Неявное объявление, множественное присваивание, встроенные коллекции и
+      ввод-вывод без импорта — программа пишется быстро; ошибки типов
+      откладываются до запуска.
+    concepts: [variants.1, variants.3, req.4]
+  reliability:
+    text: >
+      Сильная типизация ловит смешение строк и чисел, но только во время
+      выполнения; надёжность держится на тестах и внешних проверках
+      аннотаций. Исключения структурные, с `finally` и `with`.
+    concepts: [typing.checking, typing.strength, errors.model, errors.finally]
+  cost:
+    text: >
+      Низкий порог входа, огромная экосистема; цена — скорость выполнения и
+      расходы на тесты вместо компилятора.
+    concepts: [memory.management]

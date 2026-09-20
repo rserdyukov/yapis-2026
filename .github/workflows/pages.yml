@@ -1,0 +1,116 @@
+name: pages
+
+# Сборка и публикация сайта курса на GitHub Pages.
+#
+# Сайт собирается из docs/: практикум и варианты — обычные страницы MkDocs,
+# лекции — HTML, который marp-cli делает из колод docs/lectures/slides/,
+# каталог языков — страницы, которые build-catalog.py собирает из YAML
+# в docs/languages/_data/.
+#
+# Деплой идёт артефактом через actions/deploy-pages: ветка gh-pages не
+# создаётся и в main ничего не пишется, поэтому guard-main.yml не срабатывает.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'tools/build-docs.py'
+      - 'tools/build-slides.py'
+      - 'tools/build-catalog.py'
+      - 'tools/publication.py'
+      - 'tools/site_hooks.py'
+      - 'tools/tests/**'
+      - 'overrides/**'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'tools/build-docs.py'
+      - 'tools/build-slides.py'
+      - 'tools/build-catalog.py'
+      - 'tools/publication.py'
+      - 'tools/site_hooks.py'
+      - 'tools/tests/**'
+      - 'overrides/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Публикуем по одному прогону за раз. Прерывать текущий деплой нельзя:
+# Pages останется в промежуточном состоянии.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+
+      - name: Установить MkDocs
+        run: python3 -m pip install --quiet -r docs/requirements.txt
+        shell: bash
+
+      # Сгенерированные документы должны быть закоммичены в актуальном виде:
+      # иначе сайт и TASK.md студента разойдутся с docs/_partials/.
+      - name: Проверить актуальность собранных документов
+        run: python3 tools/build-docs.py --check
+        shell: bash
+
+      # Каталог языков: валидация YAML по онтологии и актуальность страниц
+      # docs/languages/*.md. Испорченный маркер секции в примере ловится
+      # здесь — на сайт он попал бы как строка кода, не сломав сборку.
+      - name: Проверить каталог языков
+        run: python3 tools/build-catalog.py --check
+        shell: bash
+
+      # Слайды собираются в docs/lectures/html/ (в git не коммитятся).
+      # marp-cli запускается через npx: на раннере Node уже есть, а тянуть
+      # Docker-образ дольше.
+      - name: Собрать слайды лекций
+        run: python3 tools/build-slides.py
+        shell: bash
+
+      # strict: true в mkdocs.yml — битая перекрёстная ссылка валит сборку.
+      - name: Собрать сайт
+        run: python3 -m mkdocs build
+        shell: bash
+
+      - name: Проверить правила публикации
+        run: python3 -m unittest discover -s tools/tests -v
+        shell: bash
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+
+  # Публикуется только main: для PR job выше работает как проверка сборки.
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

@@ -23,3 +23,9 @@ Icon
 
 ### Артефакты локальных прогонов ИИ-ревью
 .github/review/tests/results/
+
+### Сборка сайта курса
+# Готовый сайт и слайды собираются в CI из docs/ — в git не хранятся.
+site/
+docs/lectures/html/
+__pycache__/

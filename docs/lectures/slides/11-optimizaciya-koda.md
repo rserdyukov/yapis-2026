@@ -1,5 +1,6 @@
 ---
 type: slide
+publish: true
 theme: custom_academic
 paginate: "true"
 ---
@@ -50,6 +51,5 @@ paginate: "true"
 - Планирование инструкций
 - Оптимизация памяти и кэша
 - Сокращение силы операторов на машинном уровне
-
 
 

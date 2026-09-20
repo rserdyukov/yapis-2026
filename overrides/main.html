@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{# Верхние вкладки остаются видимыми и на телефоне; боковые меню не нужны. #}
+{% block site_nav %}{% endblock %}
+
+{% block content %}
+  <div class="course-article{% if page.meta.layout == 'landing' %} course-article--landing{% endif %}">
+    <div class="course-eyebrow">ЯПИС · языки и компиляторы</div>
+    {% if not page.is_homepage %}
+      <nav class="course-breadcrumbs" aria-label="Путь к странице">
+        <a href="{{ 'index.html' | url }}">Главная</a>
+        {% for ancestor in page.ancestors | reverse %}
+          {% if ancestor.children %}
+            <span aria-hidden="true">/</span>
+            <a href="{{ ancestor.children[0].url | url }}">{{ ancestor.title }}</a>
+          {% endif %}
+        {% endfor %}
+        <span aria-hidden="true">/</span><span aria-current="page">{{ page.title }}</span>
+      </nav>
+    {% endif %}
+    {{ super() }}
+  </div>
+{% endblock %}

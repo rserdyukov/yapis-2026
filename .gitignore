@@ -28,3 +28,4 @@ Icon
 # Готовый сайт и слайды собираются в CI из docs/ — в git не хранятся.
 site/
 docs/lectures/html/
+__pycache__/

@@ -1,5 +1,6 @@
 ---
 type: slide
+publish: true
 theme: custom_academic
 paginate: "true"
 ---

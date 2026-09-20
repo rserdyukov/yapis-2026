@@ -1,0 +1,229 @@
+id: rust
+publish: true
+
+meta:
+  name: Rust
+  ru: Rust
+  wikidata: Q575650
+  pldb: rust
+  rosetta: Rust
+  appeared:
+    value: 2010
+    sources:
+      - {url: "https://pldb.io/concepts/rust.html", title: "PLDB appeared", retrieved: 2026-09-18}
+      - {url: "https://www.wikidata.org/wiki/Q575650", title: "Wikidata P571 (2006 — начало разработки)", retrieved: 2026-09-18}
+  designers: [Graydon Hoare]
+  organizations: [Mozilla Research, Rust Foundation]
+  website: https://www.rust-lang.org/
+  spec: https://doc.rust-lang.org/reference/
+  summary: >
+    Компилируемый язык со статической проверкой типов, управлением памятью
+    через владение и заимствование без сборщика мусора и обработкой ошибок
+    через значения `Result`. Компилируется через LLVM — одну из целевых
+    платформ курса.
+
+versions:
+  - id: "1.0"
+    label: Rust 1.0
+    date: 2015-05-15
+    kind: release
+    role: first
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q575650", title: "Wikidata P348 1.0.0", retrieved: 2026-09-18}
+  - id: "1.59"
+    label: Rust 1.59
+    date: 2022-02-24
+    kind: release
+    sources:
+      - {url: "https://blog.rust-lang.org/2022/02/24/Rust-1.59.0.html", title: "Announcing Rust 1.59.0", retrieved: 2026-09-18}
+  - id: "1.98"
+    label: Rust 1.98
+    date: 2026-09-01
+    kind: release
+    role: latest
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q575650", title: "Wikidata P348 1.98.0", retrieved: 2026-09-18}
+
+publications:
+  - authors: [Nicholas D. Matsakis, Felix S. Klock II]
+    title: "The Rust Language"
+    year: 2014
+    venue: "ACM SIGAda Ada Letters 34(3), HILT '14"
+    url: https://doi.org/10.1145/2692956.2663188
+  - authors: [Ralf Jung, Jacques-Henri Jourdan, Robbert Krebbers, Derek Dreyer]
+    title: "RustBelt: Securing the Foundations of the Rust Programming Language"
+    year: 2018
+    venue: "Proc. ACM Program. Lang. 2, POPL"
+    url: https://doi.org/10.1145/3158154
+  - authors: [Steve Klabnik, Carol Nichols]
+    title: "The Rust Programming Language"
+    year: 2018
+    venue: "No Starch Press"
+    url: https://doc.rust-lang.org/book/
+
+concepts:
+  variants.1:
+    - value: explicit
+      note: "ключевое слово `let`; тип указывается или выводится компилятором; без `mut` переменная неизменяема"
+  variants.2:
+    - value: explicit
+      note: "`as` для примитивов, `From`/`Into`, `parse`; арифметика между i32 и f64 без приведения — ошибка компиляции"
+  variants.3:
+    - value: single
+    - value: multiple
+      since: "1.59"
+      note: "деструктуризация кортежа: `(a, b) = (b, a)`; при объявлении `let (a, b) = …` — с 1.0"
+  variants.4:
+    - value: subprograms_and_blocks
+      note: "любой блок `{ }` — область видимости; блок — выражение"
+  variants.5:
+    - value: explicit
+      note: "фигурные скобки обязательны даже для одного оператора"
+  variants.6:
+    - value: if_and_switch
+      note: "`if`/`else if`/`else` и `match` — сопоставление с образцом с проверкой полноты; оба — выражения"
+  variants.7:
+    - value: absent
+      note: "две `fn` с одним именем в одной области — ошибка; полиморфизм — через трейты и обобщения"
+  variants.8:
+    - value: by_value
+      applies_to: типы с трейтом Copy (числа, bool, char, ссылки)
+    - value: move
+      applies_to: остальные типы
+      note: "после вызова исходная переменная недоступна — компилятор запрещает использование"
+    - value: borrow
+      note: "`&T` — разделяемая ссылка только на чтение; таких ссылок может быть несколько"
+    - value: borrow_mut
+      note: "`&mut T` — единственная ссылка с правом записи; проверяется компилятором (borrow checker)"
+  variants.9:
+    - value: anywhere
+      note: "вложенная `fn` не захватывает переменные внешней; для этого — замыкания `|x| …`"
+
+  req.4:
+    - value: macro
+      applies_to: вывод
+      note: "`println!`, `print!`, `eprintln!` — макросы стандартной библиотеки"
+    - value: stdlib
+      applies_to: ввод
+      note: "`std::io::stdin().read_line(&mut s)` и `parse`; встроенных функций ввода нет"
+  req.7.2.until:
+    - value: false
+      note: "эквивалент — `while !cond`"
+  req.7.2.do_while:
+    - value: false
+      note: "эквивалент — `loop { …; if cond { break } }`"
+  req.7.3:
+    - value: foreach
+      note: "`for x in iter`; счётный цикл — диапазон `0..n`"
+  req.8.2:
+    - value: globals
+      note: "`static`; изменение `static mut` требует `unsafe`, обычно используют атомики или `Mutex`"
+
+  typing.checking:
+    - value: static
+  typing.strength:
+    - value: strong
+      note: "неявных приведений между числовыми типами нет"
+  typing.inference:
+    - value: true
+      note: "локальный вывод (Hindley–Milner-подобный) внутри функции; сигнатуры функций аннотируются явно"
+  typing.nullability:
+    - value: optional_type
+      note: "`Option<T>`; null-ссылок в безопасном коде нет"
+
+  memory.management:
+    - value: ownership
+      note: "владение, перемещение, заимствование и времена жизни проверяются компилятором; освобождение — при выходе владельца из области (`Drop`)"
+    - value: refcount
+      applies_to: разделяемое владение
+      note: "`Rc<T>` / `Arc<T>` — явно, по выбору программиста"
+
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+    - value: functional
+      note: "замыкания, итераторы, `map`/`filter`, алгебраические типы, сопоставление с образцом"
+    - value: object_oriented
+      note: "структуры + трейты; наследования реализации нет — композиция и обобщения"
+
+  errors.model:
+    - value: result_type
+      note: "`Result<T, E>` и `Option<T>`, оператор `?` для проброса; `panic!` — для невосстановимых ошибок, не для управления потоком"
+  errors.finally:
+    - value: false
+      note: "освобождение ресурсов — через `Drop` при выходе из области (RAII), отдельного `finally` нет"
+  errors.checked:
+    - value: true
+      note: "тип ошибки — часть сигнатуры `fn f() -> Result<T, E>`; игнорировать `Result` без `#[must_use]`-предупреждения нельзя"
+
+  subprograms.lambda:
+    - value: true
+      note: "замыкания `|x| x + 1`; три трейта `Fn`/`FnMut`/`FnOnce` по способу захвата"
+  subprograms.generics:
+    - value: true
+      note: "мономорфизация во время компиляции; ограничения через трейты (`T: Display`)"
+  subprograms.default_args:
+    - value: false
+      note: "эквивалент — `Option<T>` в параметре или паттерн builder"
+  subprograms.named_args:
+    - value: false
+      note: "эквивалент — структура-параметр"
+
+  syntax.statement_terminator:
+    - value: semicolon
+      note: "`;` превращает выражение в оператор; последнее выражение блока без `;` — его значение"
+  syntax.case_sensitive:
+    - value: true
+  syntax.shadowing:
+    - value: allowed
+    - value: allowed_same_scope
+      note: "повторный `let x` в той же области создаёт новую переменную (идиома для смены типа)"
+
+grammar:
+  spec_url: https://doc.rust-lang.org/reference/
+  sources:
+    - id: parser
+      repo: antlr/grammars-v4
+      path: rust/RustParser.g4
+      commit: 20efa537586610f5aebd584429ac1b5993a30381
+      license: MIT
+  fragments:
+    - {rule: letStatement, source: parser, file: RustParser.fragments.g4, line: 430}
+    - {rule: blockExpression, source: parser, file: RustParser.fragments.g4, line: 537}
+    - {rule: ifExpression, source: parser, file: RustParser.fragments.g4, line: 677}
+    - {rule: matchExpression, source: parser, file: RustParser.fragments.g4, line: 688}
+    - {rule: loopExpression, source: parser, file: RustParser.fragments.g4, line: 647}
+    - {rule: function_, source: parser, file: RustParser.fragments.g4, line: 195}
+    - {rule: functionParamPattern, source: parser, file: RustParser.fragments.g4, line: 232}
+  links:
+    - {title: "Нотация грамматики в The Rust Reference", url: "https://doc.rust-lang.org/reference/notation.html"}
+    - {title: "Rosetta Code: Rust", url: "https://rosettacode.org/wiki/Category:Rust"}
+
+examples:
+  - role: showcase
+    file: showcase.rs
+
+assessment:
+  readability:
+    text: >
+      Синтаксис явный и единообразный (скобки, `let`, типы в сигнатурах), но
+      аннотации времён жизни и обобщений с ограничениями трейтов делают
+      сигнатуры длинными; для новичка — самый сложный из языков каталога.
+    concepts: [variants.1, variants.5, typing.inference]
+  writability:
+    text: >
+      Вывод типов внутри функций и выражения-блоки сокращают код, но
+      проверка заимствований заставляет заранее продумывать владение
+      данными; высокая «входная цена».
+    concepts: [variants.8, memory.management]
+  reliability:
+    text: >
+      Статическая сильная типизация, отсутствие null, обязательная обработка
+      `Result` и проверка владения исключают целые классы ошибок на этапе
+      компиляции.
+    concepts: [typing.checking, typing.nullability, errors.model, errors.checked, memory.management]
+  cost:
+    text: >
+      Дольше учить и дольше компилировать; окупается там, где критичны
+      производительность и безопасность памяти без сборщика мусора.
+    concepts: [memory.management]

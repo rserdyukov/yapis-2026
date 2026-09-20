@@ -1,0 +1,374 @@
+# Онтология концепций каталога языков программирования.
+#
+# Один словарь на весь каталог: карточка языка (languages/<id>.yaml) может
+# ссылаться только на концепции и значения, объявленные здесь. Это и делает
+# языки сравнимыми между собой — матрица «концепция × язык» на странице
+# concepts.md строится из этого файла.
+#
+# Категория variants повторяет девять свойств проектируемого языка из
+# docs/labs/variants.md (студент видит, как каждое свойство решено в
+# реальных языках); requirements — различающие пункты
+# docs/_partials/language-requirements.md. Остальные категории — оси, по
+# которым языки сравниваются в лекциях 02 и 20.
+#
+# Термины берутся из лекций, где они там есть (лекция 02 — типизация и
+# парадигмы, 03 — свойства языка, 20 — характеристики). Синонимы из лекций
+# указываются в aliases, чтобы поиск по сайту находил обе формулировки.
+#
+# Схема записи описана в README.md рядом.
+
+schema_version: 1
+
+# Доля покрытых значений (только kind: choice), ниже которой --check падает.
+# Непокрытое значение допустимо, если у него есть coverage.pending с note,
+# какой язык его покроет. Пороги растут вместе с числом языков.
+coverage_threshold:
+  variants: 0.8
+  requirements: 1.0
+
+categories:
+
+  - id: variants
+    ru: Свойства проектируемого языка
+    en: Designed-language properties
+    note: >
+      Девять свойств, по которым студенту выдаётся вариант
+      (docs/labs/variants.md, раздел 1). Здесь — как эти свойства решены в
+      реальных языках.
+    concepts:
+
+      - id: variants.1
+        slug: variants-1
+        ru: Объявление переменных
+        en: Variable declaration
+        kind: choice
+        showcase: required
+        values:
+          - {id: explicit, ru: Явное, en: explicit declaration,
+             note: "переменная вводится отдельной конструкцией объявления (тип или ключевое слово)"}
+          - {id: implicit, ru: Неявное, en: implicit declaration,
+             note: "переменная возникает при первом присваивании"}
+
+      - id: variants.2
+        slug: variants-2
+        ru: Преобразование типов
+        en: Type conversion
+        kind: choice
+        showcase: required
+        values:
+          - {id: explicit, ru: Явное, en: explicit conversion, note: "например, `a = (int) b`"}
+          - {id: implicit, ru: Неявное, en: implicit conversion (coercion)}
+
+      - id: variants.3
+        slug: variants-3
+        ru: Оператор присваивания
+        en: Assignment
+        kind: choice
+        showcase: required
+        values:
+          - {id: single, ru: Одиночный, en: single assignment, note: "например, `a = b`"}
+          - {id: multiple, ru: Множественный, en: multiple assignment, note: "например, `a, b = c, d`"}
+
+      - id: variants.4
+        slug: variants-4
+        ru: Структуры, ограничивающие область видимости
+        en: Scoping constructs
+        kind: choice
+        max_values: 1
+        showcase: required
+        values:
+          - {id: subprograms, ru: Подпрограммы, en: subprograms only}
+          - {id: subprograms_and_blocks, ru: Подпрограммы и блочные операторы, en: subprograms and blocks}
+
+      - id: variants.5
+        slug: variants-5
+        ru: Маркер блочного оператора
+        en: Block delimiter
+        kind: choice
+        max_values: 1
+        showcase: required
+        values:
+          - {id: explicit, ru: Явный, en: explicit delimiters, note: "например, `{ }` или `begin end`"}
+          - {id: implicit, ru: Неявный, en: significant indentation, note: "как в Python"}
+
+      - id: variants.6
+        slug: variants-6
+        ru: Условные операторы
+        en: Conditional statements
+        kind: choice
+        showcase: required
+        values:
+          - {id: if_only, ru: Только двухвариантный if-then-else, en: if-then-else only,
+             coverage: {pending: true, note: "Lua, Bash, Pascal без case"}}
+          - {id: if_and_switch, ru: Двухвариантный и многовариантный switch-case, en: if and switch/match}
+
+      - id: variants.7
+        slug: variants-7
+        ru: Перегрузка подпрограмм
+        en: Subprogram overloading
+        kind: choice
+        max_values: 1
+        showcase: required
+        values:
+          - {id: absent, ru: Отсутствует, en: no overloading}
+          - {id: present, ru: Присутствует, en: overloading}
+
+      - id: variants.8
+        slug: variants-8
+        ru: Передача параметров в подпрограмму
+        en: Parameter passing
+        kind: choice
+        showcase: required
+        note: >
+          Перечисление расширено относительно variants.md: три исходных
+          варианта не описывают ни один из языков каталога.
+        values:
+          - {id: by_value, ru: По значению, en: by value}
+          - {id: by_result, ru: По результату, en: by result (out),
+             coverage: {pending: true, note: "Ada out, C# out"}}
+          - {id: by_ref, ru: По ссылке, en: by reference,
+             coverage: {pending: true, note: "C++ &, C# ref, Pascal var"}}
+          - {id: by_sharing, ru: По ссылке на объект, en: call by sharing,
+             note: "копируется ссылка на объект; сам объект не копируется"}
+          - {id: move, ru: Перемещение, en: move semantics}
+          - {id: borrow, ru: Заимствование, en: shared borrow}
+          - {id: borrow_mut, ru: Изменяемое заимствование, en: mutable borrow}
+
+      - id: variants.9
+        slug: variants-9
+        ru: Допустимое место объявления подпрограмм
+        en: Subprogram declaration placement
+        kind: choice
+        showcase: required
+        values:
+          - {id: program_start, ru: В начале программы, en: at program start,
+             coverage: {pending: true, note: "Pascal, C89-стиль"}}
+          - {id: anywhere, ru: В любом месте, а также внутри другой подпрограммы, en: anywhere, nested allowed}
+          - {id: class_members_only, ru: Только как члены класса, en: class members only,
+             note: "свободных и вложенных подпрограмм нет; обход — лямбды и локальные классы"}
+
+  - id: requirements
+    ru: Обязательные требования к языку
+    en: Mandatory language requirements
+    note: >
+      Из docs/_partials/language-requirements.md взяты только пункты, по
+      которым реальные языки различаются. Пункты, истинные для любого языка
+      (есть типы, операции, выражения, блок, if, for), не заводятся.
+    concepts:
+
+      - id: req.4
+        slug: req-4
+        ru: Встроенный ввод-вывод
+        en: Built-in I/O
+        kind: choice
+        showcase: required
+        note: "п. 4.1: read() и write() — чем они являются в языке"
+        values:
+          - {id: builtin, ru: Встроенные функции, en: built-in functions}
+          - {id: stdlib, ru: Функции стандартной библиотеки, en: standard library}
+          - {id: macro, ru: Макросы, en: macros}
+
+      - id: req.7.2.until
+        slug: req-7-2-until
+        ru: Цикл с постусловием until
+        en: until loop
+        kind: bool
+        showcase: required
+        note: "п. 7.2 требует while и until; until нет ни в одном языке каталога — показывается эквивалент"
+
+      - id: req.7.2.do_while
+        slug: req-7-2-do-while
+        ru: Цикл do-while
+        en: do-while loop
+        kind: bool
+        showcase: required
+
+      - id: req.7.3
+        slug: req-7-3
+        ru: Оператор цикла с итерациями for
+        en: for loop form
+        kind: choice
+        showcase: required
+        values:
+          - {id: c_style, ru: Счётный (в стиле C), en: C-style counted loop}
+          - {id: foreach, ru: По коллекции (foreach), en: foreach}
+
+      - id: req.8.2
+        slug: req-8-2
+        ru: Глобальная область видимости для переменных
+        en: Global variables
+        kind: choice
+        max_values: 1
+        showcase: required
+        values:
+          - {id: globals, ru: Есть глобальные переменные, en: globals}
+          - {id: no_globals, ru: Глобальных переменных нет, en: no globals, note: "эквивалент — статические поля класса"}
+
+  - id: typing
+    ru: Типизация
+    en: Typing
+    note: "Термины лекций 02 (классификация) и 20 (типы, проверка типов)."
+    concepts:
+
+      - id: typing.checking
+        slug: typing-checking
+        ru: Проверка типов
+        en: Type checking
+        kind: choice
+        aliases: [статическая типизация, динамическая типизация]
+        values:
+          - {id: static, ru: Статическая, en: static, note: "ошибки типов обнаруживаются до запуска программы"}
+          - {id: dynamic, ru: Динамическая, en: dynamic, note: "ошибка проявится при выполнении проблемной ветки"}
+          - {id: gradual, ru: Постепенная, en: gradual, note: "опциональные статические аннотации поверх динамической проверки"}
+
+      - id: typing.strength
+        slug: typing-strength
+        ru: Сильная и слабая типизация
+        en: Type strength
+        kind: choice
+        max_values: 1
+        aliases: [строгая типизация]
+        values:
+          - {id: strong, ru: Сильная, en: strong, note: "большинство опасных приведений запрещены"}
+          - {id: weak, ru: Слабая, en: weak, note: "язык неявно приводит типы",
+             coverage: {pending: true, note: "JavaScript, C"}}
+
+      - id: typing.inference
+        slug: typing-inference
+        ru: Вывод типов
+        en: Type inference
+        kind: bool
+
+      - id: typing.nullability
+        slug: typing-nullability
+        ru: Отсутствие значения (null)
+        en: Nullability
+        kind: choice
+        values:
+          - {id: nullable_everywhere, ru: null допустим в любом ссылочном типе, en: nullable references}
+          - {id: optional_type, ru: Отдельный тип-обёртка (Option/Optional), en: option type}
+          - {id: nullable_types, ru: "Nullable-типы в системе типов (T?)", en: nullable types,
+             coverage: {pending: true, note: "Kotlin, C# 8, Swift, TypeScript strict"}}
+
+  - id: memory
+    ru: Управление памятью
+    en: Memory management
+    concepts:
+      - id: memory.management
+        slug: memory-management
+        ru: Освобождение памяти
+        en: Memory reclamation
+        kind: choice
+        values:
+          - {id: gc, ru: Сборка мусора, en: garbage collection}
+          - {id: refcount, ru: Подсчёт ссылок, en: reference counting}
+          - {id: ownership, ru: Владение и время жизни, en: ownership and lifetimes}
+          - {id: manual, ru: Ручное, en: manual,
+             coverage: {pending: true, note: "C, C++"}}
+
+  - id: paradigm
+    ru: Парадигмы программирования
+    en: Programming paradigms
+    note: "Список лекции 02."
+    concepts:
+      - id: paradigm.supported
+        slug: paradigm-supported
+        ru: Поддерживаемые парадигмы
+        en: Supported paradigms
+        kind: choice
+        values:
+          - {id: imperative, ru: Императивная, en: imperative}
+          - {id: procedural, ru: Процедурная, en: procedural}
+          - {id: object_oriented, ru: Объектно-ориентированная, en: object-oriented}
+          - {id: functional, ru: Функциональная, en: functional}
+          - {id: declarative, ru: Декларативная, en: declarative,
+             coverage: {pending: true, note: "SQL, Prolog, HTML"}}
+          - {id: logic, ru: Логическая, en: logic,
+             coverage: {pending: true, note: "Prolog"}}
+          - {id: event_driven, ru: Событийно-ориентированная, en: event-driven,
+             coverage: {pending: true, note: "JavaScript, C#"}}
+
+  - id: errors
+    ru: Обработка исключительных ситуаций
+    en: Error handling
+    note: "Лекция 20, слайд «Обработка исключительных ситуаций»."
+    concepts:
+      - id: errors.model
+        slug: errors-model
+        ru: Модель обработки ошибок
+        en: Error handling model
+        kind: choice
+        values:
+          - {id: unstructured, ru: Неструктурная (регистрируемый обработчик), en: unstructured handlers,
+             coverage: {pending: true, note: "C signal, Go panic/recover"}}
+          - {id: exceptions, ru: Структурная (try-throw-catch), en: structured exceptions}
+          - {id: result_type, ru: Значение-результат (Result / коды ошибок), en: result values}
+      - id: errors.finally
+        slug: errors-finally
+        ru: Блоки с гарантированным завершением
+        en: Guaranteed cleanup blocks
+        kind: bool
+      - id: errors.checked
+        slug: errors-checked
+        ru: Проверяемые исключения в сигнатуре
+        en: Checked exceptions
+        kind: bool
+
+  - id: subprograms
+    ru: Подпрограммы и абстракция
+    en: Subprograms and abstraction
+    concepts:
+      - id: subprograms.lambda
+        slug: subprograms-lambda
+        ru: Лямбда-функции
+        en: Lambda functions
+        kind: bool
+        aliases: [анонимные функции, замыкания]
+      - id: subprograms.generics
+        slug: subprograms-generics
+        ru: Обобщённые типы и подпрограммы
+        en: Generics
+        kind: bool
+        aliases: [шаблоны, дженерики]
+      - id: subprograms.default_args
+        slug: subprograms-default-args
+        ru: Параметры по умолчанию
+        en: Default arguments
+        kind: bool
+      - id: subprograms.named_args
+        slug: subprograms-named-args
+        ru: Именованные аргументы
+        en: Named arguments
+        kind: bool
+
+  - id: syntax
+    ru: Синтаксическая структура
+    en: Syntax
+    note: "Лекция 20, слайд «Синтаксическая структура»."
+    concepts:
+      - id: syntax.statement_terminator
+        slug: syntax-statement-terminator
+        ru: Разделитель операторов
+        en: Statement terminator
+        kind: choice
+        max_values: 1
+        values:
+          - {id: semicolon, ru: Точка с запятой обязательна, en: mandatory semicolon}
+          - {id: newline, ru: Перевод строки, en: newline}
+          - {id: optional_semicolon, ru: Точка с запятой необязательна, en: optional semicolon,
+             coverage: {pending: true, note: "Kotlin, Go, JavaScript, Swift"}}
+      - id: syntax.case_sensitive
+        slug: syntax-case-sensitive
+        ru: Чувствительность к регистру
+        en: Case sensitivity
+        kind: bool
+      - id: syntax.shadowing
+        slug: syntax-shadowing
+        ru: Совмещение имён (shadowing)
+        en: Shadowing
+        kind: choice
+        aliases: [совпадение имён, ограниченное совмещение имен]
+        values:
+          - {id: allowed, ru: Разрешено во вложенной области, en: allowed in nested scope}
+          - {id: forbidden_in_block, ru: Запрещено внутри одной подпрограммы, en: forbidden within a subprogram}
+          - {id: allowed_same_scope, ru: Разрешено даже в той же области, en: allowed in the same scope}

@@ -1,5 +1,6 @@
 ---
 type: slide
+publish: true
 theme: custom_academic
 paginate: "true"
 ---
@@ -198,4 +199,3 @@ STORE R1, address    // сохранить значение из R1 в памя�
 	- python-xasm (https://github.com/rocky/python-xasm), python-reassembler
 - WASM
 	- WAT
-

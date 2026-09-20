@@ -3,7 +3,9 @@ name: pages
 # Сборка и публикация сайта курса на GitHub Pages.
 #
 # Сайт собирается из docs/: практикум и варианты — обычные страницы MkDocs,
-# лекции — HTML, который marp-cli делает из колод docs/lectures/slides/.
+# лекции — HTML, который marp-cli делает из колод docs/lectures/slides/,
+# каталог языков — страницы, которые build-catalog.py собирает из YAML
+# в docs/languages/_data/.
 #
 # Деплой идёт артефактом через actions/deploy-pages: ветка gh-pages не
 # создаётся и в main ничего не пишется, поэтому guard-main.yml не срабатывает.
@@ -16,6 +18,11 @@ on:
       - 'mkdocs.yml'
       - 'tools/build-docs.py'
       - 'tools/build-slides.py'
+      - 'tools/build-catalog.py'
+      - 'tools/publication.py'
+      - 'tools/site_hooks.py'
+      - 'tools/tests/**'
+      - 'overrides/**'
       - '.github/workflows/pages.yml'
   pull_request:
     paths:
@@ -23,6 +30,11 @@ on:
       - 'mkdocs.yml'
       - 'tools/build-docs.py'
       - 'tools/build-slides.py'
+      - 'tools/build-catalog.py'
+      - 'tools/publication.py'
+      - 'tools/site_hooks.py'
+      - 'tools/tests/**'
+      - 'overrides/**'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -60,6 +72,13 @@ jobs:
         run: python3 tools/build-docs.py --check
         shell: bash
 
+      # Каталог языков: валидация YAML по онтологии и актуальность страниц
+      # docs/languages/*.md. Испорченный маркер секции в примере ловится
+      # здесь — на сайт он попал бы как строка кода, не сломав сборку.
+      - name: Проверить каталог языков
+        run: python3 tools/build-catalog.py --check
+        shell: bash
+
       # Слайды собираются в docs/lectures/html/ (в git не коммитятся).
       # marp-cli запускается через npx: на раннере Node уже есть, а тянуть
       # Docker-образ дольше.
@@ -70,6 +89,10 @@ jobs:
       # strict: true в mkdocs.yml — битая перекрёстная ссылка валит сборку.
       - name: Собрать сайт
         run: python3 -m mkdocs build
+        shell: bash
+
+      - name: Проверить правила публикации
+        run: python3 -m unittest discover -s tools/tests -v
         shell: bash
 
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0

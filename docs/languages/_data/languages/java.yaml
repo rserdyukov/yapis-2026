@@ -1,0 +1,246 @@
+id: java
+publish: true
+
+meta:
+  name: Java
+  ru: Java
+  wikidata: Q251
+  pldb: java
+  hopl: 2131
+  rosetta: Java
+  appeared:
+    value: 1995
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q251", title: "Wikidata P571", retrieved: 2026-09-18}
+  designers: [James Gosling]
+  organizations: [Sun Microsystems, Oracle]
+  website: https://www.oracle.com/java/
+  spec: https://docs.oracle.com/javase/specs/
+  summary: >
+    Объектно-ориентированный язык со статической проверкой типов, сборкой
+    мусора и структурными исключениями, компилируемый в байт-код JVM —
+    одну из целевых платформ курса. Второй по частоте язык реализации
+    компиляторов в практикуме.
+
+versions:
+  - id: "1.0"
+    label: Java 1.0
+    date: 1996-01-23
+    kind: release
+    role: first
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q251", title: "Wikidata P571/P348", retrieved: 2026-09-18}
+  - id: "5"
+    label: Java SE 5
+    date: 2004-09-30
+    kind: release
+    sources:
+      - {url: "https://www.oracle.com/java/technologies/javase/jdk5-relnotes.html", title: "JDK 5.0 Release Notes", retrieved: 2026-09-18}
+  - id: "8"
+    label: Java SE 8
+    date: 2014-03-18
+    kind: release
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q251", title: "Wikidata P348 Java SE 8", retrieved: 2026-09-18}
+  - id: "10"
+    label: Java SE 10
+    date: 2018-03-20
+    kind: release
+    sources:
+      - {url: "https://openjdk.org/jeps/286", title: "JEP 286: Local-Variable Type Inference", retrieved: 2026-09-18}
+  - id: "26"
+    label: Java SE 26
+    date: 2026-03-17
+    kind: release
+    role: latest
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q251", title: "Wikidata P348 Java SE 26", retrieved: 2026-09-18}
+
+publications:
+  - authors: [James Gosling, Henry McGilton]
+    title: "The Java Language Environment: A White Paper"
+    year: 1996
+    venue: "Sun Microsystems"
+    url: https://www.oracle.com/java/technologies/language-environment.html
+  - authors: [James Gosling, Bill Joy, Guy Steele, Gilad Bracha, Alex Buckley, Daniel Smith, Gavin Bierman]
+    title: "The Java Language Specification, Java SE 21 Edition"
+    year: 2023
+    venue: "Oracle"
+    url: https://docs.oracle.com/javase/specs/jls/se21/html/index.html
+  - authors: [Joshua Bloch]
+    title: "Effective Java, 3rd Edition"
+    year: 2018
+    venue: "Addison-Wesley"
+
+concepts:
+  variants.1:
+    - value: explicit
+      note: "тип перед именем: `int x = 1;`"
+    - value: implicit
+      since: "10"
+      applies_to: локальные переменные с инициализатором
+      note: "`var x = 1;` — тип выводится, но объявление остаётся явным (JEP 286); поля и параметры — только с типом"
+  variants.2:
+    - value: explicit
+      note: "оператор приведения `(int) x` — буквально пример из вариантов заданий"
+    - value: implicit
+      applies_to: расширяющие преобразования и boxing
+      note: "int → long → double без потери (JLS 5.1.2); int ↔ Integer с версии 5; сужающие — только явно"
+  variants.3:
+    - value: single
+      note: "`a = b = 0` — цепочка одиночных присваиваний; множественного `a, b = c, d` нет"
+  variants.4:
+    - value: subprograms_and_blocks
+      note: "любой блок `{ }`; повторное объявление имени во вложенном блоке — ошибка"
+  variants.5:
+    - value: explicit
+      note: "фигурные скобки; для одного оператора их можно опустить, но это не блок"
+  variants.6:
+    - value: if_and_switch
+      note: "`switch` по константам с 1.0; выражение `switch` со стрелками — с 14 (JEP 361); сопоставление по типам — с 21 (JEP 441)"
+  variants.7:
+    - value: present
+      note: "выбор по статическим типам аргументов на этапе компиляции"
+  variants.8:
+    - value: by_value
+      applies_to: примитивные типы
+      note: "копия значения"
+    - value: by_sharing
+      applies_to: ссылочные типы
+      note: "JLS 8.4.1 формально называет это передачей по значению — копируется ссылка; изменение объекта видно вызывающему, перепривязка параметра — нет"
+      sources:
+        - {url: "https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.4.1", title: "JLS 8.4.1 Formal Parameters", retrieved: 2026-09-18}
+  variants.9:
+    - value: class_members_only
+      note: "вложенных методов нет; обход — лямбды (с 8) и локальные классы внутри метода"
+
+  req.4:
+    - value: stdlib
+      note: "`System.out.println`, `Scanner`, `BufferedReader` — классы стандартной библиотеки"
+  req.7.2.until:
+    - value: false
+      note: "эквивалент — `while (!cond)`"
+  req.7.2.do_while:
+    - value: true
+  req.7.3:
+    - value: c_style
+      note: "`for (int i = 0; i < n; i++)`"
+    - value: foreach
+      since: "5"
+      note: "`for (T x : iterable)`"
+  req.8.2:
+    - value: no_globals
+      note: "любая переменная — член класса или локальная; эквивалент глобальной — `static`-поле"
+
+  typing.checking:
+    - value: static
+  typing.strength:
+    - value: strong
+      note: "`\"1\" + 2` даёт строку `\"12\"` — единственное заметное неявное приведение (конкатенация)"
+  typing.inference:
+    - value: true
+      since: "10"
+      applies_to: локальные переменные (`var`), лямбды, обобщённые вызовы (diamond с 7)
+  typing.nullability:
+    - value: nullable_everywhere
+      note: "любая ссылка может быть `null`; `Optional<T>` (с 8) — библиотечная обёртка, не часть системы типов"
+
+  memory.management:
+    - value: gc
+      note: "трассирующие сборщики JVM (G1, ZGC, Shenandoah); освобождение недетерминировано"
+
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+      note: "статические методы; свободных функций нет"
+    - value: object_oriented
+      note: "классы, одиночное наследование реализации, интерфейсы"
+    - value: functional
+      since: "8"
+      note: "лямбды, функциональные интерфейсы, Stream API; без функций первого класса вне интерфейсов"
+
+  errors.model:
+    - value: exceptions
+      note: "try / catch / finally; иерархия от Throwable"
+  errors.finally:
+    - value: true
+      note: "`finally` и try-with-resources (с 7)"
+  errors.checked:
+    - value: true
+      note: "проверяемые исключения объявляются в `throws`; непроверяемые (RuntimeException) — нет"
+
+  subprograms.lambda:
+    - value: true
+      since: "8"
+      note: "лямбда — реализация функционального интерфейса; захватываемые переменные должны быть effectively final"
+  subprograms.generics:
+    - value: true
+      since: "5"
+      note: "стирание типов: во время выполнения параметры типов недоступны"
+  subprograms.default_args:
+    - value: false
+      note: "эквивалент — перегрузка"
+  subprograms.named_args:
+    - value: false
+      note: "эквивалент — паттерн builder"
+
+  syntax.statement_terminator:
+    - value: semicolon
+  syntax.case_sensitive:
+    - value: true
+  syntax.shadowing:
+    - value: forbidden_in_block
+      applies_to: локальные переменные
+      note: "локальная переменная не может повторить имя другой локальной в охватывающем блоке того же метода"
+    - value: allowed
+      applies_to: поля и параметры
+      note: "локальная переменная или параметр может скрыть поле класса; доступ к полю — через `this`"
+
+grammar:
+  spec_url: https://docs.oracle.com/javase/specs/jls/se21/html/jls-19.html
+  sources:
+    - id: parser
+      repo: antlr/grammars-v4
+      path: java/java/JavaParser.g4
+      commit: 20efa537586610f5aebd584429ac1b5993a30381
+      license: BSD-3-Clause
+  fragments:
+    - {rule: localVariableDeclaration, source: parser, file: JavaParser.fragments.g4, line: 478}
+    - {rule: block, source: parser, file: JavaParser.fragments.g4, line: 468}
+    - {rule: statement, source: parser, file: JavaParser.fragments.g4, line: 521}
+    - {rule: switchExpression, source: parser, file: JavaParser.fragments.g4, line: 722}
+    - {rule: forControl, source: parser, file: JavaParser.fragments.g4, line: 584}
+    - {rule: methodDeclaration, source: parser, file: JavaParser.fragments.g4, line: 168}
+    - {rule: formalParameter, source: parser, file: JavaParser.fragments.g4, line: 305}
+  links:
+    - {title: "Grammar Zoo: Java", url: "https://slebok.github.io/zoo/index.html#java"}
+    - {title: "Rosetta Code: Java", url: "https://rosettacode.org/wiki/Category:Java"}
+
+examples:
+  - role: showcase
+    file: Showcase.java
+
+assessment:
+  readability:
+    text: >
+      Явные типы в объявлениях и сигнатурах делают код самодокументируемым,
+      но многословным: обвязка классов и обязательные скобки увеличивают
+      объём по сравнению с Python и Kotlin.
+    concepts: [variants.1, variants.5, variants.9]
+  writability:
+    text: >
+      Перегрузка, `var`, лямбды и Stream API сократили код по сравнению с
+      ранними версиями; отсутствие свободных функций, параметров по умолчанию
+      и множественного присваивания остаётся.
+    concepts: [variants.7, variants.3, subprograms.default_args]
+  reliability:
+    text: >
+      Статическая типизация и проверяемые исключения ловят ошибки на этапе
+      компиляции; `null` допустим в любой ссылке и остаётся главным
+      источником ошибок времени выполнения.
+    concepts: [typing.checking, errors.checked, typing.nullability]
+  cost:
+    text: >
+      Зрелая экосистема JVM и инструменты; цена — многословность, время
+      старта JVM и потребление памяти.
+    concepts: [memory.management]

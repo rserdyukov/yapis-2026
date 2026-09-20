@@ -1,5 +1,10 @@
+---
+publish: true
+layout: landing
+---
+
 <!-- ВНИМАНИЕ. Файл собирается автоматически: tools/build-slides.py
-     Правки вносите в исходники колод docs/lectures/slides/. -->
+     Текст меняйте в docs/lectures/slides/. Метаданные индекса сохраняются. -->
 
 # Лекции
 

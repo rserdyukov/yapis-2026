@@ -22,6 +22,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from publication import page_frontmatter
+
 ROOT = Path(__file__).resolve().parent.parent
 PARTIALS = ROOT / "docs" / "_partials"
 
@@ -146,7 +148,7 @@ def build_site_labs() -> str:
 Порядок работы с репозиторием, ветки, Pull Request и правила ИИ-ревью
 описаны в `GUIDE.md` вашего репозитория."""
 
-    return "\n\n".join([header, *body]) + "\n"
+    return page_frontmatter(ROOT / "docs/labs/index.md") + "\n\n".join([header, *body]) + "\n"
 
 
 TARGETS = {

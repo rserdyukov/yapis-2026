@@ -118,6 +118,10 @@ build_review_diff() {
     echo
     echo "### Полный diff (без сгенерированных файлов)"
     echo
-    git -C "${repo_dir}" diff "${base}" "${head}" -- "${work_dir}" "${exclude[@]}"
+    # ${exclude[@]+…}: при пустом массиве (нет сгенерированных файлов — частый
+    # случай) bash < 4.4 под `set -u` считает "${exclude[@]}" unbound variable
+    # и завершает весь скрипт; а ошибку не видно из-за 2>/dev/null ниже.
+    # Это /bin/bash 3.2 на macOS, т. е. локальный review-local.sh.
+    git -C "${repo_dir}" diff "${base}" "${head}" -- "${work_dir}" ${exclude[@]+"${exclude[@]}"}
   } > "${out}" 2>/dev/null
 }

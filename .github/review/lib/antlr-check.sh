@@ -339,7 +339,8 @@ run_antlr_checks() {
     if [ "${kind}" = "parser" ]; then
       dir="$(dirname "${g}")"
       local lx
-      for lx in "${lexers[@]}"; do
+      # ${lexers[@]+…}: пустой массив под set -u в bash 3.2 (macOS) — unbound variable.
+      for lx in ${lexers[@]+"${lexers[@]}"}; do
         [ "$(dirname "${lx}")" = "${dir}" ] && group+=("${lx}")
       done
       if [ "${#group[@]}" -eq 1 ]; then

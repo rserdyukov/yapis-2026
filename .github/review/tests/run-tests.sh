@@ -1534,6 +1534,26 @@ test_generated_numstat_filter_and_sum() {
   assert_eq "${out}" "3" "три сгенерированных пути"
 }
 
+# Регрессия (142f0ff): без сгенерированных файлов массив exclude пуст, и в
+# bash < 4.4 (/bin/bash 3.2 на macOS) под `set -u` "${exclude[@]}" роняет
+# review-local.sh молча — сразу после шапки, с кодом 1. На bash 5 тест
+# проходит в любом случае; ловит баг только при запуске на macOS.
+test_generated_build_review_diff_without_generated_files() {
+  local r="${TMP_ROOT}/brd-repo" out rc
+  rm -rf "${r}"; mkdir -p "${r}/work"
+  git -C "${r}" init -q
+  printf 'a\n' > "${r}/work/main.py"
+  git -C "${r}" add . && git -C "${r}" -c user.name=t -c user.email=t@t commit -qm base
+  printf 'a\nb\n' > "${r}/work/main.py"
+  git -C "${r}" add . && git -C "${r}" -c user.name=t -c user.email=t@t commit -qm head
+  git -C "${r}" diff --numstat HEAD~1 HEAD -- work > "${r}.numstat"
+  out="$(bash -c "set -uo pipefail; source '${REVIEW_DIR}/lib/generated-files.sh'
+    build_review_diff '${r}' HEAD~1 HEAD work '${r}.numstat' '${r}.diff'; echo DONE" 2>&1)"; rc=$?
+  assert_contains "${out}" "DONE" "build_review_diff не обрывает скрипт под set -u (код ${rc})" || return 1
+  assert_contains "$(cat "${r}.diff")" "+b" "diff записан целиком" || return 1
+  assert_not_contains "$(cat "${r}.diff")" "Сгенерированные файлы" "секции сгенерированных нет"
+}
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # Тесты: antlr-check.sh — сборка грамматики и прогон примеров
@@ -1634,6 +1654,20 @@ test_antlr_check_skips_foreign_actions() {
   local out rc; out="$(_run_antlr "${w}")"; rc=$?
   assert_contains "${out}" "ПРОПУЩЕНА" "пропуск объявлен явно" || return 1
   [ "${rc}" -eq 0 ] || { fail "ограничение окружения не должно давать ненулевой код"; return 1; }
+  return 0
+}
+
+# parser grammar без единой lexer grammar: массив lexers пуст, и в bash 3.2
+# (macOS) под set -u "${lexers[@]}" обрывал проверку вместо понятного сообщения.
+test_antlr_check_parser_without_lexer() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-nolexer"; rm -rf "${w}"; mkdir -p "${w}/compiler" "${w}/examples"
+  printf 'parser grammar CalcParser;\noptions { tokenVocab = CalcLexer; }\nprog : NUM EOF ;\n' > "${w}/compiler/CalcParser.g4"
+  printf '1\n' > "${w}/examples/ok.txt"
+  local out rc; out="$(bash -c "set -u; source '${REVIEW_DIR}/lib/antlr-check.sh'; run_antlr_checks '${w}' 30 6" 2>&1)"; rc=$?
+  assert_not_contains "${out}" "unbound variable" "пустой lexers не роняет проверку" || return 1
+  assert_contains "${out}" "parser grammar без lexer grammar" "понятное сообщение" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
   return 0
 }
 

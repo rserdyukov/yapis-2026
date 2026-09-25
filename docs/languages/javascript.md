@@ -24,6 +24,12 @@ JavaScript описан здесь как ECMAScript 2024 с динамичес�
 | Спецификация | <https://262.ecma-international.org/15.0/> |
 | Внешние каталоги | [Wikidata Q2005](https://www.wikidata.org/wiki/Q2005) |
 
+## Статьи { #articles }
+
+- [JavaScript: цена обратной совместимости](../garden/javascript-compatibility.md)
+- [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md)
+- [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
+
 ## Люди { #people }
 
 - [Брендан Эйх](people.md#eich) — Создал первую реализацию JavaScript в Netscape в 1995 году и участвовал в стандартизации ECMAScript.

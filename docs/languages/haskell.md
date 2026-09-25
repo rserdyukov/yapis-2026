@@ -24,6 +24,10 @@ Haskell 2010 — нестрогий чисто функциональный яз
 | Спецификация | <https://www.haskell.org/onlinereport/haskell2010/> |
 | Внешние каталоги | [Wikidata Q34010](https://www.wikidata.org/wiki/Q34010) |
 
+## Статьи { #articles }
+
+- [Haskell: чистота и ленивость](../garden/haskell-purity-laziness.md)
+
 ## Люди { #people }
 
 - [Пол Худак](people.md#hudak) — Один из редакторов первого отчёта о языке Haskell.
@@ -35,6 +39,7 @@ Haskell 2010 — нестрогий чисто функциональный яз
 
 - Филип Уодлер, Stephen Blott. *How to Make Ad-hoc Polymorphism Less Ad Hoc*. POPL '89, 1989. DOI: [10.1145/75277.75283](https://doi.org/10.1145/75277.75283). Статья, в которой предложены классы типов Haskell. ([в источниках](sources.md#wadler-blott-1989))
 - Пол Худак, Джон Хьюз, Саймон Пейтон-Джонс, Филип Уодлер. *A History of Haskell — Being Lazy with Class*. HOPL III, 2007. DOI: [10.1145/1238844.1238856](https://doi.org/10.1145/1238844.1238856). Решения комитета Haskell о нестрогости, классах типов и монадическом вводе-выводе. ([в источниках](sources.md#hopl-haskell))
+- Джон Хьюз. *Why Functional Programming Matters*. The Computer Journal 32(2), 1989. DOI: [10.1093/comjnl/32.2.98](https://doi.org/10.1093/comjnl/32.2.98). Почему функции высшего порядка и ленивые вычисления улучшают модульность программ. ([в источниках](sources.md#hughes-why-fp))
 
 ## Концепции { #concepts }
 

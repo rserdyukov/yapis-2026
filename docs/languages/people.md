@@ -175,7 +175,138 @@ publish: true
 Участник комитета Haskell, автор статьи «Why Functional Programming Matters».
 
 - **Языки:** [Haskell](haskell.md)
-- **Источники:** [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell)
+- **Источники:** [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell); [Why Functional Programming Matters](sources.md#hughes-why-fp)
+
+### Чарльз Мур { #moore }
+
+*Charles H. Moore* · [Wikidata Q92999](https://www.wikidata.org/wiki/Q92999)
+
+Создатель языка Forth (около 1970 года) и сооснователь Forth, Inc.
+
+- **Языки:** [Forth](forth.md)
+- **Понятия:** [Метапрограммирование](glossary.md#syntax-metaprogramming)
+- **Источники:** [The Evolution of Forth](sources.md#hopl-forth)
+
+### Дональд Чемберлин { #chamberlin }
+
+*Donald D. Chamberlin* · [Wikidata Q93071](https://www.wikidata.org/wiki/Q93071)
+
+Соавтор языка SEQUEL (впоследствии SQL), созданного в IBM Research для System R.
+
+- **Языки:** [SQL](sql.md)
+- **Понятия:** [Кратность элементов коллекции](glossary.md#data-collection-multiplicity)
+- **Источники:** [SEQUEL: A Structured English Query Language](sources.md#sequel-1974)
+
+### Рэймонд Бойс { #boyce }
+
+*Raymond F. Boyce* · [Wikidata Q93007](https://www.wikidata.org/wiki/Q93007)
+
+Соавтор SEQUEL/SQL и нормальной формы Бойса — Кодда.
+
+- **Языки:** [SQL](sql.md)
+- **Источники:** [SEQUEL: A Structured English Query Language](sources.md#sequel-1974)
+
+### Алан Кэй { #kay }
+
+*Alan Kay* · [Wikidata Q92742](https://www.wikidata.org/wiki/Q92742)
+
+Руководитель группы Xerox PARC, создавшей Smalltalk; ввёл термин «объектно-ориентированное программирование».
+
+- **Языки:** [Smalltalk](smalltalk.md)
+- **Понятия:** [Диспетчеризация вызовов](glossary.md#abstraction-dispatch)
+- **Источники:** [The Early History of Smalltalk](sources.md#hopl-smalltalk)
+
+### Адель Голдберг { #goldberg }
+
+*Adele Goldberg* · [Wikidata Q11605](https://www.wikidata.org/wiki/Q11605)
+
+Соразработчик Smalltalk-80 и соавтор его описания «Smalltalk-80: The Language and its Implementation».
+
+- **Языки:** [Smalltalk](smalltalk.md)
+- **Источники:** [Smalltalk-80: The Language and its Implementation](sources.md#smalltalk-80-blue-book)
+
+### Дэн Ингаллс { #ingalls }
+
+*Dan Ingalls* · [Wikidata Q92772](https://www.wikidata.org/wiki/Q92772)
+
+Главный реализатор виртуальных машин Smalltalk в Xerox PARC и соавтор Squeak.
+
+- **Языки:** [Smalltalk](smalltalk.md)
+- **Понятия:** [Метапрограммирование](glossary.md#syntax-metaprogramming)
+- **Источники:** [The Evolution of Smalltalk: from Smalltalk-72 through Squeak](sources.md#hopl-smalltalk-squeak)
+
+### Джо Армстронг { #armstrong }
+
+*Joe Armstrong* · [Wikidata Q1691321](https://www.wikidata.org/wiki/Q1691321)
+
+Один из создателей Erlang в Ericsson; в диссертации 2003 года описал построение отказоустойчивых систем из изолированных процессов.
+
+- **Языки:** [Erlang](erlang.md)
+- **Понятия:** [Представление и передача ошибок](glossary.md#errors-model), [Конкурентное выполнение](glossary.md#resources-concurrency)
+- **Источники:** [A History of Erlang](sources.md#hopl-erlang); [Making Reliable Distributed Systems in the Presence of Software Errors](sources.md#armstrong-thesis)
+
+### Роберт Вирдинг { #virding }
+
+*Robert Virding* · [Wikidata Q107596747](https://www.wikidata.org/wiki/Q107596747)
+
+Один из первых разработчиков Erlang в лаборатории Ericsson Computer Science Laboratory.
+
+- **Языки:** [Erlang](erlang.md)
+
+### Роберту Иерузалимски { #ierusalimschy }
+
+*Roberto Ierusalimschy* · [Wikidata Q1840472](https://www.wikidata.org/wiki/Q1840472)
+
+Ведущий архитектор Lua в PUC-Rio и автор книги «Programming in Lua».
+
+- **Языки:** [Lua](lua.md)
+- **Источники:** [The Evolution of Lua](sources.md#hopl-lua)
+
+### Кен Томпсон { #thompson }
+
+*Ken Thompson* · [Wikidata Q1107006](https://www.wikidata.org/wiki/Q1107006)
+
+Соавтор Unix и языка B в Bell Labs; один из трёх авторов Go в Google.
+
+- **Языки:** [Go](go.md)
+- **Источники:** [The Go Programming Language and Environment](sources.md#go-cacm-2022)
+
+### Роб Пайк { #pike }
+
+*Rob Pike* · [Wikidata Q517764](https://www.wikidata.org/wiki/Q517764)
+
+Один из трёх авторов Go в Google; ранее участвовал в разработке Plan 9 и вместе с Кеном Томпсоном создал UTF-8.
+
+- **Языки:** [Go](go.md)
+- **Источники:** [The Go Programming Language and Environment](sources.md#go-cacm-2022); [Go at Google: Language Design in the Service of Software Engineering](sources.md#pike-go-at-google)
+
+### Роберт Гризмер { #griesemer }
+
+*Robert Griesemer* · [Wikidata Q16729446](https://www.wikidata.org/wiki/Q16729446)
+
+Один из трёх авторов Go и соавтор его спецификации.
+
+- **Языки:** [Go](go.md)
+- **Источники:** [The Go Programming Language and Environment](sources.md#go-cacm-2022)
+
+### Эндрю Келли { #andrew-kelley }
+
+*Andrew Kelley* · [Wikidata Q62470811](https://www.wikidata.org/wiki/Q62470811)
+
+Создатель языка Zig и президент Zig Software Foundation.
+
+- **Языки:** [Zig](zig.md)
+- **Понятия:** [Метапрограммирование](glossary.md#syntax-metaprogramming)
+
+### Кеннет Айверсон { #iverson }
+
+*Kenneth E. Iverson* · [Wikidata Q92629](https://www.wikidata.org/wiki/Q92629)
+
+Создатель APL; тьюринговская лекция «Notation as a Tool of Thought».
+
+- **Языки:** [APL](apl.md)
+- **Понятия:** [Поднятие операций по рангу массива](glossary.md#evaluation-rank-lifting)
+- **Источники:** [Notation as a Tool of Thought](sources.md#iverson-notation); [The Evolution of APL](sources.md#hopl-apl)
 
 ## Теория и трансляция
 
@@ -197,6 +328,15 @@ publish: true
 - **Слайды лекций:** [05. Контекстно-свободные грамматики](../lectures/html/05-kontekstno-svobodnye-grammatiki.html)
 - **Источники:** [Can Programming Be Liberated from the von Neumann Style?](sources.md#backus-1978)
 
+### Эдгар Кодд { #codd }
+
+*Edgar F. Codd* · [Wikidata Q92596](https://www.wikidata.org/wiki/Q92596)
+
+Автор реляционной модели данных (1970), на которой основан SQL.
+
+- **Понятия:** [Кратность элементов коллекции](glossary.md#data-collection-multiplicity)
+- **Источники:** [A Relational Model of Data for Large Shared Data Banks](sources.md#codd-1970)
+
 ### Дональд Кнут { #knuth }
 
 *Donald E. Knuth* · [Wikidata Q17457](https://www.wikidata.org/wiki/Q17457)
@@ -213,15 +353,6 @@ publish: true
 Участник создания ALGOL, первый лауреат премии Тьюринга, автор «Epigrams on Programming».
 
 - **Источники:** [Epigrams on Programming](sources.md#perlis-epigrams)
-
-### Кеннет Айверсон { #iverson }
-
-*Kenneth E. Iverson* · [Wikidata Q92629](https://www.wikidata.org/wiki/Q92629)
-
-Создатель APL; тьюринговская лекция «Notation as a Tool of Thought».
-
-- **Понятия:** [Поднятие операций по рангу массива](glossary.md#evaluation-rank-lifting)
-- **Источники:** [Notation as a Tool of Thought](sources.md#iverson-notation)
 
 ### Альфред Ахо { #aho }
 

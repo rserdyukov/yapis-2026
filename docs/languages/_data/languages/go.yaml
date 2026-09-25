@@ -1,0 +1,273 @@
+id: go
+publish: true
+default_profile: go127
+
+meta:
+  name: Go
+  ru: Go
+  wikidata: Q37227
+  appeared:
+    value: 2009
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q37227", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Rob Pike, Ken Thompson, Robert Griesemer]
+  organizations: [Google]
+  website: https://go.dev/
+  spec: https://go.dev/ref/spec
+  summary: >
+    Go — компилируемый императивный язык со статической типизацией, сборкой
+    мусора и встроенными в язык горутинами и каналами. Интерфейсы
+    реализуются структурно, без объявления `implements`; наследования
+    реализации нет, а ошибки обычно возвращаются как значения типа `error`.
+    Описан срез по спецификации языка go1.27 и стандартной библиотеке;
+    свойства компилятора gc и утилит отмечены отдельными слоями.
+
+versions:
+  - id: "1.0"
+    label: Go 1
+    date: 2012-03-28
+    kind: release
+    role: first
+    sources:
+      - {url: "https://go.dev/doc/devel/release", title: "Go — Release History", retrieved: 2026-09-25}
+  - id: "1.18"
+    label: Go 1.18
+    date: 2022-03-15
+    kind: release
+    sources:
+      - {url: "https://go.dev/doc/go1.18", title: "Go 1.18 Release Notes", retrieved: 2026-09-25}
+  - id: "1.27"
+    label: Go 1.27
+    date: 2026-08-19
+    kind: release
+    role: latest
+    sources:
+      - {url: "https://go.dev/doc/devel/release", title: "Go — Release History", retrieved: 2026-09-25}
+
+profiles:
+  go127: "The Go Programming Language Specification, Language version go1.27 (May 26, 2026), и стандартная библиотека; реализация по умолчанию — тулчейн go.dev (компилятор gc)."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "Имена вводятся объявлениями `var`, `const`, `type`, `func` и короткой формой `x := expr`. `:=` — тоже объявление: слева должно быть хотя бы одно новое имя в текущем блоке."
+      sources:
+        - {url: "https://go.dev/ref/spec#Short_variable_declarations", title: "Go spec — Short variable declarations"}
+        - {url: "https://go.dev/ref/spec#Variable_declarations", title: "Go spec — Variable declarations"}
+  bindings.assignment:
+    - value: single
+    - value: multiple
+      note: "Кортежное присваивание `a, b = b, a` и приём нескольких результатов вызова `v, err := f()`. Операнды вычисляются до присваиваний; распаковки структур или срезов по образцу нет."
+      sources:
+        - {url: "https://go.dev/ref/spec#Assignment_statements", title: "Go spec — Assignment statements"}
+  scope.resolution:
+    - value: lexical
+      sources:
+        - {url: "https://go.dev/ref/spec#Declarations_and_scope", title: "Go spec — Declarations and scope"}
+  scope.constructs:
+    - value: block
+      note: "Блоки в фигурных скобках, а также неявные блоки `if`, `for`, `switch` и каждой ветви `case`; блоки вселенной, пакета и файла входят в ту же иерархию."
+      sources:
+        - {url: "https://go.dev/ref/spec#Blocks", title: "Go spec — Blocks"}
+    - value: module
+      applies_to: блок пакета и блок файла
+      note: "Объявления верхнего уровня видимы во всём пакете; имена импортируемых пакетов — только в файле с импортом."
+  scope.shadowing:
+    - value: allowed
+      note: "Объявление во вложенном блоке скрывает внешнее, например `err` внутри `if`. Повтор имени в `:=` в том же блоке не создаёт новую переменную, а присваивает уже объявленной."
+  typing.checking:
+    - value: static
+      note: "Типы проверяются компилятором; утверждение типа `x.(T)` и type switch проверяют динамический тип значения интерфейса во время выполнения."
+  typing.inference:
+    - value: true
+      note: "Тип переменной выводится из инициализатора в `var x = e` и `x := e`; с Go 1.18 выводятся и аргументы типов обобщённых функций. Параметры и результаты функций аннотируются всегда."
+      sources:
+        - {url: "https://go.dev/ref/spec#Type_inference", title: "Go spec — Type inference"}
+  typing.conversions:
+    - value: explicit
+      note: "Смешивать разные числовые типы нельзя, даже `int` и `int64`: нужна явная конверсия `T(x)`. Нетипизированные константы неявно принимают нужный тип, если значение в нём представимо."
+      sources:
+        - {url: "https://go.dev/ref/spec#Conversions", title: "Go spec — Conversions"}
+        - {url: "https://go.dev/ref/spec#Representability", title: "Go spec — Representability"}
+  typing.compatibility:
+    - value: nominal
+      applies_to: определённые (именованные) типы
+      note: "`type Celsius float64` вводит новый тип, отличный от `float64`; присваивание между ними требует конверсии."
+      sources:
+        - {url: "https://go.dev/ref/spec#Type_identity", title: "Go spec — Type identity"}
+    - value: structural
+      applies_to: реализация интерфейсов и идентичность безымянных составных типов
+      note: "Тип реализует интерфейс, если его набор методов содержит методы интерфейса; объявлять это не нужно. Безымянные типы-литералы с одинаковой структурой идентичны."
+      sources:
+        - {url: "https://go.dev/ref/spec#Implementing_an_interface", title: "Go spec — Implementing an interface"}
+        - {url: "https://go.dev/ref/spec#Assignability", title: "Go spec — Assignability"}
+  typing.product_types:
+    - value: record
+      note: "`struct` с именованными и встроенными полями; значения создаются составными литералами `Point{X: 1, Y: 2}`. Несколько результатов функции — не тип-кортеж: их нельзя сохранить в одну переменную."
+      sources:
+        - {url: "https://go.dev/ref/spec#Struct_types", title: "Go spec — Struct types"}
+        - {url: "https://go.dev/ref/spec#Composite_literals", title: "Go spec — Composite literals"}
+  typing.nullability:
+    - value: sentinel
+      note: "`nil` — нулевое значение указателей, срезов, отображений, каналов, функций и интерфейсов. Числа, строки, массивы и структуры не бывают `nil`: они имеют собственные нулевые значения."
+      sources:
+        - {url: "https://go.dev/ref/spec#The_zero_value", title: "Go spec — The zero value"}
+  control.selection:
+    - value: statement
+      note: "`if` с необязательным оператором инициализации `if v, ok := m[k]; ok {…}`. Тернарного условного выражения нет."
+      sources:
+        - {url: "https://go.dev/ref/spec#If_statements", title: "Go spec — If statements"}
+        - {url: "https://go.dev/doc/faq#Does_Go_have_a_ternary_form", title: "Go FAQ — Does Go have the ?: operator?"}
+  control.switch:
+    - value: true
+      note: "Выражение-switch с произвольными выражениями в `case` и type switch по динамическому типу. Переход в следующую ветвь только явным `fallthrough`."
+      sources:
+        - {url: "https://go.dev/ref/spec#Switch_statements", title: "Go spec — Switch statements"}
+  control.until:
+    - value: absent
+      note: "`for` — единственный оператор цикла; отдельных `while`, `until` и `repeat` нет."
+  control.do_while:
+    - value: false
+      note: "Цикл с постусловием имитируют `for { …; if !cond { break } }`."
+  control.iteration:
+    - value: c_style
+      note: "`for init; cond; post {}`; с Go 1.22 каждая итерация получает собственную переменную цикла. Форма `for cond {}` заменяет while."
+      sources:
+        - {url: "https://go.dev/ref/spec#For_statements", title: "Go spec — For statements"}
+    - value: foreach
+      note: "`for k, v := range x` по массивам, срезам, строкам (по рунам), отображениям, каналам, целым числам и функциям-итераторам; последние две формы появились в Go 1.22–1.23."
+      sources:
+        - {url: "https://go.dev/ref/spec#For_range", title: "Go spec — For statements with range clause"}
+  subprograms.overloading:
+    - value: false
+      note: "Функции и методы не перегружаются по сигнатуре: имя в блоке уникально."
+      sources:
+        - {url: "https://go.dev/doc/faq#overloading", title: "Go FAQ — Why does Go not support overloading?"}
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Аргументы, включая структуры и массивы, копируются. Срез, отображение, канал и указатель копируются как дескрипторы, поэтому изменения данных через них видны вызывающему."
+      sources:
+        - {url: "https://go.dev/doc/faq#pass_by_value", title: "Go FAQ — When are function parameters passed by value?"}
+  subprograms.closures:
+    - value: true
+      note: "Функциональные литералы захватывают переменные охватывающей функции по ссылке; захваченные переменные живут, пока доступно замыкание."
+      sources:
+        - {url: "https://go.dev/ref/spec#Function_literals", title: "Go spec — Function literals"}
+  subprograms.lambda:
+    - value: true
+      note: "Функциональный литерал `func(x int) int { return x * 2 }`; вложенные именованные объявления `func` внутри функции запрещены."
+  subprograms.generics:
+    - value: true
+      since: "1.18"
+      note: "Параметры типов у функций и типов; ограничения — интерфейсы, в том числе с наборами типов `~int | ~float64`. Методы не могут иметь собственных параметров типов."
+      sources:
+        - {url: "https://go.dev/ref/spec#Type_parameter_declarations", title: "Go spec — Type parameter declarations"}
+        - {url: "https://go.dev/ref/spec#Type_constraints", title: "Go spec — Type constraints"}
+  subprograms.default_args:
+    - value: false
+      note: "Все параметры обязательны; вариативный последний параметр `...T` и паттерн «функциональных опций» — замена, а не аргументы по умолчанию."
+  subprograms.named_args:
+    - value: false
+      note: "Аргументы сопоставляются только по позиции; именованные поля есть лишь в составных литералах структур."
+      sources:
+        - {url: "https://go.dev/ref/spec#Calls", title: "Go spec — Calls"}
+  abstraction.contracts:
+    - value: interfaces
+      note: "Интерфейс задаёт набор методов и неявно удовлетворяется; с Go 1.18 интерфейсы также служат ограничениями параметров типов."
+      sources:
+        - {url: "https://go.dev/ref/spec#Interface_types", title: "Go spec — Interface types"}
+  abstraction.dispatch:
+    - value: static
+      applies_to: вызов метода конкретного типа
+      note: "Метод выбирается по статическому типу получателя."
+    - value: single
+      applies_to: вызов метода через значение интерфейса
+      note: "Реализация выбирается по динамическому типу значения, хранящегося в интерфейсе."
+  abstraction.inheritance:
+    - value: absent
+      note: "Встраивание поля продвигает его методы во внешний тип, но это композиция: внешняя структура не становится подтипом встроенной, а метод встроенного типа не переопределяется виртуально."
+      sources:
+        - {url: "https://go.dev/doc/faq#inheritance", title: "Go FAQ — Why is there no type inheritance?"}
+        - {url: "https://go.dev/ref/spec#Struct_types", title: "Go spec — Struct types (embedded fields, promoted methods)"}
+  abstraction.modules:
+    - value: namespaces
+      note: "Пакет — единица компиляции и пространство имён; импорт по пути, обращение через квалифицированный идентификатор `pkg.Name`."
+      sources:
+        - {url: "https://go.dev/ref/spec#Packages", title: "Go spec — Packages"}
+    - value: explicit_exports
+      note: "Экспортируются идентификаторы верхнего уровня, поля и методы, имя которых начинается с заглавной буквы Unicode; отдельного списка экспорта нет."
+      sources:
+        - {url: "https://go.dev/ref/spec#Exported_identifiers", title: "Go spec — Exported identifiers"}
+  evaluation.tail_calls:
+    - value: false
+      note: "Спецификация не требует устранения хвостовых вызовов; глубокая рекурсия расходует растущий стек горутины."
+  memory.management:
+    - value: gc
+      note: "Спецификация называет язык garbage-collected: явного освобождения памяти нет. Алгоритм (конкурентный трассирующий сборщик gc) — свойство реализации."
+      sources:
+        - {url: "https://go.dev/ref/spec#Introduction", title: "Go spec — Introduction"}
+        - {url: "https://go.dev/doc/gc-guide", title: "A Guide to the Go Garbage Collector"}
+  errors.model:
+    - value: error_code
+      note: "Функция возвращает ошибку дополнительным результатом типа-интерфейса `error`, `nil` означает успех. Это не размеченный Result: обе компоненты существуют одновременно, и проверку `err != nil` компилятор не требует."
+      sources:
+        - {url: "https://go.dev/ref/spec#Errors", title: "Go spec — Errors"}
+        - {url: "https://go.dev/doc/faq#exceptions", title: "Go FAQ — Why does Go not have exceptions?"}
+    - value: panic
+      note: "`panic` раскручивает стек горутины, выполняя отложенные вызовы; `recover` внутри отложенной функции может остановить панику. Предназначена для программных ошибок, а не для обычного потока ошибок."
+      sources:
+        - {url: "https://go.dev/ref/spec#Handling_panics", title: "Go spec — Handling panics"}
+        - {url: "https://go.dev/ref/spec#Run_time_panics", title: "Go spec — Run-time panics"}
+  resources.cleanup:
+    - value: defer
+      note: "`defer f.Close()` откладывает вызов до возврата из функции (не блока); аргументы вычисляются сразу, вызовы выполняются в обратном порядке, в том числе при панике."
+      sources:
+        - {url: "https://go.dev/ref/spec#Defer_statements", title: "Go spec — Defer statements"}
+  resources.concurrency:
+    - value: threads
+      note: "`go f()` запускает горутину — независимый поток управления в общем адресном пространстве. Горутины легковесны и мультиплексируются рантаймом на потоки ОС."
+      sources:
+        - {url: "https://go.dev/ref/spec#Go_statements", title: "Go spec — Go statements"}
+    - value: message_passing
+      note: "Типизированные каналы `chan T`, операции `<-` и `select` для ожидания нескольких коммуникаций; мьютексы пакета `sync` — альтернатива на уровне стандартной библиотеки."
+      sources:
+        - {url: "https://go.dev/ref/spec#Channel_types", title: "Go spec — Channel types"}
+        - {url: "https://go.dev/ref/spec#Select_statements", title: "Go spec — Select statements"}
+  resources.communication_coupling:
+    - value: synchronous_rendezvous
+      applies_to: небуферизованные каналы
+      note: "Отправка завершается только при встрече с получателем. Буферизованный канал — ограниченная FIFO-очередь, общая для любых горутин: отправка блокируется при заполнении, поэтому это не почтовый ящик процесса и значение asynchronous_mailbox не заявлено."
+      sources:
+        - {url: "https://go.dev/ref/spec#Channel_types", title: "Go spec — Channel types"}
+  syntax.blocks:
+    - value: explicit
+      note: "Блоки ограничены фигурными скобками, обязательными даже для одного оператора в `if` и `for`."
+  syntax.statement_terminator:
+    - value: optional_semicolon
+      note: "Грамматика использует `;`, но лексер автоматически вставляет её после строки, оканчивающейся идентификатором, литералом, `)`, `]`, `}` и некоторыми ключевыми словами. Поэтому `{` нельзя переносить на новую строку; `gofmt` задаёт единый стиль."
+      sources:
+        - {url: "https://go.dev/ref/spec#Semicolons", title: "Go spec — Semicolons"}
+  syntax.case_sensitive:
+    - value: true
+      note: "Регистр первой буквы ещё и определяет экспорт: `Println` видим вне пакета, `println` — нет."
+      sources:
+        - {url: "https://go.dev/ref/spec#Identifiers", title: "Go spec — Identifiers"}
+  data.numeric_precision:
+    - value: fixed_precision
+      applies_to: типизированные числовые значения
+      note: "`int8`…`int64`, `uint*`, `float32/64`; разрядность `int` зависит от платформы (32 или 64 бита). Целочисленное переполнение заворачивается по модулю."
+      sources:
+        - {url: "https://go.dev/ref/spec#Numeric_types", title: "Go spec — Numeric types"}
+        - {url: "https://go.dev/ref/spec#Integer_overflow", title: "Go spec — Integer overflow"}
+    - value: arbitrary_precision
+      applies_to: нетипизированные константные выражения
+      note: "Константы вычисляются точно при компиляции (реализация обязана поддерживать не менее 256 бит); `math/big` даёт такую арифметику во время выполнения на уровне библиотеки."
+      sources:
+        - {url: "https://go.dev/ref/spec#Constants", title: "Go spec — Constants"}
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+    - value: object_oriented
+      note: "Методы у любых определённых типов и интерфейсы без классов и иерархий типов; FAQ отвечает на вопрос об ООП «и да и нет»."
+      sources:
+        - {url: "https://go.dev/doc/faq#Is_Go_an_object-oriented_language", title: "Go FAQ — Is Go an object-oriented language?"}

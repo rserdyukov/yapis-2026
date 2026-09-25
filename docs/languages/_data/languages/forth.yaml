@@ -1,0 +1,207 @@
+id: forth
+publish: true
+default_profile: forth2012
+
+meta:
+  name: Forth
+  ru: Forth
+  wikidata: Q275472
+  appeared:
+    value: 1970
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q275472", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Charles H. Moore]
+  organizations: [Forth, Inc.]
+  website: https://forth-standard.org/
+  spec: https://forth-standard.org/standard/words
+  summary: >
+    Forth — стековый язык с постфиксной записью: слова берут аргументы со
+    стека данных и кладут туда результаты, а стек возвратов хранит адреса
+    вызовов и параметры циклов.
+    Новые слова определяются через `:` и `;` и попадают в словарь; немедленные
+    слова выполняются во время компиляции и расширяют сам компилятор, а ячейки
+    не типизированы — смысл значения задаёт применяемое слово.
+    Основа карточки — стандарт Forth-2012 (предыдущий — ANS Forth 1994);
+    необязательные наборы слов отмечены в пояснениях, свойства систем вроде
+    Gforth не включены.
+
+versions: []
+profiles:
+  forth2012: "Стандарт Forth-2012 (Core и Core Extension; необязательные наборы Exception, Locals, Search-Order, File-Access, Facility отмечаются в applies_to). Конкретные системы, например Gforth, — слой implementation."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "Имена вводятся определяющими словами: `:` для слов, `VARIABLE`, `CONSTANT`, `VALUE`, `CREATE`. Значения на стеке данных безымянны."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/VARIABLE", title: "Forth-2012 6.1.2410 VARIABLE"}
+        - {url: "https://forth-standard.org/standard/core/Colon", title: "Forth-2012 6.1.0450 :"}
+  bindings.mutation:
+    - value: rebindable
+      applies_to: VARIABLE и VALUE
+      note: "`VARIABLE` возвращает адрес ячейки, содержимое меняется через `!`; значение `VALUE` меняется через `TO`."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/TO", title: "Forth-2012 6.2.2295 TO"}
+    - value: immutable
+      applies_to: CONSTANT
+      note: "`CONSTANT` при исполнении кладёт на стек зафиксированное значение; стандартного слова для его изменения нет."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/CONSTANT", title: "Forth-2012 6.1.0950 CONSTANT"}
+  bindings.assignment:
+    - value: single
+      note: "`x addr !` записывает одну ячейку по адресу, `x TO name` — одно значение `VALUE`. Распаковки нет: несколько значений раскладываются стековыми операциями."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/Store", title: "Forth-2012 6.1.0010 !"}
+  scope.resolution:
+    - value: lexical
+      applies_to: "локальные имена `{: … :}` из необязательного набора Locals"
+      note: "Локальные имена видимы только в тексте текущего определения. Глобальные имена ищутся в словаре по порядку поиска в момент трансляции, и найденное определение фиксируется в скомпилированном коде."
+      sources:
+        - {url: "https://forth-standard.org/standard/locals/bColon", title: "Forth-2012 13.6.2.2550 {:"}
+  scope.globals:
+    - value: globals
+      note: "Определения словаря, включая `VARIABLE`, доступны всем последующим определениям в текущем порядке поиска; без Locals других областей для имён нет."
+  scope.shadowing:
+    - value: allowed_same_scope
+      note: "Повторное определение имени скрывает прежнее при последующем поиске, но ранее скомпилированные слова продолжают вызывать старое определение. Тест к `:` показывает `: GDX 123 ; : GDX GDX 234 ;` — внутри второго определения `GDX` ещё ссылается на первое."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/Colon", title: "Forth-2012 6.1.0450 : — тест search order"}
+  typing.checking:
+    - value: n/a
+      note: "Типов значений у ячеек нет, поэтому нет ни статической, ни динамической проверки: слово интерпретирует ячейку как число, адрес или флаг по своему контракту. Следить за типами должен программист; нарушение контракта — неоднозначное условие, а не ошибка типа."
+      sources:
+        - {url: "https://forth-standard.org/standard/usage", title: "Forth-2012 3.1 Data types; 3.2.3.1 Data stack"}
+  typing.annotations:
+    - value: absent
+      note: "Стековые комментарии вида `( a b -- c )` — соглашение документации, система их не проверяет; `(` просто пропускает текст до `)`."
+  typing.conversions:
+    - value: explicit
+      note: "Смена представления делается словами, например `S>D` расширяет одинарную ячейку до двойной. Большинство операций ничего не преобразует, а применяет свою интерпретацию к тем же битам."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/StoD", title: "Forth-2012 6.1.2170 S>D"}
+  control.selection:
+    - value: statement
+      note: "`flag IF … ELSE … THEN` снимает флаг со стека данных; работает только внутри определения. Результат ветвей оставляется на стеке, отдельной формы условного выражения нет."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/IF", title: "Forth-2012 6.1.1700 IF"}
+  control.switch:
+    - value: true
+      applies_to: "`CASE … OF … ENDOF … ENDCASE` (Core Extension)"
+      note: "`OF` сравнивает значение с вершиной стека; варианты перебираются последовательно."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/CASE", title: "Forth-2012 6.2.0873 CASE"}
+  control.until:
+    - value: post_test
+      note: "`BEGIN … flag UNTIL`: тело выполняется хотя бы один раз, цикл завершается, когда флаг истинен."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/UNTIL", title: "Forth-2012 6.1.2390 UNTIL"}
+  control.do_while:
+    - value: false
+      note: "Отдельной формы с продолжением при истинном постусловии нет; `BEGIN … 0= UNTIL` лишь имитирует её. `BEGIN … WHILE … REPEAT` проверяет условие в середине цикла."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/WHILE", title: "Forth-2012 6.1.2430 WHILE"}
+        - {url: "https://forth-standard.org/standard/core/REPEAT", title: "Forth-2012 6.1.2140 REPEAT"}
+  control.iteration:
+    - value: c_style
+      note: "`limit start DO … LOOP` и `DO … n +LOOP` — счётный цикл с индексом `I`, границей и шагом; параметры хранятся на стеке возвратов. Произвольного условия, как в C, нет; итерации по коллекции нет."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/DO", title: "Forth-2012 6.1.1240 DO"}
+  subprograms.overloading:
+    - value: false
+      note: "Имени соответствует последнее видимое определение; сигнатур нет."
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Аргументы и результаты передаются через общий стек данных как значения ячеек. Передача адреса — тоже передача значения; объявленных параметров у слова нет."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/DUP", title: "Forth-2012 6.1.1290 DUP — стековая нотация"}
+  subprograms.placement:
+    - value: declaration_region
+      note: "Определения вводятся из входного потока текстового интерпретатора, вне других определений, и добавляются в текущий список слов."
+  subprograms.nesting:
+    - value: false
+      note: "Стандарт не разрешает вкладывать компиляцию одного определения в другое (3.4.5). Цитаты `[: … ;]` в Forth-2012 не входят."
+      sources:
+        - {url: "https://forth-standard.org/standard/usage", title: "Forth-2012 3.4.5 Compilation"}
+  subprograms.closures:
+    - value: false
+      note: "Определение не захватывает окружение; локальные имена существуют только во время выполнения своего слова."
+  subprograms.lambda:
+    - value: true
+      applies_to: "`:NONAME … ;` (Core Extension)"
+      note: "`:NONAME` создаёт безымянное определение и оставляет его execution token для `EXECUTE` или `DEFER`/`IS`. Это не замыкание: окружение не захватывается."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/ColonNONAME", title: "Forth-2012 6.2.0455 :NONAME"}
+  abstraction.modules:
+    - value: namespaces
+      applies_to: необязательный набор Search-Order
+      note: "Списки слов (`WORDLIST`) и порядок поиска разделяют пространства имён; явной границы экспорта нет."
+      sources:
+        - {url: "https://forth-standard.org/standard/search", title: "Forth-2012 16 Search-Order word set"}
+    - value: textual_inclusion
+      applies_to: необязательный набор File-Access
+      note: "`INCLUDED` интерпретирует содержимое файла как входной поток."
+      sources:
+        - {url: "https://forth-standard.org/standard/file/INCLUDED", title: "Forth-2012 11.6.1.1718 INCLUDED"}
+  evaluation.strategy:
+    - value: strict
+      note: "Каждое слово выполняется в порядке записи над уже вычисленными значениями на стеке."
+  evaluation.effects:
+    - value: unrestricted
+      note: "Любое слово может менять память, словарь и стеки; статического разделения эффектов нет."
+  evaluation.tail_calls:
+    - value: false
+      note: "Стандарт не гарантирует устранение хвостовых вызовов; отдельные системы могут его выполнять."
+  memory.management:
+    - value: manual
+      note: "Пространство данных словаря выделяется через `HERE`, `ALLOT`, `,` и освобождается только удалением определений (`MARKER`); `ALLOCATE`/`FREE` необязательного набора Memory-Allocation — явная куча. Сборки мусора нет."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/ALLOT", title: "Forth-2012 6.1.0710 ALLOT"}
+        - {url: "https://forth-standard.org/standard/memory", title: "Forth-2012 14 Memory-Allocation word set"}
+  errors.model:
+    - value: exceptions
+      applies_to: необязательный набор Exception
+      note: "`CATCH` выполняет execution token и возвращает 0 или код, переданный `THROW`; стеки восстанавливаются до глубины на момент `CATCH`."
+      sources:
+        - {url: "https://forth-standard.org/standard/exception/CATCH", title: "Forth-2012 9.6.1.0875 CATCH"}
+        - {url: "https://forth-standard.org/standard/exception/THROW", title: "Forth-2012 9.6.1.2275 THROW"}
+    - value: error_code
+      note: "Исключения несут целый код, а слова File-Access и Memory-Allocation возвращают код результата ior, который проверяет вызывающий."
+      sources:
+        - {url: "https://forth-standard.org/standard/memory/ALLOCATE", title: "Forth-2012 14.6.1.0707 ALLOCATE"}
+  resources.io:
+    - value: builtin
+      note: "`EMIT`, `TYPE`, `KEY`, `ACCEPT` входят в Core; файлы — необязательный набор File-Access."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/TYPE", title: "Forth-2012 6.1.2310 TYPE"}
+  syntax.blocks:
+    - value: explicit
+      note: "Группы ограничены парными словами: `:` … `;`, `IF` … `THEN`, `BEGIN` … `UNTIL`, `DO` … `LOOP`. Соответствие проверяется через стек управления при компиляции."
+  syntax.statement_terminator:
+    - value: structural
+      note: "Операторов нет: программа — последовательность слов, разделённых пробелами; определение заканчивается словом `;`. Перевод строки не значим."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/Semi", title: "Forth-2012 6.1.0460 ;"}
+  syntax.metaprogramming:
+    - value: compile_time_execution
+      note: "Слово, помеченное `IMMEDIATE`, выполняется во время компиляции определения; `POSTPONE` откладывает семантику компиляции другого слова. Так в самом языке определены `IF`, `DO` и другие управляющие слова."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/IMMEDIATE", title: "Forth-2012 6.1.1710 IMMEDIATE"}
+        - {url: "https://forth-standard.org/standard/core/POSTPONE", title: "Forth-2012 6.1.2033 POSTPONE"}
+    - value: runtime_code
+      note: "`EVALUATE` интерпретирует строку во время выполнения; `CREATE … DOES>` определяет новые определяющие слова с собственным поведением."
+      sources:
+        - {url: "https://forth-standard.org/standard/core/EVALUATE", title: "Forth-2012 6.1.1360 EVALUATE"}
+        - {url: "https://forth-standard.org/standard/core/DOES", title: "Forth-2012 6.1.1250 DOES>"}
+  syntax.program_representation:
+    - value: textual
+      note: "Исходный текст разбирается на слова, разделённые пробелами; исторический формат блоков по 1024 символа — тоже текст."
+  paradigm.supported:
+    - value: imperative
+      note: "Явная работа со стеками и памятью."
+    - value: procedural
+      note: "Программа строится как иерархия слов-подпрограмм."
+  data.numeric_precision:
+    - value: fixed_precision
+      note: "Целые занимают одинарную или двойную ячейку фиксированной разрядности; при переполнении результат определяется реализацией (3.2.2.2)."
+      sources:
+        - {url: "https://forth-standard.org/standard/usage", title: "Forth-2012 3.2.1 Numbers; 3.2.2.2 Other integer operations"}

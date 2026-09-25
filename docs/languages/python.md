@@ -35,6 +35,11 @@ publish: true
 | Python 3.10 | 2021-10-04 | выпуск | [What's New In Python 3.10](https://docs.python.org/3/whatsnew/3.10.html) (получено 2026-09-18) |
 | Python 3.14 — актуальная | 2025-10-07 | выпуск | [Wikidata P348 3.14.0](https://www.wikidata.org/wiki/Q28865) (получено 2026-09-18) |
 
+## Статьи { #articles }
+
+- [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md)
+- [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
+
 ## Люди { #people }
 
 - [Гвидо ван Россум](people.md#van-rossum) — Автор Python; руководил развитием языка до 2018 года.

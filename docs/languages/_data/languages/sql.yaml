@@ -1,0 +1,349 @@
+id: sql
+publish: true
+default_profile: iso2023
+
+meta:
+  name: SQL
+  ru: SQL
+  wikidata: Q47607
+  appeared:
+    value: 1974
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q47607", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Donald D. Chamberlin, Raymond F. Boyce]
+  organizations: [IBM, ISO/IEC JTC 1/SC 32]
+  website: https://www.iso.org/standard/76583.html
+  spec: https://www.iso.org/standard/76583.html
+  summary: >
+    SQL — декларативный язык запросов и описания данных: запрос задаёт
+    требуемый результат над таблицами, а план выполнения выбирает СУБД.
+    Таблицы и результаты запросов — мультимножества строк; `NULL` порождает
+    трёхзначную логику с `UNKNOWN`, а `WITH RECURSIVE` вычисляет замыкание
+    отношений. Базовый профиль — ISO/IEC 9075:2023 (Foundation, текст платный,
+    поэтому утверждения опираются на документацию СУБД, где она ссылается на
+    стандарт); поведение SQLite и PostgreSQL отмечено как диалект реализации,
+    процедурные расширения (SQL/PSM, PL/pgSQL) — отдельно.
+
+versions: []
+profiles:
+  iso2023: "ISO/IEC 9075-2:2023 SQL/Foundation: запросы (DML) и описание схемы (DDL). Стандарт платный; утверждения подтверждаются открытыми вторичными источниками — документацией PostgreSQL и SQLite в местах, где она явно описывает стандарт. Процедурная часть SQL/PSM (ISO/IEC 9075-4) в профиль не входит."
+  sqlite: "Диалект SQLite 3 по SQL As Understood By SQLite (https://www.sqlite.org/lang.html); слой реализации. Различающий пример проверен на SQLite 3.45.1, статья сада — на 3.51.0; прочие утверждения относятся к текущей документации без фиксации выпуска."
+  postgresql: "Диалект PostgreSQL по текущей документации (https://www.postgresql.org/docs/current/), включая CREATE FUNCTION и PL/pgSQL там, где это указано; слой реализации, выпуск не фиксируется."
+
+concepts:
+  paradigm.supported:
+    - value: declarative
+      note: "Запрос описывает результат через отношения, предикаты и агрегаты; порядок соединений, индексы и алгоритмы выбирает оптимизатор. Последовательность операторов в скрипте и транзакции — процедурная оболочка над декларативными запросами."
+  data.collection_multiplicity:
+    - value: bag
+      applies_to: таблицы без ключа, результаты SELECT и SELECT ALL, UNION ALL
+      note: "Одинаковые строки сохраняют кратность: `SELECT ALL` — поведение по умолчанию. Пример сайта (раздел «SQL» страницы примеров) на `VALUES (1), (1), (2)` выдаёт `1`, `1`, `2`. Первичный ключ или `UNIQUE` лишь запрещают дубли в конкретной таблице и не меняют модель результата запроса."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-select-lists.html", title: "PostgreSQL — Select Lists: ALL and DISTINCT"}
+        - {url: "https://www.sqlite.org/lang_select.html", title: "SQLite — SELECT"}
+    - value: set
+      applies_to: SELECT DISTINCT, UNION, INTERSECT, EXCEPT без ALL
+      note: "`DISTINCT` и теоретико-множественные операции без `ALL` устраняют дубли; в примере сайта `SELECT DISTINCT` даёт `1`, `2`. Для сравнения строк при устранении дублей два `NULL` считаются неразличимыми, хотя `NULL = NULL` даёт `UNKNOWN`."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-union.html", title: "PostgreSQL — Combining Queries: UNION eliminates duplicates unless ALL"}
+    - value: sequence
+      applies_to: результат с ORDER BY верхнего уровня при выдаче клиенту
+      note: "Порядок строк гарантирует только внешний `ORDER BY`; он упорядочивает выдачу, но не устраняет дубли. Без него порядок зависит от плана и не превращает мультимножество в последовательность."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-order.html", title: "PostgreSQL — Sorting Rows (ORDER BY)"}
+  computation.rule_semantics:
+    - value: least_fixed_point
+      applies_to: WITH RECURSIVE с UNION над конечными данными без порождения новых значений
+      note: "Нерекурсивная часть задаёт начальные строки, рекурсивная итерируется до пустого приращения. С `UNION` и монотонным телом (например, транзитивное замыкание графа с циклом) результат — наименьшая неподвижная точка. `UNION ALL` и порождение значений (`n + 1`) могут не завершиться без условия остановки; стандарт ограничивает форму рекурсии (например, запрещает агрегаты в рекурсивной части)."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-with.html", title: "PostgreSQL — WITH Queries: Recursive Query Evaluation"}
+    - value: least_fixed_point
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      applies_to: WITH RECURSIVE
+      note: "SQLite требует составного SELECT: нерекурсивные части перед рекурсивными, разделитель `UNION` или `UNION ALL`; рекурсивные SELECT не могут использовать агрегатные и оконные функции. Реализация выполняет рекурсию через очередь строк."
+      sources:
+        - {url: "https://www.sqlite.org/lang_with.html", title: "SQLite — WITH clause: Recursive Common Table Expressions"}
+    - value: least_fixed_point
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      applies_to: WITH RECURSIVE
+      note: "Рабочая таблица итерируется, пока приращение не станет пустым; при `UNION` (не `UNION ALL`) дубли отбрасываются на каждом шаге, что обеспечивает завершение на конечном замыкании."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-with.html", title: "PostgreSQL — WITH Queries: Recursive Query Evaluation"}
+  typing.checking:
+    - value: static
+      note: "Тип значения определяется столбцом или выражением: несовместимость типов в запросе обнаруживается при его подготовке (анализе), до чтения строк."
+      sources:
+        - {url: "https://www.sqlite.org/datatype3.html", title: "SQLite — Datatypes: other engines use static, rigid typing"}
+    - value: static
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      note: "Разрешение операторов, функций и типов столбцов результата выполняется при анализе запроса по правилам преобразования типов."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/typeconv.html", title: "PostgreSQL — Type Conversion"}
+    - value: dynamic
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      note: "В SQLite тип принадлежит значению, а не столбцу: объявленный тип задаёт лишь affinity (предпочтительный класс хранения). Таблицы `STRICT` включают проверку типов столбцов при записи."
+      sources:
+        - {url: "https://www.sqlite.org/datatype3.html", title: "SQLite — Datatypes In SQLite: dynamic typing and type affinity"}
+        - {url: "https://www.sqlite.org/stricttables.html", title: "SQLite — STRICT Tables"}
+  typing.annotations:
+    - value: required
+      applies_to: столбцы CREATE TABLE, CAST, объявления доменов
+      note: "В стандарте определение столбца содержит тип данных или домен; типы выражений запроса и столбцов представлений выводятся из операндов без аннотаций."
+    - value: optional
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      applies_to: столбцы CREATE TABLE
+      note: "Имя типа в определении столбца необязательно; столбец без объявленного типа получает affinity BLOB."
+      sources:
+        - {url: "https://www.sqlite.org/lang_createtable.html", title: "SQLite — CREATE TABLE: column-def and type-name"}
+        - {url: "https://www.sqlite.org/datatype3.html", title: "SQLite — affinity for no datatype specified"}
+  typing.inference:
+    - value: true
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      scope: prepared statement parameters
+      note: "Тип неуказанного параметра `$n` в `PREPARE` выводится из контекста использования. Это вывод типов отдельных выражений при анализе запроса, а не полиморфный вывод типов программы."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-prepare.html", title: "PostgreSQL — PREPARE: parameter type inferred from context"}
+  typing.conversions:
+    - value: explicit
+      applies_to: CAST(expr AS type)
+      note: "`CAST` — стандартная явная конверсия; недопустимое значение (например, нечисловая строка в INTEGER) даёт ошибку в стандарте и PostgreSQL."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-expressions.html", title: "PostgreSQL — Value Expressions: Type Casts"}
+    - value: implicit
+      note: "Числовые типы разной точности приводятся в арифметике, сравнении и присваивании столбцу; набор неявных преобразований у СУБД различается."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/typeconv.html", title: "PostgreSQL — Type Conversion"}
+    - value: implicit
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      note: "Affinity столбца преобразует записываемое значение, если это возможно без потерь: текст `'42'` в столбце INTEGER сохраняется как целое; `CAST` в SQLite не ошибается, а возвращает приближение (например, 0)."
+      sources:
+        - {url: "https://www.sqlite.org/datatype3.html", title: "SQLite — Type Affinity"}
+        - {url: "https://www.sqlite.org/lang_expr.html", title: "SQLite — CAST expressions"}
+  typing.compatibility:
+    - value: structural
+      applies_to: результаты UNION/INTERSECT/EXCEPT, INSERT … SELECT
+      note: "Строки сопоставляются по позиции: число столбцов должно совпадать, типы соответствующих столбцов — быть совместимыми; имена столбцов не участвуют."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-union.html", title: "PostgreSQL — union compatible queries"}
+  typing.product_types:
+    - value: record
+      applies_to: строки таблиц, составные типы, ROW
+      note: "Строка — запись именованных столбцов; стандарт также определяет row types и structured types. В PostgreSQL каждая таблица задаёт одноимённый составной тип."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/rowtypes.html", title: "PostgreSQL — Composite Types"}
+    - value: tuple
+      applies_to: конструктор строки ROW(a, b) и (a, b)
+      note: "Анонимный конструктор строки сравнивается поэлементно по позиции, например `(a, b) < (c, d)`."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-expressions.html", title: "PostgreSQL — Row Constructors"}
+  typing.nullability:
+    - value: nullable_everywhere
+      note: "Значение любого типа может быть `NULL`, пока столбец или домен не ограничен `NOT NULL`; это ограничение, а не отдельный nullable-тип. Сравнение с `NULL` даёт `UNKNOWN`: в примере сайта `CASE` при `NULL = NULL` уходит в ветку `ELSE` ('unknown'). `IS NULL` и `IS [NOT] DISTINCT FROM` сравнивают с учётом `NULL`."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/functions-comparison.html", title: "PostgreSQL — Comparison Functions and Operators: IS DISTINCT FROM"}
+        - {url: "https://www.postgresql.org/docs/current/ddl-constraints.html", title: "PostgreSQL — Constraints: Not-Null Constraints"}
+        - {url: "https://www.sqlite.org/nulls.html", title: "SQLite — NULL Handling in SQLite Versus Other Database Engines"}
+  control.selection:
+    - value: expression
+      applies_to: CASE, COALESCE, NULLIF
+      note: "`CASE WHEN … THEN … ELSE … END` — выражение со значением; без `ELSE` результат `NULL`. Условие, давшее `UNKNOWN`, не выбирает ветку. Оператор `IF` есть только в процедурных расширениях (SQL/PSM, PL/pgSQL)."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/functions-conditional.html", title: "PostgreSQL — Conditional Expressions"}
+    - value: guards
+      applies_to: WHERE, HAVING, ON, FILTER
+      note: "Предикат отбирает строки: проходят только строки с `TRUE`; `FALSE` и `UNKNOWN` отбрасываются одинаково."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-table-expressions.html", title: "PostgreSQL — The WHERE Clause"}
+  control.switch:
+    - value: true
+      applies_to: простая форма CASE expr WHEN value THEN …
+      note: "Простая форма `CASE` сравнивает одно выражение со списком значений; это выражение, а не оператор с проваливанием. `CASE x WHEN NULL` никогда не срабатывает, так как сравнение использует `=`."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/functions-conditional.html", title: "PostgreSQL — CASE (simple form)"}
+  control.iteration:
+    - value: n/a
+      note: "В языке запросов нет операторов цикла: обработка всех строк следует из семантики отношений, а повторение — из `WITH RECURSIVE`. Циклы `LOOP`/`WHILE`/`FOR` принадлежат SQL/PSM и PL/pgSQL, не SQL/Foundation."
+  control.pattern_matching:
+    - value: false
+      note: "`LIKE`, `SIMILAR TO` и регулярные выражения сопоставляют строки с шаблоном, но не разбирают структуру значения со связыванием переменных. `MATCH_RECOGNIZE` (распознавание образцов в последовательностях строк) — отдельная необязательная возможность стандарта, не рассмотренная здесь."
+  scope.resolution:
+    - value: lexical
+      note: "Имена столбцов и псевдонимов таблиц разрешаются по вложенности текста запроса: коррелированный подзапрос видит псевдонимы внешнего запроса, внешний не видит имён подзапроса."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/queries-table-expressions.html", title: "PostgreSQL — Table Expressions: table aliases and subqueries"}
+  scope.constructs:
+    - value: block
+      applies_to: запрос и подзапрос (FROM, WHERE, SELECT)
+      note: "Каждый запросный блок вводит область псевдонимов таблиц из своего `FROM`; ссылка из подзапроса на внешний столбец делает подзапрос коррелированным."
+    - value: binding_form
+      applies_to: WITH
+      note: "Предложение `WITH` связывает имена CTE для следующего за ним запроса, подобно `let`; с `RECURSIVE` имя видно и в собственном определении."
+      sources:
+        - {url: "https://www.sqlite.org/lang_with.html", title: "SQLite — WITH clause"}
+  scope.shadowing:
+    - value: allowed
+      note: "Неуточнённое имя столбца разрешается в ближайшем охватывающем запросном блоке, где оно определено; одноимённый столбец внешнего запроса скрывается. Опечатка в имени столбца подзапроса может молча сослаться на внешний столбец."
+  bindings.introduction:
+    - value: explicit
+      note: "Псевдонимы `AS`, имена CTE и объекты схемы (`CREATE TABLE`, `CREATE VIEW`) вводятся явно; переменных в запросе нет, параметры подставляются клиентом."
+  bindings.mutation:
+    - value: immutable
+      applies_to: псевдонимы и имена CTE внутри запроса
+      note: "Имя, введённое в запросе, нельзя перепривязать. Изменение данных таблиц операторами `INSERT`/`UPDATE`/`DELETE` — изменение состояния базы, а не перепривязка имени."
+  bindings.assignment:
+    - value: single
+      applies_to: UPDATE … SET column = expr
+      note: "Все правые части в `SET` вычисляются по старым значениям строки, поэтому `SET a = b, b = a` меняет значения местами."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-update.html", title: "PostgreSQL — UPDATE"}
+    - value: multiple
+      applies_to: UPDATE … SET (a, b) = (expr1, expr2)
+      note: "Присваивание списка столбцов из конструктора строки или подзапроса."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-update.html", title: "PostgreSQL — UPDATE: column list assignment"}
+        - {url: "https://www.sqlite.org/lang_update.html", title: "SQLite — UPDATE: column-name-list"}
+  subprograms.overloading:
+    - value: true
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      applies_to: CREATE FUNCTION
+      note: "Функции с одинаковым именем различаются типами входных аргументов. В языке запросов подпрограмм нет — это свойство определяемых пользователем функций."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/xfunc-overload.html", title: "PostgreSQL — Function Overloading"}
+  subprograms.lambda:
+    - value: false
+      note: "Анонимных функций как значений в SQL/Foundation нет; ближайшие средства — подзапросы и CTE, которые являются выражениями-таблицами, а не функциями."
+  subprograms.named_args:
+    - value: true
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      applies_to: вызов функций с именованными параметрами
+      note: "Нотация `f(a => 1)` и смешанная позиционно-именованная форма."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-syntax-calling-funcs.html", title: "PostgreSQL — Calling Functions: Named Notation"}
+  subprograms.default_args:
+    - value: true
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      applies_to: CREATE FUNCTION … DEFAULT
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/xfunc-sql.html", title: "PostgreSQL — SQL Functions with Default Values for Arguments"}
+  abstraction.modules:
+    - value: namespaces
+      note: "Схемы (schema) — пространства имён таблиц, представлений и подпрограмм внутри каталога; имя уточняется как `schema.table`. `INFORMATION_SCHEMA` — стандартная схема метаданных."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/ddl-schemas.html", title: "PostgreSQL — Schemas"}
+    - value: namespaces
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      note: "Имя схемы — `main`, `temp` или имя присоединённой через `ATTACH` базы; вложенных схем внутри одной базы нет."
+      sources:
+        - {url: "https://www.sqlite.org/lang_naming.html", title: "SQLite — Database Object Name Resolution"}
+        - {url: "https://www.sqlite.org/lang_attach.html", title: "SQLite — ATTACH DATABASE"}
+  evaluation.strategy:
+    - value: n/a
+      note: "Язык задаёт результат, а не порядок вычисления: оптимизатор выбирает план, подвыражения могут вычисляться в любом порядке или не вычисляться вовсе. Поэтому ни strict, ни non-strict не описывают SQL без оговорок; порядок гарантирует лишь `CASE` (с исключениями для констант)."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-expressions.html", title: "PostgreSQL — Expression Evaluation Rules"}
+  errors.model:
+    - value: error_code
+      note: "Результат выполнения оператора сообщается пятисимвольным кодом `SQLSTATE`: класс из двух символов и подкласс (например, `22012` — деление на ноль). Коды классов определены стандартом."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/errcodes-appendix.html", title: "PostgreSQL — Appendix A. Error Codes (SQLSTATE per SQL standard)"}
+    - value: error_code
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      note: "C API SQLite возвращает целочисленные коды результата (`SQLITE_CONSTRAINT` и расширенные коды), а не `SQLSTATE`."
+      sources:
+        - {url: "https://www.sqlite.org/rescode.html", title: "SQLite — Result and Error Codes"}
+    - value: exceptions
+      profile: postgresql
+      layer: implementation
+      implementation: PL/pgSQL
+      applies_to: процедурное расширение PL/pgSQL (аналог обработчиков SQL/PSM)
+      note: "Блок `BEGIN … EXCEPTION WHEN … THEN` перехватывает ошибку по имени условия или `SQLSTATE`; это не часть декларативного языка запросов."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/plpgsql-control-structures.html", title: "PostgreSQL — PL/pgSQL: Trapping Errors"}
+  resources.io:
+    - value: n/a
+      note: "Язык не содержит операций ввода-вывода: результат запроса передаётся клиенту через интерфейс СУБД (встроенный SQL, CLI, драйвер). Команды вроде `COPY` PostgreSQL — расширения реализации."
+  syntax.blocks:
+    - value: explicit
+      note: "Подзапросы и группы выражений ограничиваются скобками; предложения запроса (`SELECT`, `FROM`, `WHERE`…) начинаются ключевыми словами. `BEGIN … END` — конструкция процедурных расширений."
+  syntax.statement_terminator:
+    - value: semicolon
+      note: "Операторы в скрипте разделяются `;`. Отдельный оператор, переданный через API, может обходиться без неё."
+      sources:
+        - {url: "https://www.sqlite.org/lang.html", title: "SQLite — sql-stmt-list: semicolon-separated statements"}
+  syntax.case_sensitive:
+    - value: false
+      applies_to: ключевые слова и неквотированные идентификаторы
+      note: "Стандарт приводит неквотированные идентификаторы к верхнему регистру, PostgreSQL — к нижнему; квотированные `\"Foo\"` чувствительны к регистру. В SQLite идентификаторы нечувствительны к регистру, строковые литералы пишутся в `'…'`, а не в двойных кавычках."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-syntax-lexical.html", title: "PostgreSQL — Lexical Structure: identifier case folding vs SQL standard"}
+        - {url: "https://www.sqlite.org/lang_keywords.html", title: "SQLite — SQL Keywords and quoting"}
+  syntax.metaprogramming:
+    - value: reflection
+      applies_to: INFORMATION_SCHEMA
+      note: "Метаданные схемы доступны обычными запросами к стандартным представлениям `INFORMATION_SCHEMA`."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/information-schema.html", title: "PostgreSQL — The Information Schema (defined in the SQL standard)"}
+    - value: runtime_code
+      applies_to: динамический SQL (PREPARE/EXECUTE)
+      note: "Текст оператора собирается строкой и подготавливается во время выполнения; в стандарте это встроенный (embedded) и процедурный SQL, в PostgreSQL — `PREPARE` и `EXECUTE` в PL/pgSQL."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/sql-prepare.html", title: "PostgreSQL — PREPARE: compatibility with embedded SQL"}
+  syntax.program_representation:
+    - value: textual
+  data.numeric_radix:
+    - value: decimal
+      applies_to: DECIMAL, NUMERIC
+      note: "Точные числовые типы хранят десятичные разряды: `0.1 + 0.2 = 0.3` для `NUMERIC` истинно."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/datatype-numeric.html", title: "PostgreSQL — Numeric Types: Arbitrary Precision Numbers"}
+    - value: binary
+      applies_to: REAL, DOUBLE PRECISION, FLOAT
+      note: "Приближённые типы; в PostgreSQL — IEEE 754 одинарной и двойной точности."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/datatype-numeric.html", title: "PostgreSQL — Floating-Point Types"}
+    - value: binary
+      profile: sqlite
+      layer: implementation
+      implementation: SQLite
+      applies_to: столбцы DECIMAL/NUMERIC
+      note: "Объявление `DECIMAL(10,5)` даёт affinity NUMERIC: значение хранится как INTEGER или 8-байтовое REAL, десятичного типа хранения нет."
+      sources:
+        - {url: "https://www.sqlite.org/datatype3.html", title: "SQLite — Storage Classes and NUMERIC affinity"}
+  data.numeric_precision:
+    - value: fixed_precision
+      applies_to: DECIMAL(p, s), NUMERIC(p, s), целые типы
+      note: "Точность и масштаб объявляются в типе; значение, не помещающееся в точность, вызывает ошибку. По стандарту `NUMERIC` без масштаба имеет масштаб 0."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/datatype-numeric.html", title: "PostgreSQL — Numeric Types (SQL standard default scale 0)"}
+    - value: arbitrary_precision
+      profile: postgresql
+      layer: implementation
+      implementation: PostgreSQL
+      applies_to: NUMERIC без точности и масштаба
+      note: "«Unconstrained numeric» хранит значения любой длины до пределов реализации (до 131072 цифр до точки) и не приводит их к фиксированному масштабу — отклонение от стандартного масштаба 0."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/datatype-numeric.html", title: "PostgreSQL — Arbitrary Precision Numbers"}

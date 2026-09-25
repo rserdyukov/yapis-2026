@@ -146,6 +146,103 @@ people:
     summary: Участник комитета Haskell, автор статьи «Why Functional Programming Matters».
     languages: [haskell]
 
+  - id: moore
+    name: Charles H. Moore
+    ru: Чарльз Мур
+    wikidata: Q92999
+    summary: Создатель языка Forth (около 1970 года) и сооснователь Forth, Inc.
+    languages: [forth]
+    concepts: [syntax.metaprogramming]
+
+  - id: chamberlin
+    name: Donald D. Chamberlin
+    ru: Дональд Чемберлин
+    wikidata: Q93071
+    summary: Соавтор языка SEQUEL (впоследствии SQL), созданного в IBM Research для System R.
+    languages: [sql]
+    concepts: [data.collection_multiplicity]
+
+  - id: boyce
+    name: Raymond F. Boyce
+    ru: Рэймонд Бойс
+    wikidata: Q93007
+    summary: Соавтор SEQUEL/SQL и нормальной формы Бойса — Кодда.
+    languages: [sql]
+
+  - id: kay
+    name: Alan Kay
+    ru: Алан Кэй
+    wikidata: Q92742
+    summary: Руководитель группы Xerox PARC, создавшей Smalltalk; ввёл термин «объектно-ориентированное программирование».
+    languages: [smalltalk]
+    concepts: [abstraction.dispatch]
+
+  - id: goldberg
+    name: Adele Goldberg
+    ru: Адель Голдберг
+    wikidata: Q11605
+    summary: "Соразработчик Smalltalk-80 и соавтор его описания «Smalltalk-80: The Language and its Implementation»."
+    languages: [smalltalk]
+
+  - id: ingalls
+    name: Dan Ingalls
+    ru: Дэн Ингаллс
+    wikidata: Q92772
+    summary: Главный реализатор виртуальных машин Smalltalk в Xerox PARC и соавтор Squeak.
+    languages: [smalltalk]
+    concepts: [syntax.metaprogramming]
+
+  - id: armstrong
+    name: Joe Armstrong
+    ru: Джо Армстронг
+    wikidata: Q1691321
+    summary: Один из создателей Erlang в Ericsson; в диссертации 2003 года описал построение отказоустойчивых систем из изолированных процессов.
+    languages: [erlang]
+    concepts: [errors.model, resources.concurrency]
+
+  - id: virding
+    name: Robert Virding
+    ru: Роберт Вирдинг
+    wikidata: Q107596747
+    summary: Один из первых разработчиков Erlang в лаборатории Ericsson Computer Science Laboratory.
+    languages: [erlang]
+
+  - id: ierusalimschy
+    name: Roberto Ierusalimschy
+    ru: Роберту Иерузалимски
+    wikidata: Q1840472
+    summary: Ведущий архитектор Lua в PUC-Rio и автор книги «Programming in Lua».
+    languages: [lua]
+
+  - id: thompson
+    name: Ken Thompson
+    ru: Кен Томпсон
+    wikidata: Q1107006
+    summary: Соавтор Unix и языка B в Bell Labs; один из трёх авторов Go в Google.
+    languages: [go]
+
+  - id: pike
+    name: Rob Pike
+    ru: Роб Пайк
+    wikidata: Q517764
+    summary: Один из трёх авторов Go в Google; ранее участвовал в разработке Plan 9 и вместе с Кеном Томпсоном создал UTF-8.
+    languages: [go]
+
+  - id: griesemer
+    name: Robert Griesemer
+    ru: Роберт Гризмер
+    wikidata: Q16729446
+    summary: Один из трёх авторов Go и соавтор его спецификации.
+    languages: [go]
+
+  - id: andrew-kelley
+    name: Andrew Kelley
+    ru: Эндрю Келли
+    wikidata: Q62470811
+    summary: Создатель языка Zig и президент Zig Software Foundation.
+    languages: [zig]
+    concepts: [syntax.metaprogramming]
+
   # --- формальная теория и трансляция
   - id: chomsky
     name: Noam Chomsky
@@ -160,6 +257,13 @@ people:
     wikidata: Q92746
     summary: Руководил созданием Fortran; предложил нотацию описания синтаксиса ALGOL 60 — форму Бэкуса — Наура.
     lectures: ["05"]
+
+  - id: codd
+    name: Edgar F. Codd
+    ru: Эдгар Кодд
+    wikidata: Q92596
+    summary: Автор реляционной модели данных (1970), на которой основан SQL.
+    concepts: [data.collection_multiplicity]
 
   - id: knuth
     name: Donald E. Knuth
@@ -179,6 +283,7 @@ people:
     ru: Кеннет Айверсон
     wikidata: Q92629
     summary: Создатель APL; тьюринговская лекция «Notation as a Tool of Thought».
+    languages: [apl]
     concepts: [evaluation.rank_lifting]
 
   - id: aho

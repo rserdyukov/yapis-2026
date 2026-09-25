@@ -11,7 +11,7 @@ publish: true
 
 Компилируемый язык со статической проверкой типов, управлением памятью через владение и заимствование без сборщика мусора и обработкой ошибок через значения `Result`. Компилируется через LLVM — одну из целевых платформ курса.
 
-*Карточка полная: 51/74 понятий; пример, грамматика, оценка* — [как читать отметку](index.md#как-читать-карточку).
+*Карточка полная: 52/74 понятий; пример, грамматика, оценка* — [как читать отметку](index.md#как-читать-карточку).
 
 ## Метаданные { #meta }
 
@@ -33,6 +33,10 @@ publish: true
 | Rust 1.0 — первый выпуск | 2015-05-15 | выпуск | [Wikidata P348 1.0.0](https://www.wikidata.org/wiki/Q575650) (получено 2026-09-18) |
 | Rust 1.59 | 2022-02-24 | выпуск | [Announcing Rust 1.59.0](https://blog.rust-lang.org/2022/02/24/Rust-1.59.0.html) (получено 2026-09-18) |
 | Rust 1.98 — актуальная | 2026-09-01 | выпуск | [Wikidata P348 1.98.0](https://www.wikidata.org/wiki/Q575650) (получено 2026-09-18) |
+
+## Статьи { #articles }
+
+- [Rust: владение и заимствование](../garden/rust-ownership.md)
 
 ## Люди { #people }
 
@@ -404,10 +408,17 @@ publish: true
 
 *Ownership transfer and sharing* · [в онтологии](concepts.md#memory-transfer)
 
-- **Копирование значения (layer: language, profile: rust2024, applies_to: типы Copy, включая &T, но не &mut T)**
+- **Копирование значения (layer: language, profile: rust2024, applies_to: типы Copy, включая &T, но не &mut T)** — Присваивание и передача аргумента побитово копируют значение; исходная переменная остаётся доступной.
 - **Перемещение владения (layer: language, profile: rust2024, applies_to: передача принадлежащего вызывающему значения не-Copy типа)** — после вызова исходная переменная недоступна — компилятор запрещает использование
 - **Разделяемое заимствование (layer: language, profile: safe)** — &T допускает разделяемый доступ; изменение через внутреннюю изменяемость (например Cell/Mutex) возможно
 - **Исключительное заимствование (layer: language, profile: safe)** — &mut T даёт исключительный доступ на время активного заимствования; возможны временные reborrow
+
+#### Права ссылок и ограничения алиасов { #memory-reference-permissions }
+
+*Reference permissions and alias restrictions* · [в онтологии](concepts.md#memory-reference-permissions)
+
+- **Разделяемый неизменяемый объект (layer: language, profile: rust2024, applies_to: разделяемые ссылки &T)** — Через &T нельзя изменять значение (кроме типов с внутренней изменяемостью: Cell, RefCell); таких ссылок может быть сколько угодно одновременно. ([Rust Reference, Shared references](https://doc.rust-lang.org/reference/types/pointer.html#shared-references-))
+- **Изолированный доступ (layer: language, profile: rust2024, applies_to: изменяемые ссылки &mut T)** — Пока жива &mut T, других ссылок на то же значение нет: «либо много читателей, либо один писатель» проверяется компилятором. ([Rust Reference, Mutable references](https://doc.rust-lang.org/reference/types/pointer.html#mutable-references-mut))
 
 ### Каналы ошибок { #errors }
 

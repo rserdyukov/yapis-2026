@@ -1,0 +1,294 @@
+id: apl
+publish: true
+default_profile: iso13751
+
+meta:
+  name: APL
+  ru: APL
+  wikidata: Q296187
+  appeared:
+    value: 1966
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q296187", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Kenneth E. Iverson]
+  organizations: [IBM]
+  website: https://aplwiki.com/
+  spec: https://docs.dyalog.com/
+  summary: >
+    APL — язык массивов: единственная структура данных — прямоугольный массив
+    произвольного ранга, а примитивные функции записываются специальными
+    глифами и применяются к целым массивам без явных циклов.
+    Выражение вычисляется справа налево без приоритета операций; операторы
+    вроде `/` и `¨` строят из функций новые функции.
+    Базовый профиль — общее ядро по ISO/IEC 13751 (Extended APL), стандарт
+    не свободно доступен, поэтому ссылки для ядра даны на документацию Dyalog;
+    dfns, поезда, оператор ранга `⍤` и управляющие структуры отнесены к
+    профилю Dyalog APL.
+
+versions: []
+profiles:
+  iso13751: "Общее ядро APL по ISO/IEC 13751:2001 (Extended APL): массивы, скалярные функции, операторы, традиционные функции с динамической областью видимости. Текст стандарта платный; утверждения проверены по совпадающим разделам Dyalog APL 19.0 Language Reference."
+  dyalog: "Dyalog APL 19.0 по Language Reference Guide: диалект и реализация Dyalog Ltd., включая dfns, поезда, оператор ранга, управляющие структуры и классы. Не распространяется на APL2, GNU APL и другие диалекты."
+
+concepts:
+  bindings.introduction:
+    - value: assignment
+      note: "Переменная появляется при первом присваивании `←`; объявления для глобальных имён нет. Локальные имена традиционной функции перечисляются в заголовке через `;`."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Variables/Specification%20of%20Variables.htm", title: "Dyalog 19.0 — Specification of Variables"}
+  bindings.mutation:
+    - value: rebindable
+      note: "Имя можно заново присвоить; массивы — значения, изменение части массива через индексное присваивание не затрагивает другие имена."
+  bindings.assignment:
+    - value: single
+      note: "`A←⍳3` связывает имя со значением выражения справа."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Functions/Assignment.htm", title: "Dyalog 19.0 — Assignment"}
+    - value: multiple
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Стрендовое присваивание `year month day←2017 05 24` раскладывает элементы вектора по именам; скаляр присваивается всем именам. Происходит от APL2, но в ядре ISO не проверено."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Functions/Assignment.htm", title: "Dyalog 19.0 — Assignment: multiple assignment"}
+  scope.resolution:
+    - value: dynamic
+      applies_to: традиционные функции (tradfns)
+      note: "Локальное имя затеняет одноимённый объект на время выполнения функции, и вызванные ею функции видят это локальное значение — поиск идёт вниз по state indicator."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/TradFns/Global%20Local%20Names.htm", title: "Dyalog 19.0 — Global & Local Names"}
+    - value: lexical
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: dfns
+      note: "Вложенная dfn ищет имя во внешних dfn по тексту, а не по цепочке вызовов; документация противопоставляет это «обычной для APL» динамической области."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Static%20Name%20Scope.htm", title: "Dyalog 19.0 — Lexical Name Scope"}
+  scope.constructs:
+    - value: subprogram
+      note: "Локализация действует на время вызова определённой функции или оператора; блочных областей нет."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/TradFns/Global%20Local%20Names.htm", title: "Dyalog 19.0 — Global & Local Names"}
+    - value: module
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Пространства имён (класс 9) — вложенные «рабочие области» с собственными именами."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Namespaces/Namespaces.htm", title: "Dyalog 19.0 — Namespaces"}
+  scope.globals:
+    - value: globals
+      note: "Имена рабочей области (workspace) доступны любой функции, если не затенены локальными."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Workspaces.htm", title: "Dyalog 19.0 — Workspaces"}
+  scope.shadowing:
+    - value: allowed
+      note: "Локальное имя функции временно исключает объект с тем же именем из внешнего окружения (localisation/shadowing)."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/TradFns/Global%20Local%20Names.htm", title: "Dyalog 19.0 — Global & Local Names"}
+  typing.checking:
+    - value: dynamic
+      note: "Тип элементов (числа, символы, вложенные массивы) и согласованность форм проверяются примитивами при выполнении: `DOMAIN ERROR`, `LENGTH ERROR`, `RANK ERROR`."
+  typing.annotations:
+    - value: absent
+      note: "Заголовок функции задаёт имена аргументов и результата, но не их типы или ранги."
+  typing.inference:
+    - value: false
+      note: "Статического вывода типов в языке нет; оптимизации интерпретатора по типу данных — свойство реализации."
+  typing.conversions:
+    - value: implicit
+      note: "Числовые представления (булево, целое, вещественное, комплексное) взаимно преобразуются неявно; программа видит просто числа. Число и символ неявно не смешиваются."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Variables/Numbers.htm", title: "Dyalog 19.0 — Numbers"}
+  control.selection:
+    - value: guards
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: dfns
+      note: "`условие: выражение` — охранные выражения проверяются по порядку; первое истинное задаёт результат dfn."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Guards.htm", title: "Dyalog 19.0 — Guards"}
+    - value: statement
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: традиционные функции
+      note: "`:If … :Else … :EndIf`; в dfns управляющие структуры не допускаются. В классическом APL ветвление выражается переходом `→`."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Control%20Structures/if.htm", title: "Dyalog 19.0 — If Statement"}
+  control.switch:
+    - value: true
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "`:Select … :Case … :CaseList … :Else … :EndSelect`; сравнение через `≡`."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Control%20Structures/select.htm", title: "Dyalog 19.0 — Select Statement"}
+  control.until:
+    - value: post_test
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "`:Repeat … :Until условие` выполняет тело хотя бы один раз."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Control%20Structures/repeat.htm", title: "Dyalog 19.0 — Repeat Statement"}
+  control.iteration:
+    - value: higher_order
+      note: "Обход выражается операторами над функциями: редукция `f/`, `¨` (each), внешнее произведение `∘.f`, а также неявным поэлементным применением скалярных функций."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Operators/Reduce.htm", title: "Dyalog 19.0 — Reduce"}
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Operators/Each%20with%20Monadic%20Operand.htm", title: "Dyalog 19.0 — Each"}
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Operators/Outer%20Product.htm", title: "Dyalog 19.0 — Outer Product"}
+    - value: foreach
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "`:For I :In массив` перебирает элементы в порядке ravel."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Control%20Structures/for.htm", title: "Dyalog 19.0 — For Statement"}
+  subprograms.overloading:
+    - value: false
+      note: "Одна функция может быть вызвана монадически и диадически (валентность), но это не перегрузка по типам: тело само проверяет наличие левого аргумента."
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Аргументы `⍺`/`⍵` — массивы-значения; изменение локальной копии не видно вызывающему. Ссылки на пространства имён Dyalog передаются как значения-ссылки."
+  subprograms.nesting:
+    - value: true
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: dfns
+      note: "Именованная dfn может быть определена внутри другой dfn как локальная функция."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Dynamic%20Functions%20and%20Operators.htm", title: "Dyalog 19.0 — Dfns & Dops"}
+  subprograms.lambda:
+    - value: true
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Dfn `{(+/⍵)÷≢⍵}` — анонимная функция, которую можно применить сразу, передать операнду оператора или назвать присваиванием. Поезда `(f g h)` дают неявные (tacit) функции без имён аргументов."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Dynamic%20Functions%20and%20Operators.htm", title: "Dyalog 19.0 — Dfns & Dops"}
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Trains.htm", title: "Dyalog 19.0 — Function Trains"}
+  subprograms.default_args:
+    - value: true
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: левый аргумент dfn
+      note: "`⍺←выражение` задаёт левый аргумент, если dfn вызвана монадически."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Default%20Left%20Argument.htm", title: "Dyalog 19.0 — Default Left Argument"}
+  subprograms.named_args:
+    - value: false
+      note: "Функция имеет не более двух аргументов-массивов, `⍺` и `⍵`; несколько значений передаются вложенным массивом."
+  evaluation.strategy:
+    - value: strict
+      note: "Аргумент вычисляется до применения функции; выражение разбирается справа налево без приоритета операций, так `2×3-1` равно 4."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Expressions.htm", title: "Dyalog 19.0 — Expressions"}
+  evaluation.effects:
+    - value: unrestricted
+      note: "Функции могут присваивать глобальные имена и выполнять ввод-вывод; статического контроля эффектов нет."
+  evaluation.tail_calls:
+    - value: true
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: dfns
+      note: "Интерпретатор переиспользует кадр стека для хвостовых вызовов dfn; для традиционных функций такое утверждение не делается."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Tail%20Calls.htm", title: "Dyalog 19.0 — Tail Calls"}
+  evaluation.rank_lifting:
+    - value: scalar_extension
+      note: "Скалярные функции применяются к каждому простому скаляру на любой глубине вложенности; скаляр в диадическом вызове размножается до формы другого аргумента: `1 2 3+10` даёт `11 12 13`."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Functions/Scalar%20Functions.htm", title: "Dyalog 19.0 — Scalar Functions: scalar extension"}
+    - value: cell_rank
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Оператор ранга `f⍤k` применяет `f` к k-ячейкам аргументов; отрицательный k отсчитывается от ранга аргумента. В Classic Edition вместо глифа — `⎕U2364`. Наличие этого оператора в других диалектах (APL2 его не имеет) здесь не утверждается."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Operators/Rank.htm", title: "Dyalog 19.0 — Rank operator"}
+  errors.model:
+    - value: exceptions
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "`⎕SIGNAL` порождает событие с номером; `:Trap коды … :EndTrap` и error-guard dfn `коды::выражение` перехватывают его, разматывая стек до места перехвата."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/System%20Functions/signal.htm", title: "Dyalog 19.0 — ⎕SIGNAL"}
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Control%20Structures/trap.htm", title: "Dyalog 19.0 — Trap Statement"}
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Defined%20Functions%20and%20Operators/DynamicFunctions/Error%20Guards.htm", title: "Dyalog 19.0 — Error-Guards"}
+  resources.io:
+    - value: builtin
+      note: "Системные переменные `⎕` и `⍞` — ввод и вывод через терминал; неприсвоенный результат выражения выводится автоматически."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/System%20Functions/Character%20Input%20Output.htm", title: "Dyalog 19.0 — Character Input/Output"}
+  abstraction.inheritance:
+    - value: single
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "`:Class CLASS2: CLASS1` — класс наследует публичные члены одного базового класса."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Object%20Oriented%20Programming/Classes/Class%20Inheritance.htm", title: "Dyalog 19.0 — Inheritance"}
+  syntax.blocks:
+    - value: explicit
+      note: "Группировка — круглые скобки; тело dfn ограничено `{ }`, традиционная функция — строками определения `∇ … ∇` или редактором, управляющие структуры Dyalog — парами `:If … :EndIf`."
+  syntax.statement_terminator:
+    - value: newline
+      note: "Строка — одно выражение; Dyalog дополнительно разделяет выражения в одной строке символом `⋄` (diamond)."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Functions/Execute.htm", title: "Dyalog 19.0 — Execute: sub-expressions separated by ⋄"}
+  syntax.case_sensitive:
+    - value: true
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Прописные и строчные латинские буквы — разные символы имён; ранние системы с одним регистром это различие не наблюдали."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Variables/Names.htm", title: "Dyalog 19.0 — Legal Names"}
+  syntax.metaprogramming:
+    - value: runtime_code
+      note: "`⍎` выполняет строку как выражение APL; `⎕FX` создаёт функцию из её текстового представления, `⎕CR` возвращает текст существующей."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Functions/Execute.htm", title: "Dyalog 19.0 — Execute"}
+        - {url: "https://help.dyalog.com/19.0/Content/Language/System%20Functions/fx.htm", title: "Dyalog 19.0 — ⎕FX"}
+  syntax.program_representation:
+    - value: textual
+      note: "Программа — текст, но из специального набора символов: примитивы записываются одиночными глифами (`⍴`, `⍳`, `∘.`, `⍤`), что исторически требовало особой клавиатуры."
+  paradigm.supported:
+    - value: functional
+      note: "Композиция функций и операторов высшего порядка над целыми массивами; «программирование массивами» в перечислении онтологии отдельного значения не имеет."
+    - value: imperative
+      note: "Присваивание, переход `→` и глобальное состояние рабочей области."
+    - value: object_oriented
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Классы, экземпляры и наследование Dyalog."
+  data.collection_multiplicity:
+    - value: sequence
+      note: "Массив упорядочен по осям и хранит повторяющиеся элементы в отдельных позициях; множества моделируются функциями вроде `∪`, а не отдельной коллекцией."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/Variables/Arrays.htm", title: "Dyalog 19.0 — Arrays"}
+  data.numeric_radix:
+    - value: binary
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      note: "Вещественные числа по умолчанию — IEEE-754 64-bit binary."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/128%20Bit%20Decimal%20Floating%20Point.htm", title: "Dyalog 19.0 — 128 Bit Decimal Floating-Point"}
+    - value: decimal
+      profile: dyalog
+      layer: implementation
+      implementation: Dyalog APL
+      applies_to: "`⎕FR←1287`"
+      note: "Альтернативное 128-битное десятичное представление IEEE-754-2008 выбирается системной переменной."
+      sources:
+        - {url: "https://help.dyalog.com/19.0/Content/Language/Introduction/128%20Bit%20Decimal%20Floating%20Point.htm", title: "Dyalog 19.0 — 128 Bit Decimal Floating-Point"}

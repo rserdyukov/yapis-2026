@@ -1,0 +1,238 @@
+id: zig
+publish: true
+default_profile: zig016
+
+meta:
+  name: Zig
+  ru: Zig
+  wikidata: Q51885456
+  appeared:
+    value: 2015
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q51885456", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Andrew Kelley]
+  organizations: [Zig Software Foundation]
+  website: https://ziglang.org/
+  spec: https://ziglang.org/documentation/master/
+  summary: >
+    Zig — императивный системный язык без сборщика мусора, скрытого потока
+    управления и скрытых выделений памяти: аллокатор передаётся явно, ошибки
+    возвращаются как значения типа `!T`, а очистка задаётся `defer`/`errdefer`.
+    Обобщённость и метапрограммирование строятся на одном механизме — вычислении
+    `comptime` с типами как значениями, без макросов и препроцессора.
+    Язык ещё не достиг 1.0 и не имеет стабильной спецификации: записи опираются
+    на Language Reference выпуска 0.16.0 и могут устареть в следующих выпусках.
+
+versions: []
+profiles:
+  zig016: "Zig 0.16, Language Reference выпуска 0.16.0 и стандартная библиотека этого выпуска; язык до 1.0 и меняется между выпусками, формальной спецификации нет."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "Имя вводится объявлением `const` или `var`; инициализация обязательна, а `undefined` явно оставляет значение неопределённым."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Assignment", title: "Zig 0.16.0 Language Reference — Assignment"}
+  bindings.mutation:
+    - value: immutable
+      applies_to: объявления `const`
+      note: "После инициализации `const`-имя нельзя изменить; `const` относится к байтам, которые имя адресует непосредственно, у указателей собственная константность."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Assignment", title: "Zig 0.16.0 Language Reference — Assignment"}
+    - value: rebindable
+      applies_to: объявления `var`
+      note: "`var` допускает последующее присваивание значения того же типа."
+  bindings.assignment:
+    - value: single
+    - value: multiple
+      applies_to: кортежи, массивы и векторы
+      note: "Деструктурирующее присваивание `x, y, z = tuple;` разрешено только внутри блока."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Destructuring", title: "Zig 0.16.0 Language Reference — Destructuring"}
+  scope.constructs:
+    - value: block
+      note: "Блок ограничивает область локальных объявлений и сам является выражением; помеченный блок возвращает значение через `break :label value`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Blocks", title: "Zig 0.16.0 Language Reference — Blocks"}
+    - value: module
+      note: "Каждый исходный файл неявно является объявлением структуры и задаёт пространство имён своих объявлений."
+  scope.shadowing:
+    - value: forbidden_in_block
+      note: "Запрет шире локального: идентификатор не может скрыть никакой видимый идентификатор внешней области, включая объявления уровня файла (`local variable shadows declaration`)."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Shadowing", title: "Zig 0.16.0 Language Reference — Shadowing"}
+  typing.checking:
+    - value: static
+      note: "Типы проверяются при семантическом анализе; часть проверок (переполнение, выход за границы) выполняется при выполнении в режимах Debug и ReleaseSafe."
+  typing.annotations:
+    - value: optional
+      applies_to: локальные объявления
+      note: "Тип локального `const`/`var` можно вывести из инициализатора; типы параметров (или `anytype`) и тип результата функции записываются явно."
+  typing.inference:
+    - value: true
+      applies_to: локальные объявления и параметры `anytype`
+      note: "Локальный вывод из инициализатора и вывод типа `anytype`-параметра в месте вызова; глобального вывода типов функций нет."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Function-Parameter-Type-Inference", title: "Zig 0.16.0 Language Reference — Function Parameter Type Inference"}
+  typing.conversions:
+    - value: explicit
+      note: "Сужающие и меняющие представление преобразования выполняются встроенными функциями `@intCast`, `@floatFromInt`, `@bitCast`, `@ptrCast` и др.; часть из них добавляет проверки безопасности."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Explicit-Casts", title: "Zig 0.16.0 Language Reference — Explicit Casts"}
+    - value: implicit
+      applies_to: однозначные и безопасные приведения типов
+      note: "Неявная коэрсия допускается только когда преобразование однозначно и гарантированно безопасно: расширение целых, `T` → `?T`, `T` → `E!T`, усиление квалификаторов. Исключение — C-указатели."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Type-Coercion", title: "Zig 0.16.0 Language Reference — Type Coercion"}
+  typing.sum_types:
+    - value: tagged
+      note: "`union(enum)` или `union(Tag)` хранит активный вариант; `switch` по размеченному объединению даёт доступ к полезной нагрузке через захват."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Tagged-union", title: "Zig 0.16.0 Language Reference — Tagged union"}
+  typing.product_types:
+    - value: record
+      note: "`struct` с именованными полями и значениями по умолчанию; порядок полей в памяти не гарантирован, кроме `extern` и `packed`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#struct", title: "Zig 0.16.0 Language Reference — struct"}
+    - value: tuple
+      note: "Кортеж — анонимная структура без имён полей, `.{ 1, 2, 3 }`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Tuples", title: "Zig 0.16.0 Language Reference — Tuples"}
+  typing.nullability:
+    - value: optional_type
+      note: "Обычные указатели `*T` не могут быть null; отсутствие значения выражается типом `?T` и распаковывается через `orelse`, `if` или `.?`. Исключения — `allowzero` и C-указатели `[*c]T`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Optionals", title: "Zig 0.16.0 Language Reference — Optionals"}
+  control.selection:
+    - value: expression
+      note: "`if` — выражение и заменяет тернарный оператор; оно также распаковывает `?T` и `E!T` с захватом значения."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#if", title: "Zig 0.16.0 Language Reference — if"}
+  control.switch:
+    - value: true
+      note: "`switch` — выражение; без ветви `else` оно обязано перечислить все значения, иначе ошибка компиляции."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#switch", title: "Zig 0.16.0 Language Reference — switch"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#Exhaustive-Switching", title: "Zig 0.16.0 Language Reference — Exhaustive Switching"}
+  control.pattern_matching:
+    - value: false
+      note: "`switch` сравнивает значения, диапазоны и варианты размеченного объединения и захватывает полезную нагрузку одного уровня, но вложенных структурных образцов нет."
+  control.do_while:
+    - value: false
+      note: "Постусловие выражается `while (true)` с явным `break`."
+  control.iteration:
+    - value: foreach
+      note: "`for` обходит массивы, срезы и диапазоны `0..n`, в том числе несколько последовательностей одинаковой длины одновременно; произвольный итератор обходится через `while` с опционалом."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#for", title: "Zig 0.16.0 Language Reference — for"}
+    - value: c_style
+      applies_to: "`while (cond) : (step)`"
+      note: "`while` принимает continue-выражение, выполняемое при каждом продолжении цикла; инициализация записывается до цикла отдельным объявлением."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#while", title: "Zig 0.16.0 Language Reference — while"}
+  subprograms.overloading:
+    - value: false
+      note: "Имя в контейнере обозначает одно объявление; вариативность по типам выражается `comptime`-параметрами или `anytype`."
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Параметры неизменяемы; для структур, объединений и массивов компилятор может передавать ссылку, так как копия ненаблюдаема. Изменяемый аргумент передаётся явным указателем."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Pass-by-value-Parameters", title: "Zig 0.16.0 Language Reference — Pass-by-value Parameters"}
+  subprograms.closures:
+    - value: false
+      note: "Нет функций, захватывающих окружение во время выполнения; состояние передаётся явно, например структурой-контекстом."
+  subprograms.lambda:
+    - value: false
+      note: "Анонимных функциональных выражений нет; функцию объявляют в контейнере, в том числе в анонимной структуре внутри выражения."
+  subprograms.generics:
+    - value: true
+      note: "Обобщённость реализуется параметрами времени компиляции: тип — значение первого класса, передаваемое как `comptime T: type`; ограничения проверяются при инстанцировании (compile-time duck typing)."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Compile-Time-Parameters", title: "Zig 0.16.0 Language Reference — Compile-Time Parameters"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#Generic-Data-Structures", title: "Zig 0.16.0 Language Reference — Generic Data Structures"}
+  subprograms.generic_mechanism:
+    - value: monomorphization
+      note: "Отдельного механизма шаблонов нет: вызов с новыми `comptime`-аргументами вычисляется при компиляции и порождает специализированный код; функция, возвращающая `type`, строит обобщённую структуру данных."
+  abstraction.dispatch:
+    - value: static
+      note: "Вызовы разрешаются статически; динамический полиморфизм строится вручную через указатели на функции, например `std.mem.Allocator` хранит указатель на объект и таблицу функций."
+  abstraction.inheritance:
+    - value: absent
+  abstraction.modules:
+    - value: explicit_exports
+      note: "`@import` возвращает структуру-тип файла; извне видны только объявления с `pub`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#import", title: "Zig 0.16.0 Language Reference — @import"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#Source-File-Structs", title: "Zig 0.16.0 Language Reference — Source File Structs"}
+  evaluation.tail_calls:
+    - value: false
+      note: "Для обычного вызова устранение не гарантировано; `@call(.always_tail, f, args)` требует хвостового вызова и даёт ошибку компиляции, если он невозможен."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#call", title: "Zig 0.16.0 Language Reference — @call"}
+  memory.management:
+    - value: manual
+      note: "Язык не управляет памятью за программиста и не имеет среды выполнения со сборщиком; по соглашению аллокатора по умолчанию нет — функции, которым нужна куча, принимают параметр `Allocator`, реализации (`FixedBufferAllocator`, `ArenaAllocator` и др.) даёт стандартная библиотека."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Memory", title: "Zig 0.16.0 Language Reference — Memory"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#Choosing-an-Allocator", title: "Zig 0.16.0 Language Reference — Choosing an Allocator"}
+  errors.model:
+    - value: result_type
+      note: "Ошибка — значение из множества ошибок; тип `E!T` объединяет его с результатом. `try` возвращает ошибку вызывающему, `catch` подставляет значение или обрабатывает её; раскрутки стека нет."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Errors", title: "Zig 0.16.0 Language Reference — Errors"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#Error-Union-Type", title: "Zig 0.16.0 Language Reference — Error Union Type"}
+    - value: panic
+      note: "`@panic` и достижение `unreachable` в режимах Debug/ReleaseSafe вызывают обработчик паники; в ReleaseFast/ReleaseSmall `unreachable` становится предположением оптимизатора."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#unreachable", title: "Zig 0.16.0 Language Reference — unreachable"}
+  errors.must_use:
+    - value: error
+      note: "Игнорирование любого выражения не-`void` типа — ошибка компиляции (`value of type … ignored`), поэтому ошибку нельзя молча потерять; явное отбрасывание — `_ = expr`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#void", title: "Zig 0.16.0 Language Reference — void"}
+  resources.cleanup:
+    - value: defer
+      note: "`defer` выполняет выражение при любом выходе из области в обратном порядке; `errdefer` — только при выходе с ошибкой. Внутри `defer` запрещён `return`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#defer", title: "Zig 0.16.0 Language Reference — defer"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#errdefer", title: "Zig 0.16.0 Language Reference — errdefer"}
+  resources.concurrency:
+    - value: threads
+      layer: standard_library
+      note: "`std.Thread.spawn` и `threadlocal`-переменные. Языковые async-функции не поддерживаются начиная с 0.11.0; `async_await` поэтому не указан."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Thread-Local-Variables", title: "Zig 0.16.0 Language Reference — Thread Local Variables"}
+        - {url: "https://ziglang.org/documentation/0.16.0/#Async-Functions", title: "Zig 0.16.0 Language Reference — Async Functions"}
+  syntax.blocks:
+    - value: explicit
+  syntax.statement_terminator:
+    - value: semicolon
+  syntax.case_sensitive:
+    - value: true
+  syntax.macro_hygiene:
+    - value: n/a
+      note: "В Zig нет макросов и препроцессора: код времени компиляции — обычные функции и блоки comptime с лексической областью видимости, поэтому вопрос о захвате имён при подстановке не возникает."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#comptime", title: "Zig 0.16.0 Language Reference, comptime"}
+  syntax.metaprogramming:
+    - value: compile_time_execution
+      note: "`comptime`-блоки, параметры и переменные вычисляются при семантическом анализе; типы — значения времени компиляции. Макросов и препроцессора нет; C-макросы доступны только через трансляцию C-заголовков."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#comptime", title: "Zig 0.16.0 Language Reference — comptime"}
+    - value: reflection
+      applies_to: время компиляции
+      note: "`@typeInfo`, `@TypeOf`, `@hasField` дают сведения о типах при компиляции; встроенные функции `@Struct`, `@Int`, `@Enum` и др. строят новые типы. Отражения типов во время выполнения нет."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#typeInfo", title: "Zig 0.16.0 Language Reference — @typeInfo"}
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+  data.numeric_precision:
+    - value: fixed_precision
+      applies_to: целые `iN`/`uN` и числа с плавающей точкой
+      note: "Разрядность целого задаётся типом, в том числе произвольной шириной вроде `u7`; переполнение обычных операторов — Illegal Behavior (проверяется в Debug/ReleaseSafe), для оборачивания есть отдельные операторы вроде `+%`."
+      sources:
+        - {url: "https://ziglang.org/documentation/0.16.0/#Integer-Overflow", title: "Zig 0.16.0 Language Reference — Integer Overflow"}
+    - value: arbitrary_precision
+      applies_to: "`comptime_int` при компиляции"
+      note: "Целые литералы и значения `comptime_int` не ограничены по размеру, но существуют только при компиляции."

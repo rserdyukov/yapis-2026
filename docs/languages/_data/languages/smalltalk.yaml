@@ -1,0 +1,247 @@
+id: smalltalk
+publish: true
+default_profile: st80
+
+meta:
+  name: Smalltalk
+  ru: Smalltalk
+  wikidata: Q235086
+  appeared:
+    value: 1972
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q235086", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Alan Kay, Adele Goldberg, Dan Ingalls]
+  organizations: [Xerox PARC]
+  website: https://pharo.org/
+  spec: http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf
+  summary: >
+    Smalltalk — объектно-ориентированный язык, в котором любое значение
+    является объектом, а любое вычисление — посылкой сообщения: даже
+    условия и циклы выражаются сообщениями к логическим значениям и блокам-замыканиям.
+    Программа живёт в образе (image) вместе со средой разработки, классы и
+    метаклассы доступны для рефлексии и изменения во время работы.
+    Основа — Smalltalk-80 по книге Goldberg и Robson (Blue Book, 1983);
+    исключения ANSI-стиля, трейты и пакеты отмечены как свойства реализации Pharo.
+
+versions: []
+profiles:
+  st80: "Smalltalk-80 по книге A. Goldberg, D. Robson «Smalltalk-80: The Language and its Implementation» (1983, Blue Book): синтаксис, классы ядра и виртуальная машина. Стандарт ANSI INCITS 319-1998 не используется — он недоступен открыто."
+  pharo: "Pharo — современная реализация, производная от Squeak, по книге «Pharo by Example 9» и Pharo wiki; слой реализации, выпуск не фиксируется."
+
+concepts:
+  paradigm.supported:
+    - value: object_oriented
+      note: "Числа, классы, блоки и контексты исполнения — объекты; вычисление — посылка сообщения получателю, который сам выбирает метод."
+      sources:
+        - {url: "http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf", title: "Goldberg, Robson — Smalltalk-80, Part One: objects and messages"}
+    - value: imperative
+      note: "Методы — последовательности выражений с присваиванием переменным и изменением состояния объектов."
+  abstraction.dispatch:
+    - value: single
+      note: "Метод ищется по селектору в классе получателя и далее по цепочке суперклассов во время выполнения; классы аргументов на выбор не влияют. При неудаче поиска получателю посылается `doesNotUnderstand:`."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/UnderstandingMessage/UnderstandingMessage.md", title: "Pharo by Example 9 — Understanding message syntax"}
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/PharoObjectModel/PharoObjectModel.md", title: "Pharo by Example 9 — The Pharo object model: method lookup"}
+  abstraction.inheritance:
+    - value: single
+      note: "У каждого класса ровно один суперкласс; `super` начинает поиск метода с суперкласса класса, где определён текущий метод. У каждого класса есть метакласс, параллельная иерархия которых повторяет иерархию классов."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/PharoObjectModel/PharoObjectModel.md", title: "Pharo by Example 9 — single inheritance hierarchy rooted at ProtoObject"}
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/Metaclasses/Metaclasses.md", title: "Pharo by Example 9 — Classes and metaclasses"}
+  abstraction.contracts:
+    - value: traits
+      profile: pharo
+      layer: implementation
+      implementation: Pharo
+      note: "Трейт — набор методов (в Pharo также переменных экземпляра), композируемый в класс с явным разрешением конфликтов; служит повторному использованию поведения, а не статической проверке соответствия. В Smalltalk-80 протоколы — лишь категории методов в браузере."
+      sources:
+        - {url: "https://github.com/pharo-open-documentation/pharo-wiki/blob/master/General/Traits.md", title: "Pharo wiki — Traits"}
+  typing.checking:
+    - value: dynamic
+      note: "Переменные не имеют типов; пригодность объекта выясняется при посылке сообщения. Непонятое сообщение — не ошибка компиляции, а `doesNotUnderstand:` во время выполнения."
+      sources:
+        - {url: "http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf", title: "Goldberg, Robson — Smalltalk-80, Part One"}
+  typing.annotations:
+    - value: absent
+      note: "Объявления `| a b |` вводят имена без типов; классы аргументов подсказывают только соглашения об именах вида `aNumber`."
+  typing.compatibility:
+    - value: duck
+      note: "Любой объект, отвечающий на нужные селекторы, пригоден независимо от места в иерархии классов."
+  typing.conversions:
+    - value: implicit
+      applies_to: арифметика чисел
+      note: "Операции над разными числовыми классами приводят операнды к более общему (generality/coercion), а `SmallInteger` при переполнении автоматически становится `LargePositiveInteger`/`LargeNegativeInteger`."
+      sources:
+        - {url: "http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf", title: "Goldberg, Robson — Smalltalk-80, Ch. 8 Numerical Classes: coercion and generality"}
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/BasicClasses/BasicClasses.md", title: "Pharo by Example 9 — Basic classes: automatic Integer conversion"}
+    - value: explicit
+      applies_to: сообщения as…
+      note: "Прочие преобразования — обычные сообщения: `asString`, `asInteger`, `asFloat`, `asSet`, `asOrderedCollection`."
+  typing.nullability:
+    - value: nullable_everywhere
+      note: "Любая переменная может ссылаться на `nil` — единственный экземпляр `UndefinedObject`; переменные по умолчанию инициализируются `nil`. Посылка `nil` сообщения, которого он не понимает, приводит к `doesNotUnderstand:`."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Syntax in a nutshell: pseudo-variables"}
+  bindings.introduction:
+    - value: explicit
+      note: "Временные переменные объявляются между вертикальными чертами `| a b |` в начале метода или блока; параметры блока — `[:x | …]`, переменные экземпляра — в определении класса."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Local variable definitions"}
+  bindings.mutation:
+    - value: rebindable
+      note: "Переменной можно присвоить другой объект; аргументы метода и блока, а также псевдопеременные `self`, `super`, `nil`, `true`, `false`, `thisContext` присваиванию не подлежат."
+  bindings.assignment:
+    - value: single
+      note: "Присваивание `x := expr` — выражение, возвращающее присвоенный объект; в Blue Book записывается стрелкой `←`. Распаковки при присваивании нет."
+  scope.resolution:
+    - value: lexical
+      note: "Временные переменные и параметры видны во вложенных блоках по тексту; переменные экземпляра видны в методах класса и подклассов; имена с прописной буквы ищутся среди переменных класса, pool-словарей и глобалов."
+  scope.constructs:
+    - value: subprogram
+      applies_to: метод
+    - value: block
+      note: "Блок `[ … ]` может объявлять собственные временные переменные и параметры."
+    - value: class
+      note: "Переменные экземпляра и переменные класса доступны только методам класса (и подклассов); извне состояние объекта доступно только через сообщения."
+  scope.globals:
+    - value: globals
+      note: "Глобальные переменные, включая имена классов, хранятся в системном словаре `Smalltalk` — едином плоском пространстве имён образа."
+      sources:
+        - {url: "http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf", title: "Goldberg, Robson — Smalltalk-80: global variables and the Smalltalk dictionary"}
+  control.selection:
+    - value: expression
+      note: "`cond ifTrue: [ … ] ifFalse: [ … ]` — сообщение объекту `true` или `false`, возвращающее значение выбранного блока. Особой синтаксической конструкции нет; компилятор лишь встраивает эти сообщения ради скорости."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Conditionals and loops"}
+  control.switch:
+    - value: false
+      note: "Конструкции switch/case нет; выбор по значению пишут цепочкой `ifTrue:ifFalse:`, словарём блоков или полиморфной посылкой сообщения."
+  control.until:
+    - value: pre_test
+      applies_to: "[ cond ] whileFalse: [ body ]"
+      note: "`whileFalse:` — сообщение блоку-условию: условие вычисляется перед каждым выполнением тела. Постусловие выражают унарным `[ body. cond ] whileFalse`, где тело входит в сам блок-получатель."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Loops: whileTrue:, whileFalse:"}
+  control.iteration:
+    - value: higher_order
+      note: "`do:`, `collect:`, `select:`, `inject:into:` посылаются коллекции, `to:do:` и `timesRepeat:` — числу, `whileTrue:` — блоку; тело цикла всегда передаётся как блок."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Conditionals and loops"}
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/Collections/Collections.md", title: "Pharo by Example 9 — Collections: iterators"}
+  subprograms.overloading:
+    - value: false
+      note: "Метод идентифицируется селектором; два метода одного класса с одним селектором невозможны. `at:` и `at:put:` — разные селекторы, а не перегрузка по числу или типам аргументов."
+  subprograms.parameter_passing:
+    - value: by_sharing
+      note: "Аргумент — ссылка на объект: изменение состояния объекта видно вызывающему, присваивание параметру запрещено."
+  subprograms.placement:
+    - value: type_member
+      note: "Метод принадлежит классу (или метаклассу — «методы класса»); свободных функций нет, роль функций играют блоки."
+  subprograms.lambda:
+    - value: true
+      note: "Блок `[:x | x + 2]` — объект `BlockClosure`, вызываемый сообщением `value:`."
+  subprograms.closures:
+    - value: true
+      note: "Блоки захватывают переменные охватывающего метода и `self`. `^` внутри блока выполняет нелокальный возврат из метода, где блок создан."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Block syntax: lexical closures and ^"}
+    - value: true
+      profile: pharo
+      layer: implementation
+      implementation: Pharo
+      note: "Реализация использует настоящие замыкания `BlockClosure` с собственными временными переменными; в Smalltalk-80 из Blue Book блоки (`BlockContext`) разделяли временные переменные с методом и не были полностью реентерабельными."
+  subprograms.named_args:
+    - value: false
+      note: "Ключевые сообщения вида `raisedTo: 6 modulo: 10` вплетают части имени в перечисление аргументов, но ключевые слова — часть селектора: порядок фиксирован, пропуск или перестановка дают другой селектор."
+  evaluation.strategy:
+    - value: strict
+      note: "Получатель и аргументы вычисляются до посылки сообщения; отложенное вычисление явно выражается блоком (`and:`, `ifTrue:` принимают блоки)."
+  evaluation.tail_calls:
+    - value: false
+      note: "Ни Blue Book, ни Pharo не гарантируют устранение хвостовых вызовов: каждый вызов создаёт контекст, видимый через `thisContext`."
+  memory.management:
+    - value: refcount
+      profile: st80
+      layer: implementation
+      implementation: Blue Book virtual machine
+      note: "Спецификация памяти объектов в части IV Blue Book описывает подсчёт ссылок (циклы требуют дополнительной маркировки); сам язык способ освобождения не предписывает."
+      sources:
+        - {url: "http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf", title: "Goldberg, Robson — Smalltalk-80, Part Four: Object Memory"}
+    - value: gc
+      profile: pharo
+      layer: implementation
+      implementation: Pharo VM
+      note: "Виртуальная машина автоматически освобождает недостижимые объекты трассирующим сборщиком; явного освобождения нет."
+  errors.model:
+    - value: exceptions
+      profile: pharo
+      layer: implementation
+      implementation: Pharo
+      note: "`[ … ] on: ZeroDivide do: [:ex | … ]` перехватывает исключение по классу; `signal` его возбуждает. Механизм следует ANSI Smalltalk; в Blue Book его нет — ошибки там сводятся к `error:` и `doesNotUnderstand:`, открывающим отладчик."
+      sources:
+        - {url: "https://github.com/pharo-open-documentation/pharo-wiki/blob/master/General/Exceptions.md", title: "Pharo wiki — Exceptions"}
+    - value: conditions_restarts
+      profile: pharo
+      layer: implementation
+      implementation: Pharo
+      note: "Обработчик выполняется до раскрутки стека: он может `resume:` — продолжить выполнение после `signal` с заданным значением, `retry` — повторить защищённый блок, `return:`, `pass` или `outer`. Именованных перезапусков, как в Common Lisp, нет."
+      sources:
+        - {url: "https://github.com/pharo-open-documentation/pharo-wiki/blob/master/General/Exceptions.md", title: "Pharo wiki — Exceptions: retry, resume, pass, outer"}
+  resources.cleanup:
+    - value: finally
+      profile: pharo
+      layer: implementation
+      implementation: Pharo
+      note: "`aBlock ensure: [ … ]` выполняет второй блок при любом выходе, `ifCurtailed:` — только при аварийном. Это сообщения блоку, а не синтаксис."
+      sources:
+        - {url: "https://github.com/pharo-open-documentation/pharo-wiki/blob/master/General/Exceptions.md", title: "Pharo wiki — Exceptions: ensure and ifCurtailed"}
+  resources.io:
+    - value: stdlib
+      note: "Ввод-вывод — сообщения объектам классов потоков и `Transcript`; в языке нет операторов ввода-вывода."
+  resources.concurrency:
+    - value: threads
+      note: "`[ … ] fork` создаёт `Process` — лёгкий процесс внутри одной виртуальной машины с планированием по приоритетам; синхронизация — `Semaphore`. Процессы разделяют память образа."
+      sources:
+        - {url: "http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf", title: "Goldberg, Robson — Smalltalk-80, Ch. 15 Multiple Independent Processes"}
+  syntax.blocks:
+    - value: explicit
+      note: "Квадратные скобки ограничивают блок, круглые — группируют выражения; тело метода ограничено средой браузера или форматом файла, а не ключевыми словами."
+  syntax.statement_terminator:
+    - value: period
+      note: "Точка разделяет (а не завершает) выражения метода или блока; `;` образует каскад сообщений тому же получателю."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/SyntaxNutshell/SyntaxNutshell.md", title: "Pharo by Example 9 — Sequences and cascades"}
+  syntax.case_sensitive:
+    - value: true
+      note: "Регистр значим; по соглашению имена глобалов и классов начинаются с прописной буквы, временных переменных и селекторов — со строчной."
+  syntax.metaprogramming:
+    - value: reflection
+      note: "Классы, методы, метаклассы и стек исполнения (`thisContext`) — объекты, доступные для чтения и изменения из программы; сами средства разработки написаны на Smalltalk."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/Reflection/Reflection.md", title: "Pharo by Example 9 — Reflection"}
+        - {url: "https://books.pharo.org/booklet-ReflectiveCore/", title: "Pharo — A simple reflective object kernel"}
+    - value: runtime_code
+      note: "Компилятор — объект образа: методы компилируются и добавляются в классы во время работы, классы создаются сообщением суперклассу."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/Reflection/Reflection.md", title: "Pharo by Example 9 — Reflection"}
+  data.collection_multiplicity:
+    - value: set
+      layer: standard_library
+      applies_to: Set
+    - value: bag
+      layer: standard_library
+      applies_to: Bag
+      note: "`Bag` хранит число вхождений элемента (`occurrencesOf:`)."
+    - value: sequence
+      layer: standard_library
+      applies_to: Array, OrderedCollection, SortedCollection
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/Collections/Collections.md", title: "Pharo by Example 9 — Collections: sequenceable vs Set, Bag, Dictionary"}
+  data.numeric_precision:
+    - value: arbitrary_precision
+      applies_to: Integer, Fraction
+      note: "Целые не переполняются: `100 factorial` вычисляется точно благодаря автоматическому переходу к `LargePositiveInteger`."
+      sources:
+        - {url: "https://github.com/SquareBracketAssociates/PharoByExample9/blob/master/Chapters/BasicClasses/BasicClasses.md", title: "Pharo by Example 9 — Basic classes: SmallInteger and LargePositiveInteger"}
+    - value: fixed_precision
+      applies_to: Float

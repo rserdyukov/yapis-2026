@@ -32,17 +32,25 @@ nav:
   # совпадение проверяет tools/tests/test_catalog.py.
   - Каталог языков:
       - languages/index.md
+      - APL: languages/apl.md
+      - Forth: languages/forth.md
       - C: languages/c.md
       - Prolog: languages/prolog.md
+      - Smalltalk: languages/smalltalk.md
+      - SQL: languages/sql.md
       - C++: languages/cpp.md
       - Common Lisp: languages/common-lisp.md
+      - Erlang: languages/erlang.md
       - Haskell: languages/haskell.md
       - Python: languages/python.md
+      - Lua: languages/lua.md
       - Java: languages/java.md
       - JavaScript: languages/javascript.md
       - C#: languages/csharp.md
+      - Go: languages/go.md
       - Rust: languages/rust.md
       - TypeScript: languages/typescript.md
+      - Zig: languages/zig.md
   - Онтология:
       - concepts/index.md
       - Понятия: languages/glossary.md
@@ -52,7 +60,19 @@ nav:
       - Различающие примеры: concepts/examples/index.md
       - Проверочные вопросы: languages/questions.md
       - Карта языков: concepts/language-map.md
-  - Цифровой сад: garden/index.md
+  - Цифровой сад:
+      - garden/index.md
+      - "Rust: владение и заимствование": garden/rust-ownership.md
+      - "Go: сознательная бедность языка": garden/go-simplicity.md
+      - "Lua: метатаблицы": garden/lua-metatables.md
+      - "Zig: comptime вместо макросов": garden/zig-comptime.md
+      - "Forth: стек вместо синтаксиса": garden/forth-stack.md
+      - "APL: нотация как инструмент мышления": garden/apl-arrays.md
+      - "SQL: декларативность": garden/sql-declarative.md
+      - "Erlang: let it crash": garden/erlang-let-it-crash.md
+      - "Smalltalk: всё есть сообщение": garden/smalltalk-messages.md
+      - "Haskell: чистота и ленивость": garden/haskell-purity-laziness.md
+      - "JavaScript: цена совместимости": garden/javascript-compatibility.md
 
 extra_css:
   - assets/stylesheets/course.css
@@ -121,6 +141,7 @@ markdown_extensions:
         - docs/_partials
         - docs/languages/_data
         - docs/concepts/examples
+        - docs/garden
       check_paths: true
       # Секции кода вырезаются из тела функций — убрать общий отступ.
       dedent_subsections: true

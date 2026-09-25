@@ -8,6 +8,8 @@ import re
 import sys
 import unittest
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools"))
 from publication import metadata  # noqa: E402
@@ -92,6 +94,33 @@ class SiteStructureTests(unittest.TestCase):
                 used.add(image.split("/", 1)[1])
         # в каталоге нет неиспользуемых картинок
         self.assertEqual(used, {p.name for p in (practice / "img").iterdir()})
+
+    def test_garden_articles_are_linked_and_self_contained(self):
+        garden = ROOT / "docs/garden"
+        index = (garden / "index.md").read_text(encoding="utf-8")
+        nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+        onto = yaml.safe_load((ROOT / "docs/languages/_data/ontology.yaml").read_text(encoding="utf-8"))
+        concepts = {c["id"] for cat in onto["categories"] for c in cat["concepts"]}
+        langs = {p.stem for p in (ROOT / "docs/languages/_data/languages").glob("*.yaml")}
+        articles = [p for p in garden.glob("*.md") if metadata(p).get("publish") and p.name != "index.md"]
+        self.assertGreaterEqual(len(articles), 11)
+        for path in articles:
+            meta = metadata(path)
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(article=path.name):
+                self.assertIn(f"({path.name})", index)
+                self.assertIn(f"garden/{path.name}", nav)
+                self.assertTrue(meta.get("title") and meta.get("languages") and meta.get("concepts"))
+                self.assertLessEqual(set(meta["languages"]), langs)
+                self.assertLessEqual(set(meta["concepts"]), concepts)
+                self.assertIn("## Источники", text)
+                # у каждого включённого файла есть исходник, у папки — run.sh
+                for ref in re.findall(r'--8<-- "(src/[^":]+)(?::[a-z][-_0-9a-z]*)?"', text):
+                    self.assertTrue((garden / ref).is_file(), ref)
+                slug = path.stem
+                self.assertTrue((garden / "src" / slug / "run.sh").is_file(), slug)
+                # каждый пример помечен: запущен или выведен из документации
+                self.assertRegex(text, r"\*\*(Проверено|Не запускалось):\*\*")
 
 
 if __name__ == "__main__":

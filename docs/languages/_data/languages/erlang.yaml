@@ -1,0 +1,257 @@
+id: erlang
+publish: true
+default_profile: otp
+
+meta:
+  name: Erlang
+  ru: Erlang
+  wikidata: Q334879
+  appeared:
+    value: 1986
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q334879", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Joe Armstrong, Robert Virding]
+  organizations: [Ericsson]
+  website: https://www.erlang.org/
+  spec: https://www.erlang.org/doc/system/reference_manual.html
+  summary: >
+    Erlang — функциональный язык с динамической типизацией, однократным
+    связыванием переменных и сопоставлением с образцом в головах функций,
+    `case` и `receive`.
+    Конкурентность строится на лёгких изолированных процессах, обменивающихся
+    асинхронными сообщениями; отказоустойчивость — на связях, мониторах и
+    супервизорах OTP по принципу «пусть упадёт».
+    Профиль — Erlang/OTP Reference Manual; свойства виртуальной машины BEAM
+    (сборка мусора, горячая замена кода) отмечены слоем реализации.
+
+versions: []
+profiles:
+  otp: "Erlang Reference Manual и системная документация Erlang/OTP (текущая онлайн-редакция); библиотеки STDLIB/OTP помечены слоем standard_library, свойства ERTS/BEAM — implementation. Конкретный выпуск OTP не фиксируется."
+
+concepts:
+  bindings.introduction:
+    - value: pattern
+      note: "Переменная связывается при успешном сопоставлении образца: в операторе `=`, аргументах клаузы, `case`, `receive` и генераторах. Отдельного объявления нет."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#variables", title: "Erlang Reference Manual — Variables"}
+  bindings.mutation:
+    - value: single_assignment
+      note: "Переменная связывается один раз в пределах клаузы; повторное `X = …` с уже связанной `X` — проверка равенства, а не присваивание. В отличие от логической переменной Prolog, связывание не отменяется возвратом."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#variables", title: "Erlang Reference Manual — Variables: single assignment"}
+  bindings.assignment:
+    - value: multiple
+      note: "`Pattern = Expr` вычисляет правую часть и сопоставляет её с образцом, связывая все несвязанные переменные образца (деструктуризация кортежей, списков, map). Неудача — исключение `badmatch`. Это не унификация: правая часть — вычисленный терм без несвязанных переменных."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#the-match-operator", title: "Erlang Reference Manual — The Match Operator"}
+  scope.constructs:
+    - value: clause
+      note: "Областью переменной является клауза функции; переменная, связанная лишь в части ветвей `if`/`case`/`receive`, считается небезопасной после выражения."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#variables", title: "Erlang Reference Manual — Variables: scope"}
+    - value: comprehension
+      note: "Переменные генераторов локальны для списочного, битового или map-включения."
+    - value: subprogram
+      applies_to: "`fun`-выражения"
+      note: "Переменные, связанные в теле `fun`, локальны для него."
+  typing.checking:
+    - value: dynamic
+      note: "Тип значения проверяется операцией при выполнении: `1 + a` возбуждает `badarith`. Спецификации `-spec` не проверяются компилятором."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/errors.html#exceptions", title: "Erlang Reference Manual — Errors and Error Handling: Exceptions"}
+  typing.annotations:
+    - value: optional
+      note: "`-spec` и `-type` — необязательные атрибуты модуля для документации и анализаторов; на исполнение они не влияют."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/typespec.html", title: "Erlang Reference Manual — Types and Function Specifications"}
+  typing.inference:
+    - value: true
+      layer: tooling
+      implementation: Dialyzer
+      note: "Dialyzer выводит success types и сообщает о гарантированных несоответствиях; это внешний анализатор, а не часть семантики языка, и он не отвергает все небезопасные программы."
+      sources:
+        - {url: "https://www.erlang.org/doc/apps/dialyzer/dialyzer.html", title: "Dialyzer"}
+  typing.conversions:
+    - value: explicit
+      note: "BIF `list_to_integer/1`, `atom_to_list/1`, `integer_to_binary/1` и т. п.; строк в числа и обратно неявно не преобразуют."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/data_types.html#type-conversions", title: "Erlang Reference Manual — Type Conversions"}
+    - value: implicit
+      applies_to: арифметика и сравнение целых с float
+      note: "В смешанной арифметике целое приводится к float; `==` сравнивает числа, а `=:=` различает `1` и `1.0`."
+  typing.product_types:
+    - value: tuple
+      note: "Кортеж фиксированного размера; по соглашению первый элемент-атом служит меткой (`{ok, V}`, `{error, R}`)."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/data_types.html#tuple", title: "Erlang Reference Manual — Tuple"}
+    - value: record
+      note: "Запись с именованными полями — синтаксис времени компиляции, транслируемый в кортеж; отдельным типом времени выполнения не является."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/data_types.html#record", title: "Erlang Reference Manual — Record"}
+  control.selection:
+    - value: guards
+      note: "`if` выбирает первую ветвь с истинной последовательностью охран; охраны также допускаются в головах функций, `case`, `receive` и `fun`. Если ни одна ветвь `if` не подошла — ошибка `if_clause`."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#if", title: "Erlang Reference Manual — If"}
+        - {url: "https://www.erlang.org/doc/system/expressions.html#guard-sequences", title: "Erlang Reference Manual — Guard Sequences"}
+    - value: expression
+      note: "`if`, `case` и `receive` — выражения, возвращающие значение выбранной ветви."
+  control.switch:
+    - value: false
+      note: "`case` сопоставляет с образцами, а не только сравнивает значения; отдельного switch нет."
+  control.pattern_matching:
+    - value: true
+      note: "Образцы в головах клауз функций и `fun`, в `case`, `receive`, `try … catch` и операторе `=`; поддерживаются литералы, кортежи, списки, map и битовые образцы. Неудача без подходящей клаузы — исключение."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/patterns.html", title: "Erlang Reference Manual — Pattern Matching"}
+  control.do_while:
+    - value: false
+      note: "Циклических конструкций нет; повторение выражается рекурсией."
+  control.iteration:
+    - value: comprehension
+      note: "Списочные, битовые и (с OTP 26) map-включения с генераторами и фильтрами."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#comprehensions", title: "Erlang Reference Manual — Comprehensions"}
+    - value: higher_order
+      layer: standard_library
+      note: "`lists:map/2`, `lists:foldl/3`, `lists:foreach/2`; общий механизм повторения — хвостовая рекурсия."
+      sources:
+        - {url: "https://www.erlang.org/doc/apps/stdlib/lists.html", title: "STDLIB — lists"}
+  subprograms.overloading:
+    - value: false
+      note: "Функция идентифицируется модулем, именем и арностью: `f/1` и `f/2` — разные функции. Несколько клауз одной функции выбираются сопоставлением образцов при выполнении, а не перегрузкой по статическим сигнатурам."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/ref_man_functions.html#function-declaration-syntax", title: "Erlang Reference Manual — Function Declaration Syntax"}
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Аргументы — неизменяемые термы, сопоставляемые с образцами головы клаузы; из-за неизменяемости разделение представления в пределах процесса ненаблюдаемо."
+  subprograms.closures:
+    - value: true
+      note: "`fun` захватывает значения связанных переменных охватывающей клаузы; так как они неизменяемы, захват эквивалентен копированию значения."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#fun-expressions", title: "Erlang Reference Manual — Fun Expressions"}
+  subprograms.lambda:
+    - value: true
+      note: "`fun (X) -> X + 1 end`; `fun m:f/N` и `fun f/N` ссылаются на именованные функции."
+  abstraction.contracts:
+    - value: interfaces
+      applies_to: "атрибут `-behaviour` и `-callback`"
+      note: "Поведение объявляет набор обратных вызовов, которые модуль обязан экспортировать; компилятор предупреждает об отсутствующих. Стандартные поведения (`gen_server`, `supervisor`) задаёт OTP."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/modules.html#behaviour-module-attribute", title: "Erlang Reference Manual — Behaviour Module Attribute"}
+  abstraction.inheritance:
+    - value: absent
+  abstraction.modules:
+    - value: explicit_exports
+      note: "Модуль задаёт `-module` и `-export([f/1, …])`; неэкспортированные функции недоступны извне модуля."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/modules.html#module-syntax", title: "Erlang Reference Manual — Module Syntax"}
+    - value: runtime_modules
+      layer: implementation
+      implementation: ERTS/BEAM
+      note: "Модули загружаются и заменяются в работающей системе; одновременно могут существовать старая и текущая версии кода, полностью квалифицированный вызов переходит к текущей."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/code_loading.html#code-replacement", title: "Erlang Reference Manual — Code Replacement"}
+  evaluation.strategy:
+    - value: strict
+      note: "Аргументы вычисляются до вызова; `andalso`/`orelse` вычисляют правый операнд только при необходимости."
+  evaluation.tail_calls:
+    - value: true
+      note: "Reference Manual гарантирует, что вызов в последнем выражении тела не потребляет стек; бесконечный цикл хвостовой рекурсией может работать неограниченно. На этом строятся циклы серверных процессов."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/ref_man_functions.html#tail-recursion", title: "Erlang Reference Manual — Tail recursion"}
+  memory.management:
+    - value: gc
+      layer: implementation
+      implementation: ERTS/BEAM
+      note: "У каждого процесса собственная куча, собираемая независимо; крупные бинарные данные хранятся вне куч процессов с подсчётом ссылок."
+      sources:
+        - {url: "https://www.erlang.org/doc/apps/erts/garbagecollection.html", title: "ERTS — Erlang Garbage Collector"}
+  memory.transfer:
+    - value: copy
+      applies_to: сообщения между процессами
+      note: "Процессы не разделяют память: терм сообщения копируется в кучу получателя (кроме реализационного исключения для крупных бинарных данных)."
+  errors.model:
+    - value: exceptions
+      note: "Три класса исключений — `error`, `exit`, `throw` — перехватываются `try … catch Class:Reason:Stack`; `catch Expr` класса не различает."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/errors.html#exceptions", title: "Erlang Reference Manual — Exceptions"}
+        - {url: "https://www.erlang.org/doc/system/expressions.html#try", title: "Erlang Reference Manual — Try"}
+    - value: result_type
+      applies_to: соглашения библиотек
+      note: "Ожидаемые неудачи обычно возвращаются кортежами `{ok, Value}` / `{error, Reason}`; выражение `maybe` с `?=` сокращает их цепочки. Размеченность — соглашение, а не статический тип."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#maybe", title: "Erlang Reference Manual — Maybe"}
+  errors.must_use:
+    - value: absent
+      note: "Результат выражения можно не использовать; компилятор предупреждает о неиспользуемых переменных и некоторых бесполезных выражениях, но не требует обработки `{error, _}`."
+  resources.cleanup:
+    - value: finally
+      note: "`try … after … end` выполняет секцию `after` при нормальном завершении и при исключении."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#try", title: "Erlang Reference Manual — Try"}
+  resources.concurrency:
+    - value: actors
+      note: "Процесс — изолированная единица с собственным состоянием и почтовым ящиком, создаваемая `spawn`; взаимодействие только сообщениями. Процессы — объекты VM, а не процессы ОС."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/ref_man_processes.html#process-creation", title: "Erlang Reference Manual — Process Creation"}
+    - value: message_passing
+      note: "`Pid ! Message` и `receive`; связи (`link`) и мониторы доставляют сигналы о завершении процессов, на них строятся супервизоры OTP."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/ref_man_processes.html#links", title: "Erlang Reference Manual — Links"}
+        - {url: "https://www.erlang.org/doc/system/ref_man_processes.html#monitors", title: "Erlang Reference Manual — Monitors"}
+  resources.communication_coupling:
+    - value: asynchronous_mailbox
+      note: "Отправка `!` помещает сообщение в очередь получателя и не ждёт приёма; синхронный запрос-ответ (`gen_server:call`) строится поверх двух асинхронных сообщений."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#send", title: "Erlang Reference Manual — Send"}
+  resources.receive_selection:
+    - value: selective_matching
+      note: "`receive` выбирает первое от начала очереди сообщение, подходящее под один из образцов с охраной; прочие сообщения остаются в очереди. Поиск линейный по длине очереди; `after` задаёт тайм-аут."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/expressions.html#receive", title: "Erlang Reference Manual — Receive"}
+  syntax.blocks:
+    - value: explicit
+      note: "Составные выражения `case`, `if`, `receive`, `try`, `fun`, `begin` закрываются ключевым словом `end`."
+  syntax.statement_terminator:
+    - value: period
+      note: "Форма верхнего уровня (атрибут или объявление функции) заканчивается точкой; `,` разделяет выражения тела, `;` — клаузы. Все три — разделители грамматики, а не необязательная пунктуация."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/modules.html#module-syntax", title: "Erlang Reference Manual — Module Syntax"}
+  syntax.case_sensitive:
+    - value: true
+      note: "Регистр первой буквы различает переменные (заглавная или `_`) и атомы (строчная)."
+  syntax.metaprogramming:
+    - value: textual_macros
+      note: "Препроцессор `epp`: `-define`, `?MACRO`, `-include`, условная компиляция; макросы раскрываются на уровне токенов."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/macros.html", title: "Erlang Reference Manual — Preprocessor"}
+    - value: syntactic_macros
+      layer: implementation
+      implementation: компилятор Erlang/OTP
+      applies_to: parse transforms
+      note: "Модуль parse transform получает и возвращает абстрактное синтаксическое дерево модуля при компиляции; механизм не считается рекомендуемым для обычного кода."
+    - value: runtime_code
+      layer: standard_library
+      note: "Модули `erl_scan`, `erl_parse`, `erl_eval` и `compile` позволяют разобрать, вычислить или скомпилировать и загрузить код во время выполнения."
+  syntax.macro_hygiene:
+    - value: unhygienic
+      applies_to: "макросы `-define`"
+      note: "Раскрытие подставляет токены; имена переменных в теле макроса могут совпасть с переменными места использования."
+  paradigm.supported:
+    - value: functional
+      note: "Неизменяемые данные, функции высшего порядка и рекурсия; побочные эффекты (сообщения, I/O) не ограничены типами."
+    - value: declarative
+      applies_to: сопоставление с образцом и охраны
+      note: "Выбор клауз по образцам описывает форму данных, но порядок вычисления и эффекты остаются явными."
+  data.numeric_precision:
+    - value: arbitrary_precision
+      applies_to: целые
+      note: "Целые не ограничены фиксированной разрядностью: при выходе за машинное слово представление автоматически расширяется (bignum), ограничение — память и системные пределы."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/memory.html", title: "Erlang Efficiency Guide — Memory usage: small and large integers"}
+    - value: fixed_precision
+      applies_to: float
+      note: "64-битные числа с плавающей точкой без Inf и NaN: такие результаты вызывают `badarith`."
+      sources:
+        - {url: "https://www.erlang.org/doc/system/data_types.html#representation-of-floating-point-numbers", title: "Erlang Reference Manual — Representation of Floating Point Numbers"}

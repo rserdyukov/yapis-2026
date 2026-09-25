@@ -27,6 +27,8 @@ publish: true
     <br>Связи — люди: [Роберт Нистром](people.md#nystrom); практикум: [ЛР 3](../labs/index.md#lab-3), [ЛР 4](../labs/index.md#lab-4), [ЛР 5](../labs/index.md#lab-5).
 - <a id="antlr-reference"></a>Теренс Парр. [The Definitive ANTLR 4 Reference](https://pragprog.com/titles/tpantlr2/the-definitive-antlr-4-reference/). Pragmatic Bookshelf, 2013. Справочник автора ANTLR по грамматикам, visitor/listener и обработке ошибок.
     <br>Связи — люди: [Теренс Парр](people.md#parr); лекции: [09. Построение компилятора с помощью ANTLR](../lectures/html/09-postroenie-kompilyatora-s-pomoschyu-antlr.html); практикум: [ЛР 2](../labs/index.md#lab-2), [ЛР 3](../labs/index.md#lab-3).
+- <a id="smalltalk-80-blue-book"></a>Адель Голдберг, David Robson. [Smalltalk-80: The Language and its Implementation](http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf). Addison-Wesley, 1983. «Синяя книга» — описание языка Smalltalk-80 и его виртуальной машины.
+    <br>Связи — люди: [Адель Голдберг](people.md#goldberg); языки: [Smalltalk](smalltalk.md).
 
 ## Статьи
 
@@ -56,6 +58,30 @@ publish: true
     <br>Связи — люди: [Пол Худак](people.md#hudak), [Джон Хьюз](people.md#hughes), [Саймон Пейтон-Джонс](people.md#peyton-jones), [Филип Уодлер](people.md#wadler); языки: [Haskell](haskell.md); понятия: [Стратегия вычисления](glossary.md#evaluation-strategy), [Контроль эффектов](glossary.md#evaluation-effects), [Контракты полиморфизма](glossary.md#abstraction-contracts).
 - <a id="hopl-javascript"></a>Брендан Эйх, Allen Wirfs-Brock. *JavaScript: The First 20 Years*. Proc. ACM Program. Lang. 4, HOPL IV, 2020. DOI: [10.1145/3386327](https://doi.org/10.1145/3386327). Создание JavaScript и развитие стандарта ECMAScript.
     <br>Связи — люди: [Брендан Эйх](people.md#eich); языки: [JavaScript](javascript.md).
+- <a id="hopl-lua"></a>Роберту Иерузалимски, Luiz Henrique de Figueiredo, Waldemar Celes. *The Evolution of Lua*. HOPL III, 2007. DOI: [10.1145/1238844.1238846](https://doi.org/10.1145/1238844.1238846). Авторы объясняют, почему таблицы и метатаблицы стали единственным механизмом структурирования в Lua.
+    <br>Связи — люди: [Роберту Иерузалимски](people.md#ierusalimschy); языки: [Lua](lua.md).
+- <a id="go-cacm-2022"></a>Роб Пайк, Роберт Гризмер, Кен Томпсон, Russ Cox, Ian Lance Taylor. *The Go Programming Language and Environment*. Communications of the ACM 65(5), 2022. DOI: [10.1145/3488716](https://doi.org/10.1145/3488716). Авторы Go о целях языка — масштаб разработки, простота, инструменты — и о сознательно не включённых возможностях.
+    <br>Связи — люди: [Роб Пайк](people.md#pike), [Роберт Гризмер](people.md#griesemer), [Кен Томпсон](people.md#thompson); языки: [Go](go.md).
+- <a id="pike-go-at-google"></a>Роб Пайк. [Go at Google: Language Design in the Service of Software Engineering](https://go.dev/talks/2012/splash.article). SPLASH 2012, 2012. DOI: [10.1145/2384716.2384720](https://doi.org/10.1145/2384716.2384720). Почему в Go нет исключений, наследования и перегрузки: язык проектировался под большие кодовые базы и команды.
+    <br>Связи — люди: [Роб Пайк](people.md#pike); языки: [Go](go.md).
+- <a id="hopl-erlang"></a>Джо Армстронг. *A History of Erlang*. HOPL III, 2007. DOI: [10.1145/1238844.1238850](https://doi.org/10.1145/1238844.1238850). Первичный рассказ о происхождении процессов, сообщений и обработки ошибок в Erlang.
+    <br>Связи — люди: [Джо Армстронг](people.md#armstrong); языки: [Erlang](erlang.md); понятия: [Конкурентное выполнение](glossary.md#resources-concurrency), [Представление и передача ошибок](glossary.md#errors-model).
+- <a id="armstrong-thesis"></a>Джо Армстронг. [Making Reliable Distributed Systems in the Presence of Software Errors](https://erlang.org/download/armstrong_thesis_2003.pdf). KTH, PhD thesis, 2003. Обоснование принципа «пусть упадёт», изоляции процессов и деревьев супервизоров.
+    <br>Связи — люди: [Джо Армстронг](people.md#armstrong); языки: [Erlang](erlang.md); понятия: [Представление и передача ошибок](glossary.md#errors-model), [Конкурентное выполнение](glossary.md#resources-concurrency), [Синхронизация отправки и приёма](glossary.md#resources-communication-coupling).
+- <a id="hopl-forth"></a>Чарльз Мур, Elizabeth D. Rather, Donald R. Colburn. *The Evolution of Forth*. HOPL II, 1993. DOI: [10.1145/155360.155369](https://doi.org/10.1145/155360.155369). История Forth от авторов: стек, словарь и расширяемый компилятор как единый минимальный механизм.
+    <br>Связи — люди: [Чарльз Мур](people.md#moore); языки: [Forth](forth.md).
+- <a id="hopl-apl"></a>Кеннет Айверсон, Adin D. Falkoff. *The Evolution of APL*. HOPL I, 1978. DOI: [10.1145/800025.808372](https://doi.org/10.1145/800025.808372). Как математическая нотация Айверсона стала языком программирования и почему в нём нет приоритетов операций.
+    <br>Связи — люди: [Кеннет Айверсон](people.md#iverson); языки: [APL](apl.md); понятия: [Поднятие операций по рангу массива](glossary.md#evaluation-rank-lifting).
+- <a id="codd-1970"></a>Эдгар Кодд. *A Relational Model of Data for Large Shared Data Banks*. Communications of the ACM 13(6), 1970. DOI: [10.1145/362384.362685](https://doi.org/10.1145/362384.362685). Реляционная модель — отношения как множества кортежей; теоретическая основа SQL.
+    <br>Связи — люди: [Эдгар Кодд](people.md#codd); языки: [SQL](sql.md); понятия: [Кратность элементов коллекции](glossary.md#data-collection-multiplicity).
+- <a id="sequel-1974"></a>Дональд Чемберлин, Рэймонд Бойс. *SEQUEL: A Structured English Query Language*. ACM SIGFIDET Workshop, 1974. DOI: [10.1145/800296.811515](https://doi.org/10.1145/800296.811515). Первое описание языка, ставшего SQL; декларативный запрос вместо навигации по записям.
+    <br>Связи — люди: [Дональд Чемберлин](people.md#chamberlin), [Рэймонд Бойс](people.md#boyce); языки: [SQL](sql.md).
+- <a id="hopl-smalltalk"></a>Алан Кэй. *The Early History of Smalltalk*. HOPL II, 1993. DOI: [10.1145/155360.155364](https://doi.org/10.1145/155360.155364). Кэй о происхождении идеи «всё — объект, вычисление — посылка сообщения».
+    <br>Связи — люди: [Алан Кэй](people.md#kay); языки: [Smalltalk](smalltalk.md); понятия: [Диспетчеризация вызовов](glossary.md#abstraction-dispatch).
+- <a id="hopl-smalltalk-squeak"></a>Дэн Ингаллс. *The Evolution of Smalltalk: from Smalltalk-72 through Squeak*. Proc. ACM Program. Lang. 4, HOPL IV, 2020. DOI: [10.1145/3386335](https://doi.org/10.1145/3386335). Эволюция реализации Smalltalk — от интерпретатора сообщений до живой системы с образом.
+    <br>Связи — люди: [Дэн Ингаллс](people.md#ingalls); языки: [Smalltalk](smalltalk.md).
+- <a id="hughes-why-fp"></a>Джон Хьюз. *Why Functional Programming Matters*. The Computer Journal 32(2), 1989. DOI: [10.1093/comjnl/32.2.98](https://doi.org/10.1093/comjnl/32.2.98). Почему функции высшего порядка и ленивые вычисления улучшают модульность программ.
+    <br>Связи — люди: [Джон Хьюз](people.md#hughes); языки: [Haskell](haskell.md); понятия: [Стратегия вычисления](glossary.md#evaluation-strategy).
 
 ## Конференции
 
@@ -72,6 +98,11 @@ publish: true
     <br>Связи — практикум: [ЛР 5](../labs/index.md#lab-5).
 
 ## Документация и инструменты
+
+### Языки каталога
+
+- <a id="zig-langref"></a>[Zig 0.16.0 Language Reference](https://ziglang.org/documentation/0.16.0/). Нормативное описание Zig, привязанное к выпуску: язык до версии 1.0 меняется между выпусками.
+    <br>Связи — языки: [Zig](zig.md); понятия: [Метапрограммирование](glossary.md#syntax-metaprogramming).
 
 ### ANTLR
 

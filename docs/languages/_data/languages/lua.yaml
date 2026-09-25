@@ -1,0 +1,285 @@
+id: lua
+publish: true
+default_profile: lua54
+
+meta:
+  name: Lua
+  ru: Lua
+  wikidata: Q207316
+  appeared:
+    value: 1993
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q207316", title: "Wikidata P571", retrieved: 2026-09-25}
+  designers: [Roberto Ierusalimschy]
+  organizations: [PUC-Rio]
+  website: https://www.lua.org/
+  spec: https://www.lua.org/manual/5.4/manual.html
+  summary: >
+    Lua — компактный встраиваемый язык с динамической типизацией, в котором
+    таблицы — единственный механизм структурирования данных, а метатаблицы
+    позволяют переопределять операции и строить объекты и наследование.
+    Функции первого класса с лексическими замыканиями, асимметричные корутины
+    и гарантированные хвостовые вызовы входят в ядро языка.
+    Описан срез по Lua 5.4 Reference Manual и эталонной реализации PUC-Rio Lua;
+    LuaJIT и другие реализации не рассматриваются.
+
+versions:
+  - id: "1.1"
+    label: Lua 1.1
+    date: 1994-07-08
+    kind: release
+    role: first
+    sources:
+      - {url: "https://www.lua.org/versions.html", title: "Lua — version history: first public release", retrieved: 2026-09-25}
+  - id: "5.3"
+    label: Lua 5.3
+    date: 2015-01-12
+    kind: release
+    sources:
+      - {url: "https://www.lua.org/versions.html", title: "Lua — version history", retrieved: 2026-09-25}
+  - id: "5.4"
+    label: Lua 5.4
+    date: 2020-06-29
+    kind: release
+    sources:
+      - {url: "https://www.lua.org/versions.html", title: "Lua — version history", retrieved: 2026-09-25}
+  - id: "5.5"
+    label: Lua 5.5
+    date: 2025-12-22
+    kind: release
+    role: latest
+    sources:
+      - {url: "https://www.lua.org/versions.html", title: "Lua — version history", retrieved: 2026-09-25}
+
+profiles:
+  lua54: "Lua 5.4 Reference Manual и стандартные библиотеки; эталонная реализация — PUC-Rio Lua 5.4. Отличия Lua 5.5 не рассматриваются; примеры статьи сада о метатаблицах проверены на Lua 5.5.1, где использованные механизмы совпадают с 5.4."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      applies_to: локальные переменные
+      note: "`local x = 1` объявляет локальную переменную; параметры функций и переменные циклов `for` тоже локальны."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.7", title: "Lua 5.4 manual §3.3.7 — Local Declarations"}
+    - value: assignment
+      applies_to: глобальные переменные
+      note: "Присваивание необъявленному имени создаёт поле в таблице окружения `_ENV`; чтение необъявленного имени даёт `nil`, а не ошибку."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.2", title: "Lua 5.4 manual §2.2 — Environments and the Global Environment"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.2", title: "Lua 5.4 manual §3.2 — Variables"}
+  bindings.mutation:
+    - value: rebindable
+      note: "Переменная может получить значение любого типа."
+    - value: immutable
+      since: "5.4"
+      applies_to: локальные с атрибутом `<const>` или `<close>`
+      note: "Присваивание такой переменной после инициализации — ошибка компиляции; изменяемость таблицы, на которую она ссылается, не ограничивается."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.7", title: "Lua 5.4 manual §3.3.7 — Local Declarations"}
+  bindings.assignment:
+    - value: single
+    - value: multiple
+      note: "`a, b = b, a`: все выражения вычисляются до присваиваний; лишние значения отбрасываются, недостающие заполняются `nil`. Вызов в конце списка раскрывается во все свои результаты."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.3", title: "Lua 5.4 manual §3.3.3 — Assignment"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.12", title: "Lua 5.4 manual §3.4.12 — Lists of expressions, multiple results, and adjustment"}
+  scope.resolution:
+    - value: lexical
+      note: "Локальные переменные видны от объявления до конца самого внутреннего блока; вложенные функции обращаются к ним как к upvalue."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.5", title: "Lua 5.4 manual §3.5 — Visibility Rules"}
+  scope.constructs:
+    - value: block
+      note: "`do … end`, тела циклов, ветви `if`, тела функций; чанк (файл или строка кода) тоже блок."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.1", title: "Lua 5.4 manual §3.3.1 — Blocks"}
+    - value: subprogram
+  scope.globals:
+    - value: globals
+      note: "Глобальные переменные — поля таблицы `_ENV`, по умолчанию разделяемой глобальной таблицы `_G`; чанк может подменить `_ENV` и изолировать свои глобалы."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.2", title: "Lua 5.4 manual §2.2 — Environments and the Global Environment"}
+  scope.shadowing:
+    - value: allowed
+    - value: allowed_same_scope
+      note: "Повторный `local x` в том же блоке вводит новую переменную; замыкания, созданные ранее, продолжают ссылаться на прежнюю."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.5", title: "Lua 5.4 manual §3.5 — Visibility Rules"}
+  typing.checking:
+    - value: dynamic
+      note: "Типы имеют значения, а не переменные; восемь базовых типов: nil, boolean, number, string, function, userdata, thread, table."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.1", title: "Lua 5.4 manual §2.1 — Values and Types"}
+  typing.conversions:
+    - value: implicit
+      note: "Строка приводится к числу в арифметике, число к строке при конкатенации `..`; целое и вещественное преобразуются друг в друга при смешанной арифметике. Сравнение `==` строки и числа всегда ложно."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.3", title: "Lua 5.4 manual §3.4.3 — Coercions and Conversions"}
+    - value: explicit
+      layer: standard_library
+      note: "`tonumber`, `tostring`, `math.tointeger`."
+  typing.compatibility:
+    - value: duck
+      note: "Допустимость операции определяется во время выполнения типом значения или наличием метаметода (`__add`, `__index`, `__call` и др.)."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.4", title: "Lua 5.4 manual §2.4 — Metatables and Metamethods"}
+  typing.product_types:
+    - value: record
+      note: "Записи — таблицы со строковыми ключами: `p.x` — синтаксический сахар для `p[\"x\"]`. Отдельных типов struct или кортежей нет; массивы, множества и объекты тоже строятся из таблиц."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.1", title: "Lua 5.4 manual §2.1 — Values and Types"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.9", title: "Lua 5.4 manual §3.4.9 — Table Constructors"}
+  typing.nullability:
+    - value: nullable_everywhere
+      note: "Любая переменная или поле может содержать `nil`; отсутствующий ключ таблицы читается как `nil`, а присваивание `nil` удаляет поле. Ложны только `nil` и `false`, число 0 и пустая строка истинны."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.1", title: "Lua 5.4 manual §2.1 — Values and Types"}
+  control.selection:
+    - value: statement
+      note: "`if … then … elseif … else … end`. Условного выражения нет; идиома `c and a or b` ошибается, если `a` ложно."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.4", title: "Lua 5.4 manual §3.3.4 — Control Structures"}
+  control.switch:
+    - value: false
+      note: "Выбор по значению выражают цепочкой `elseif` или таблицей обработчиков."
+  control.until:
+    - value: post_test
+      note: "`repeat … until cond` проверяет условие после тела; в условии видны локальные переменные тела."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.4", title: "Lua 5.4 manual §3.3.4 — Control Structures"}
+  control.do_while:
+    - value: false
+      note: "Цикл с постусловием есть только в форме `repeat … until` с обратной полярностью условия."
+  control.iteration:
+    - value: foreach
+      note: "Общий `for k, v in explist do` вызывает функцию-итератор до получения `nil`; `pairs`/`ipairs` — библиотечные итераторы. Числовой `for i = a, b, step do` вычисляет границы один раз и не является C-подобным циклом с произвольными условием и шагом."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.5", title: "Lua 5.4 manual §3.3.5 — For Statement"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#pdf-pairs", title: "Lua 5.4 manual — pairs"}
+  subprograms.overloading:
+    - value: false
+      note: "Одно имя связано с одним значением-функцией; разбор аргументов по типу и числу выполняется в теле вручную."
+  subprograms.parameter_passing:
+    - value: by_sharing
+      note: "Таблицы, функции, корутины и full userdata передаются как ссылки без копирования; изменение таблицы видно вызывающему, но присваивание параметру — нет. Числа и строки неизменяемы."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.1", title: "Lua 5.4 manual §2.1 — Values and Types"}
+  subprograms.closures:
+    - value: true
+      note: "Вложенная функция захватывает внешние локальные переменные как upvalue: разделяет саму переменную, а не копию значения; каждое выполнение `local` создаёт новую переменную."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.5", title: "Lua 5.4 manual §3.5 — Visibility Rules"}
+  subprograms.lambda:
+    - value: true
+      note: "`function (x) return x * 2 end` — выражение; все функции Lua анонимны, имя — лишь переменная."
+  subprograms.default_args:
+    - value: false
+      note: "Недостающие аргументы получают `nil`; значение по умолчанию задают идиомой `x = x or default`."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.11", title: "Lua 5.4 manual §3.4.11 — Function Definitions"}
+  subprograms.named_args:
+    - value: false
+      note: "Имитируются передачей таблицы: `f{name = \"x\", size = 2}` — вызов с одним аргументом-таблицей."
+  abstraction.dispatch:
+    - value: single
+      note: "`obj:method(a)` — сахар для `obj.method(obj, a)`; метод ищется в самом объекте, затем через метаметод `__index`, то есть выбор зависит только от получателя."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.10", title: "Lua 5.4 manual §3.4.10 — Function Calls"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.4", title: "Lua 5.4 manual §2.4 — Metatables and Metamethods"}
+  abstraction.inheritance:
+    - value: single
+      applies_to: соглашение через цепочку `__index` метатаблиц
+      note: "Классов и наследования в синтаксисе нет: прототипное делегирование строят, задавая `__index` метатаблицы на таблицу-прототип. Множественное наследование возможно, если `__index` — функция, ищущая в нескольких родителях."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.4", title: "Lua 5.4 manual §2.4 — Metatables and Metamethods"}
+  abstraction.modules:
+    - value: runtime_modules
+      layer: standard_library
+      note: "`require` загружает чанк один раз и кэширует возвращённое значение (обычно таблицу) в `package.loaded`; модуль — обычная таблица, экспорт — её поля."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#6.3", title: "Lua 5.4 manual §6.3 — Modules"}
+  evaluation.tail_calls:
+    - value: true
+      note: "Вызов вида `return f(args)` — хвостовой: вызываемая функция переиспользует стековый кадр, число вложенных хвостовых вызовов не ограничено. `return (f(x))` и `return f(x) + 1` хвостовыми не являются."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.10", title: "Lua 5.4 manual §3.4.10 — Function Calls"}
+  evaluation.result_protocol:
+    - value: ordinary_return
+      note: "Функция может вернуть несколько значений одним `return`; это не поток альтернатив."
+    - value: explicit_resume
+      layer: standard_library
+      note: "`coroutine.resume` продолжает корутину до следующего `coroutine.yield` или завершения; `coroutine.wrap` превращает корутину в функцию-итератор. Корутины асимметричные и не являются продолжениями первого класса."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.6", title: "Lua 5.4 manual §2.6 — Coroutines"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#6.2", title: "Lua 5.4 manual §6.2 — Coroutine Manipulation"}
+  memory.management:
+    - value: gc
+      note: "Автоматическое управление памятью; в Lua 5.4 сборщик работает в инкрементальном или поколенческом режиме, переключаемом `collectgarbage`. Есть слабые таблицы и финализаторы `__gc`."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.5", title: "Lua 5.4 manual §2.5 — Garbage Collection"}
+  errors.model:
+    - value: exceptions
+      note: "`error(v)` возбуждает ошибку с произвольным значением, `pcall`/`xpcall` перехватывают её и возвращают `false, v`. Синтаксиса try/catch и иерархии типов исключений нет: это функции базовой библиотеки над механизмом раскрутки ядра."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.3", title: "Lua 5.4 manual §2.3 — Error Handling"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#pdf-pcall", title: "Lua 5.4 manual — pcall"}
+    - value: error_code
+      layer: standard_library
+      applies_to: функции `io`, `os` и подобные
+      note: "Соглашение библиотеки: при неудаче вернуть `nil` (или `fail`), сообщение и код ошибки вместо возбуждения ошибки."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#6.8", title: "Lua 5.4 manual §6.8 — Input and Output Facilities"}
+  resources.cleanup:
+    - value: resource_statement
+      since: "5.4"
+      note: "Локальная переменная с атрибутом `<close>` вызывает метаметод `__close` значения при выходе из блока — обычном, через `break`/`goto`/`return` или по ошибке."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3.8", title: "Lua 5.4 manual §3.3.8 — To-be-closed Variables"}
+    - value: manual
+      note: "Например, `file:close()`; финализатор `__gc` вызывается сборщиком в неопределённый момент и не заменяет детерминированную очистку."
+  resources.concurrency:
+    - value: n/a
+      note: "Ядро и стандартные библиотеки не дают вытесняющей многопоточности: тип `thread` — это корутина, выполняемая кооперативно в одном потоке ОС. Параллелизм предоставляет встраивающая программа или внешние библиотеки."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.6", title: "Lua 5.4 manual §2.6 — Coroutines"}
+  syntax.blocks:
+    - value: explicit
+      note: "Ключевые слова `do … end`, `then … end`, `repeat … until`, `function … end`; отступы незначимы."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#9", title: "Lua 5.4 manual §9 — The Complete Syntax of Lua"}
+  syntax.statement_terminator:
+    - value: optional_semicolon
+      note: "Операторы разделяются по грамматике, перевод строки незначим; `;` допускается и почти никогда не нужна, кроме устранения неоднозначности, когда следующая строка начинается с `(`."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.3", title: "Lua 5.4 manual §3.3 — Statements"}
+  syntax.case_sensitive:
+    - value: true
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.1", title: "Lua 5.4 manual §3.1 — Lexical Conventions"}
+  syntax.metaprogramming:
+    - value: runtime_code
+      layer: standard_library
+      note: "`load` компилирует строку или результат функции в функцию-чанк с заданным окружением; `dofile`/`loadfile` — для файлов."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#pdf-load", title: "Lua 5.4 manual — load"}
+    - value: reflection
+      layer: standard_library
+      note: "`type`, `getmetatable`/`setmetatable`, обход таблиц `pairs`; библиотека `debug` даёт доступ к локальным переменным, upvalue и стеку вызовов, но предназначена для отладки."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#6.10", title: "Lua 5.4 manual §6.10 — The Debug Library"}
+  data.numeric_precision:
+    - value: fixed_precision
+      since: "5.3"
+      note: "Тип number имеет подтипы integer и float; стандартная сборка использует 64-битные целые с заворачиванием при переполнении и двойную точность. До 5.3 все числа были вещественными."
+      sources:
+        - {url: "https://www.lua.org/manual/5.4/manual.html#2.1", title: "Lua 5.4 manual §2.1 — Values and Types"}
+        - {url: "https://www.lua.org/manual/5.4/manual.html#3.4.1", title: "Lua 5.4 manual §3.4.1 — Arithmetic Operators"}
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+    - value: functional
+      note: "Функции первого класса, замыкания и хвостовые вызовы; неизменяемых структур данных нет."
+    - value: object_oriented
+      note: "Объекты и классы строятся соглашениями на таблицах и метатаблицах, без встроенного синтаксиса классов."
+      sources:
+        - {url: "https://www.lua.org/about.html", title: "About Lua — procedural, object-oriented, functional and data-driven programming"}

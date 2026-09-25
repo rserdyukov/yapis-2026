@@ -14,19 +14,39 @@ layout: landing
 
 | Язык | Появился | Авторы | Типизация | Память | Ошибки | Полнота карточки |
 |---|---|---|---|---|---|---|
+| [APL](apl.md) | 1966 | Kenneth E. Iverson | Динамическая (layer: language, profile: iso13751) |  | Исключения (layer: implementation, profile: dyalog, implementation: Dyalog APL) | сравнительная: 36/74 понятий |
+| [Forth](forth.md) | 1970 | Charles H. Moore | неприменимо (n/a) (layer: language, profile: forth2012) | Ручное (layer: language, profile: forth2012) | Исключения (layer: language, profile: forth2012, applies_to: необязательный набор Exception); Код ошибки (layer: language, profile: forth2012) | сравнительная: 33/74 понятий |
 | [C](c.md) | 1972 | Dennis M. Ritchie | Статическая (layer: language, profile: c17) | Ручное (layer: standard_library, profile: c17, applies_to: динамически выделенная память) | Код ошибки (layer: standard_library, profile: c17) | сравнительная: 34/74 понятий |
 | [Prolog](prolog.md) | 1972 | Alain Colmerauer, Philippe Roussel, Robert Kowalski | Динамическая (layer: language, profile: iso) | Трассирующая сборка мусора (layer: implementation, profile: swi, implementation: SWI-Prolog) | Логическая неудача (layer: language, profile: iso); Исключения (layer: language, profile: iso) | сравнительная: 28/74 понятий |
+| [Smalltalk](smalltalk.md) | 1972 | Alan Kay, Adele Goldberg, Dan Ingalls | Динамическая (layer: language, profile: st80) | Подсчёт ссылок (layer: implementation, profile: st80, implementation: Blue Book virtual machine); Трассирующая сборка мусора (layer: implementation, profile: pharo, implementation: Pharo VM) | Исключения (layer: implementation, profile: pharo, implementation: Pharo); Условия и перезапуски (layer: implementation, profile: pharo, implementation: Pharo) | сравнительная: 38/74 понятий |
+| [SQL](sql.md) | 1974 | Donald D. Chamberlin, Raymond F. Boyce | Статическая (layer: language, profile: iso2023); Статическая (layer: implementation, profile: postgresql, implementation: PostgreSQL); Динамическая (layer: implementation, profile: sqlite, implementation: SQLite) |  | Код ошибки (layer: language, profile: iso2023); Код ошибки (layer: implementation, profile: sqlite, implementation: SQLite); Исключения (layer: implementation, profile: postgresql, implementation: PL/pgSQL, applies_to: процедурное расширение PL/pgSQL (аналог обработчиков SQL/PSM)) | сравнительная: 35/74 понятий |
 | [C++](cpp.md) | 1983 | Bjarne Stroustrup | Статическая (layer: language, profile: cpp23) | Ручное (layer: language, profile: cpp23); Владение и время жизни (layer: standard_library, profile: cpp23, applies_to: std::unique_ptr и владеющие контейнеры); Подсчёт ссылок (layer: standard_library, profile: cpp23, applies_to: std::shared_ptr) | Исключения (layer: language, profile: cpp23); Размеченный результат (layer: standard_library, profile: cpp23) | сравнительная: 34/74 понятий |
 | [Common Lisp](common-lisp.md) | 1984 | Scott E. Fahlman, Richard P. Gabriel, David A. Moon | Динамическая (layer: language, profile: ansi) |  | Условия и перезапуски (layer: language, profile: ansi) | сравнительная: 35/74 понятий |
+| [Erlang](erlang.md) | 1986 | Joe Armstrong, Robert Virding | Динамическая (layer: language, profile: otp) | Трассирующая сборка мусора (layer: implementation, profile: otp, implementation: ERTS/BEAM) | Исключения (layer: language, profile: otp); Размеченный результат (layer: language, profile: otp, applies_to: соглашения библиотек) | сравнительная: 38/74 понятий |
 | [Haskell](haskell.md) | 1990 | Paul Hudak, John Hughes, Simon Peyton Jones, Philip Wadler | Статическая (layer: language, profile: haskell2010) | Трассирующая сборка мусора (layer: implementation, profile: ghc, implementation: GHC) | Размеченный результат (layer: standard_library, profile: haskell2010); Исключения (layer: standard_library, profile: haskell2010, applies_to: ошибки IO); Исключения (layer: implementation, profile: ghc, implementation: GHC / base, applies_to: Control.Exception) | сравнительная: 35/74 понятий |
 | [Python](python.md) | 1991 | Guido van Rossum | Динамическая (layer: language, profile: runtime); Постепенная (с Python 3.5 включительно, layer: tooling, profile: static_analysis) | Подсчёт ссылок (layer: implementation, profile: python314, implementation: CPython); Трассирующая сборка мусора (layer: implementation, profile: python314, implementation: CPython) | Исключения (layer: language, profile: python314) | полная: 50/74 понятий; пример, грамматика, оценка |
+| [Lua](lua.md) | 1993 | Roberto Ierusalimschy | Динамическая (layer: language, profile: lua54) | Трассирующая сборка мусора (layer: language, profile: lua54) | Исключения (layer: language, profile: lua54); Код ошибки (layer: standard_library, profile: lua54, applies_to: функции `io`, `os` и подобные) | сравнительная: 38/74 понятий |
 | [Java](java.md) | 1995 | James Gosling | Статическая (layer: language, profile: java21) | Трассирующая сборка мусора (layer: language, profile: java21) | Исключения (layer: language, profile: java21) | полная: 51/74 понятий; пример, грамматика, оценка |
 | [JavaScript](javascript.md) | 1995 | Brendan Eich | Динамическая (layer: language, profile: es2024) |  | Исключения (layer: language, profile: es2024) | сравнительная: 34/74 понятий |
 | [C#](csharp.md) | 2001 | Anders Hejlsberg | Статическая (layer: language, profile: csharp12); Динамическая (layer: language, profile: csharp12, applies_to: операции с dynamic) | Трассирующая сборка мусора (layer: implementation, profile: dotnet8, implementation: .NET 8 / CLR) | Исключения (layer: language, profile: csharp12) | сравнительная: 35/74 понятий |
-| [Rust](rust.md) | 2010 | Graydon Hoare | Статическая (layer: language, profile: rust2024) | Владение и время жизни (layer: language, profile: safe); Подсчёт ссылок (layer: standard_library, profile: rust2024, applies_to: разделяемое владение) | Размеченный результат (layer: standard_library, profile: rust2024); Паника (layer: language, profile: rust2024) | полная: 51/74 понятий; пример, грамматика, оценка |
+| [Go](go.md) | 2009 | Rob Pike, Ken Thompson, Robert Griesemer | Статическая (layer: language, profile: go127) | Трассирующая сборка мусора (layer: language, profile: go127) | Код ошибки (layer: language, profile: go127); Паника (layer: language, profile: go127) | сравнительная: 38/74 понятий |
+| [Rust](rust.md) | 2010 | Graydon Hoare | Статическая (layer: language, profile: rust2024) | Владение и время жизни (layer: language, profile: safe); Подсчёт ссылок (layer: standard_library, profile: rust2024, applies_to: разделяемое владение) | Размеченный результат (layer: standard_library, profile: rust2024); Паника (layer: language, profile: rust2024) | полная: 52/74 понятий; пример, грамматика, оценка |
 | [TypeScript](typescript.md) | 2012 | Anders Hejlsberg | Статическая (layer: language, profile: ts5_strict); Динамическая (layer: language, profile: javascript_runtime) |  | Исключения (layer: language, profile: ts5_strict) | сравнительная: 35/74 понятий |
+| [Zig](zig.md) | 2015 | Andrew Kelley | Статическая (layer: language, profile: zig016) | Ручное (layer: language, profile: zig016) | Размеченный результат (layer: language, profile: zig016); Паника (layer: language, profile: zig016) | сравнительная: 39/74 понятий |
 
 <div class="grid cards" markdown>
+
+- **[APL · 1966](apl.md)**
+
+    APL — язык массивов: единственная структура данных — прямоугольный массив произвольного ранга, а примитивные функции записываются специальными глифами и применяются к целым массивам без явных циклов. Выражение вычисляется справа налево без приоритета операций; операторы вроде `/` и `¨` строят из функций новые функции. Базовый профиль — общее ядро по ISO/IEC 13751 (Extended APL), стандарт не свободно доступен, поэтому ссылки для ядра даны на документацию Dyalog; dfns, поезда, оператор ранга `⍤` и управляющие структуры отнесены к профилю Dyalog APL.
+
+    *Карточка сравнительная: 36/74 понятий.*
+
+- **[Forth · 1970](forth.md)**
+
+    Forth — стековый язык с постфиксной записью: слова берут аргументы со стека данных и кладут туда результаты, а стек возвратов хранит адреса вызовов и параметры циклов. Новые слова определяются через `:` и `;` и попадают в словарь; немедленные слова выполняются во время компиляции и расширяют сам компилятор, а ячейки не типизированы — смысл значения задаёт применяемое слово. Основа карточки — стандарт Forth-2012 (предыдущий — ANS Forth 1994); необязательные наборы слов отмечены в пояснениях, свойства систем вроде Gforth не включены.
+
+    *Карточка сравнительная: 33/74 понятий.*
 
 - **[C · 1972](c.md)**
 
@@ -40,6 +60,18 @@ layout: landing
 
     *Карточка сравнительная: 28/74 понятий.*
 
+- **[Smalltalk · 1972](smalltalk.md)**
+
+    Smalltalk — объектно-ориентированный язык, в котором любое значение является объектом, а любое вычисление — посылкой сообщения: даже условия и циклы выражаются сообщениями к логическим значениям и блокам-замыканиям. Программа живёт в образе (image) вместе со средой разработки, классы и метаклассы доступны для рефлексии и изменения во время работы. Основа — Smalltalk-80 по книге Goldberg и Robson (Blue Book, 1983); исключения ANSI-стиля, трейты и пакеты отмечены как свойства реализации Pharo.
+
+    *Карточка сравнительная: 38/74 понятий.*
+
+- **[SQL · 1974](sql.md)**
+
+    SQL — декларативный язык запросов и описания данных: запрос задаёт требуемый результат над таблицами, а план выполнения выбирает СУБД. Таблицы и результаты запросов — мультимножества строк; `NULL` порождает трёхзначную логику с `UNKNOWN`, а `WITH RECURSIVE` вычисляет замыкание отношений. Базовый профиль — ISO/IEC 9075:2023 (Foundation, текст платный, поэтому утверждения опираются на документацию СУБД, где она ссылается на стандарт); поведение SQLite и PostgreSQL отмечено как диалект реализации, процедурные расширения (SQL/PSM, PL/pgSQL) — отдельно.
+
+    *Карточка сравнительная: 35/74 понятий.*
+
 - **[C++ · 1983](cpp.md)**
 
     C++23 сочетает статическую типизацию, классы, шаблоны и управление временем жизни объектов через конструкторы и деструкторы. За основу взят проект стандарта N4950, без расширений компиляторов.
@@ -52,6 +84,12 @@ layout: landing
 
     *Карточка сравнительная: 35/74 понятий.*
 
+- **[Erlang · 1986](erlang.md)**
+
+    Erlang — функциональный язык с динамической типизацией, однократным связыванием переменных и сопоставлением с образцом в головах функций, `case` и `receive`. Конкурентность строится на лёгких изолированных процессах, обменивающихся асинхронными сообщениями; отказоустойчивость — на связях, мониторах и супервизорах OTP по принципу «пусть упадёт». Профиль — Erlang/OTP Reference Manual; свойства виртуальной машины BEAM (сборка мусора, горячая замена кода) отмечены слоем реализации.
+
+    *Карточка сравнительная: 38/74 понятий.*
+
 - **[Haskell · 1990](haskell.md)**
 
     Haskell 2010 — нестрогий чисто функциональный язык со статическими полиморфными типами, алгебраическими данными и классами типов. Вычисление по необходимости, сборщик памяти и дополнительные библиотеки GHC выделены в слой реализации, а не приписаны нормативной семантике языка.
@@ -63,6 +101,12 @@ layout: landing
     Интерпретируемый язык с динамической проверкой типов и неявным маркером блока (отступы). Самый частый язык реализации компиляторов в практикуме курса и одна из целевых платформ (байт-код CPython).
 
     *Карточка полная: 50/74 понятий; пример, грамматика, оценка.*
+
+- **[Lua · 1993](lua.md)**
+
+    Lua — компактный встраиваемый язык с динамической типизацией, в котором таблицы — единственный механизм структурирования данных, а метатаблицы позволяют переопределять операции и строить объекты и наследование. Функции первого класса с лексическими замыканиями, асимметричные корутины и гарантированные хвостовые вызовы входят в ядро языка. Описан срез по Lua 5.4 Reference Manual и эталонной реализации PUC-Rio Lua; LuaJIT и другие реализации не рассматриваются.
+
+    *Карточка сравнительная: 38/74 понятий.*
 
 - **[Java · 1995](java.md)**
 
@@ -82,17 +126,29 @@ layout: landing
 
     *Карточка сравнительная: 35/74 понятий.*
 
+- **[Go · 2009](go.md)**
+
+    Go — компилируемый императивный язык со статической типизацией, сборкой мусора и встроенными в язык горутинами и каналами. Интерфейсы реализуются структурно, без объявления `implements`; наследования реализации нет, а ошибки обычно возвращаются как значения типа `error`. Описан срез по спецификации языка go1.27 и стандартной библиотеке; свойства компилятора gc и утилит отмечены отдельными слоями.
+
+    *Карточка сравнительная: 38/74 понятий.*
+
 - **[Rust · 2010](rust.md)**
 
     Компилируемый язык со статической проверкой типов, управлением памятью через владение и заимствование без сборщика мусора и обработкой ошибок через значения `Result`. Компилируется через LLVM — одну из целевых платформ курса.
 
-    *Карточка полная: 51/74 понятий; пример, грамматика, оценка.*
+    *Карточка полная: 52/74 понятий; пример, грамматика, оценка.*
 
 - **[TypeScript · 2012](typescript.md)**
 
     TypeScript добавляет к JavaScript статическую проверку, структурную совместимость и стираемые типы. Базовый профиль — TypeScript 5.0 со strict; Handbook служит первичным описанием, а не отдельным стандартом ISO. Ввод-вывод зависит от JavaScript-хоста.
 
     *Карточка сравнительная: 35/74 понятий.*
+
+- **[Zig · 2015](zig.md)**
+
+    Zig — императивный системный язык без сборщика мусора, скрытого потока управления и скрытых выделений памяти: аллокатор передаётся явно, ошибки возвращаются как значения типа `!T`, а очистка задаётся `defer`/`errdefer`. Обобщённость и метапрограммирование строятся на одном механизме — вычислении `comptime` с типами как значениями, без макросов и препроцессора. Язык ещё не достиг 1.0 и не имеет стабильной спецификации: записи опираются на Language Reference выпуска 0.16.0 и могут устареть в следующих выпусках.
+
+    *Карточка сравнительная: 39/74 понятий.*
 
 - **[Сравнение языков](concepts.md)**
 

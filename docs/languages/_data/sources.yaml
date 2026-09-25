@@ -219,6 +219,157 @@ sources:
     note: Создание JavaScript и развитие стандарта ECMAScript.
     languages: [javascript]
 
+  - id: hopl-lua
+    kind: article
+    people: [ierusalimschy]
+    authors: [Luiz Henrique de Figueiredo, Waldemar Celes]
+    title: The Evolution of Lua
+    year: 2007
+    venue: "HOPL III"
+    doi: 10.1145/1238844.1238846
+    note: Авторы объясняют, почему таблицы и метатаблицы стали единственным механизмом структурирования в Lua.
+    languages: [lua]
+
+  - id: go-cacm-2022
+    kind: article
+    people: [pike, griesemer, thompson]
+    authors: [Russ Cox, Ian Lance Taylor]
+    title: The Go Programming Language and Environment
+    year: 2022
+    venue: "Communications of the ACM 65(5)"
+    doi: 10.1145/3488716
+    note: Авторы Go о целях языка — масштаб разработки, простота, инструменты — и о сознательно не включённых возможностях.
+    languages: [go]
+
+  - id: pike-go-at-google
+    kind: article
+    people: [pike]
+    title: "Go at Google: Language Design in the Service of Software Engineering"
+    year: 2012
+    venue: "SPLASH 2012"
+    doi: 10.1145/2384716.2384720
+    url: https://go.dev/talks/2012/splash.article
+    note: "Почему в Go нет исключений, наследования и перегрузки: язык проектировался под большие кодовые базы и команды."
+    languages: [go]
+
+  - id: hopl-erlang
+    kind: article
+    people: [armstrong]
+    title: A History of Erlang
+    year: 2007
+    venue: "HOPL III"
+    doi: 10.1145/1238844.1238850
+    note: Первичный рассказ о происхождении процессов, сообщений и обработки ошибок в Erlang.
+    languages: [erlang]
+    concepts: [resources.concurrency, errors.model]
+
+  - id: armstrong-thesis
+    kind: article
+    people: [armstrong]
+    title: Making Reliable Distributed Systems in the Presence of Software Errors
+    year: 2003
+    venue: "KTH, PhD thesis"
+    url: https://erlang.org/download/armstrong_thesis_2003.pdf
+    note: Обоснование принципа «пусть упадёт», изоляции процессов и деревьев супервизоров.
+    languages: [erlang]
+    concepts: [errors.model, resources.concurrency, resources.communication_coupling]
+
+  - id: hopl-forth
+    kind: article
+    people: [moore]
+    authors: [Elizabeth D. Rather, Donald R. Colburn]
+    title: The Evolution of Forth
+    year: 1993
+    venue: "HOPL II"
+    doi: 10.1145/155360.155369
+    note: "История Forth от авторов: стек, словарь и расширяемый компилятор как единый минимальный механизм."
+    languages: [forth]
+
+  - id: hopl-apl
+    kind: article
+    people: [iverson]
+    authors: [Adin D. Falkoff]
+    title: The Evolution of APL
+    year: 1978
+    venue: "HOPL I"
+    doi: 10.1145/800025.808372
+    note: Как математическая нотация Айверсона стала языком программирования и почему в нём нет приоритетов операций.
+    languages: [apl]
+    concepts: [evaluation.rank_lifting]
+
+  - id: codd-1970
+    kind: article
+    people: [codd]
+    title: A Relational Model of Data for Large Shared Data Banks
+    year: 1970
+    venue: "Communications of the ACM 13(6)"
+    doi: 10.1145/362384.362685
+    note: Реляционная модель — отношения как множества кортежей; теоретическая основа SQL.
+    languages: [sql]
+    concepts: [data.collection_multiplicity]
+
+  - id: sequel-1974
+    kind: article
+    people: [chamberlin, boyce]
+    title: "SEQUEL: A Structured English Query Language"
+    year: 1974
+    venue: "ACM SIGFIDET Workshop"
+    doi: 10.1145/800296.811515
+    note: Первое описание языка, ставшего SQL; декларативный запрос вместо навигации по записям.
+    languages: [sql]
+
+  - id: hopl-smalltalk
+    kind: article
+    people: [kay]
+    title: The Early History of Smalltalk
+    year: 1993
+    venue: "HOPL II"
+    doi: 10.1145/155360.155364
+    note: Кэй о происхождении идеи «всё — объект, вычисление — посылка сообщения».
+    languages: [smalltalk]
+    concepts: [abstraction.dispatch]
+
+  - id: hopl-smalltalk-squeak
+    kind: article
+    people: [ingalls]
+    title: "The Evolution of Smalltalk: from Smalltalk-72 through Squeak"
+    year: 2020
+    venue: "Proc. ACM Program. Lang. 4, HOPL IV"
+    doi: 10.1145/3386335
+    note: Эволюция реализации Smalltalk — от интерпретатора сообщений до живой системы с образом.
+    languages: [smalltalk]
+
+  - id: smalltalk-80-blue-book
+    kind: book
+    people: [goldberg]
+    authors: [David Robson]
+    title: "Smalltalk-80: The Language and its Implementation"
+    year: 1983
+    venue: "Addison-Wesley"
+    url: http://stephane.ducasse.free.fr/FreeBooks/BlueBook/Bluebook.pdf
+    note: «Синяя книга» — описание языка Smalltalk-80 и его виртуальной машины.
+    languages: [smalltalk]
+
+  - id: hughes-why-fp
+    kind: article
+    people: [hughes]
+    title: Why Functional Programming Matters
+    year: 1989
+    venue: "The Computer Journal 32(2)"
+    doi: 10.1093/comjnl/32.2.98
+    note: Почему функции высшего порядка и ленивые вычисления улучшают модульность программ.
+    languages: [haskell]
+    concepts: [evaluation.strategy]
+
+  - id: zig-langref
+    kind: documentation
+    topic: Языки каталога
+    title: Zig 0.16.0 Language Reference
+    url: https://ziglang.org/documentation/0.16.0/
+    note: "Нормативное описание Zig, привязанное к выпуску: язык до версии 1.0 меняется между выпусками."
+    languages: [zig]
+    concepts: [syntax.metaprogramming]
+
   # --- конференции
   - id: hopl
     kind: conference

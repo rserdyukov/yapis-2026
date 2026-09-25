@@ -118,9 +118,21 @@ concepts:
   subprograms.parameter_passing:
     - value: by_value
       note: "аргумент передаёт значение; это относится и к значениям ссылок. Копирование, перемещение и заимствование — отдельная ось."
+  memory.reference_permissions:
+    - value: immutable_shared
+      applies_to: разделяемые ссылки &T
+      note: "Через &T нельзя изменять значение (кроме типов с внутренней изменяемостью: Cell, RefCell); таких ссылок может быть сколько угодно одновременно."
+      sources:
+        - {url: "https://doc.rust-lang.org/reference/types/pointer.html#shared-references-", title: "Rust Reference, Shared references"}
+    - value: isolated
+      applies_to: изменяемые ссылки &mut T
+      note: "Пока жива &mut T, других ссылок на то же значение нет: «либо много читателей, либо один писатель» проверяется компилятором."
+      sources:
+        - {url: "https://doc.rust-lang.org/reference/types/pointer.html#mutable-references-mut", title: "Rust Reference, Mutable references"}
   memory.transfer:
     - value: copy
       applies_to: типы Copy, включая &T, но не &mut T
+      note: "Присваивание и передача аргумента побитово копируют значение; исходная переменная остаётся доступной."
     - value: move
       applies_to: передача принадлежащего вызывающему значения не-Copy типа
       note: "после вызова исходная переменная недоступна — компилятор запрещает использование"

@@ -54,7 +54,7 @@ from pathlib import Path
 
 import yaml
 
-from publication import frontmatter, page_frontmatter, publication_flag, published
+from publication import frontmatter, metadata as page_metadata, page_frontmatter, publication_flag, published
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = ROOT / "docs" / "languages" / "_data"
@@ -64,6 +64,7 @@ DEFAULT_OUT = ROOT / "docs" / "languages"
 # --check после неё требует пересборки каталога.
 SLIDES_DIR = ROOT / "docs" / "lectures" / "slides"
 EXAMPLES_PAGE = ROOT / "docs" / "concepts" / "examples" / "index.md"
+GARDEN_DIR = ROOT / "docs" / "garden"
 
 GENERATED_NOTICE = (
     "<!-- ВНИМАНИЕ. Файл собирается автоматически: tools/build-catalog.py\n"
@@ -879,6 +880,10 @@ class Registry:
     lectures: dict[str, tuple[str, str]] = field(default_factory=dict)   # номер → (заголовок, slug), опубликованные
     lecture_numbers: set[str] = field(default_factory=set)               # все колоды, включая черновики
     examples: dict[str, list[tuple[str, str]]] = field(default_factory=dict)  # понятие → [(заголовок, якорь)]
+    articles: list[dict] = field(default_factory=list)  # опубликованные статьи сада: title, file, languages, concepts
+
+    def articles_of(self, key: str, value: str) -> list[dict]:
+        return [a for a in self.articles if value in a.get(key, [])]
 
     def people_of(self, key: str, value: str) -> list[dict]:
         return [p for p in self.people.values() if value in p.get(key, [])]
@@ -935,14 +940,50 @@ def load_example_links(page: Path, onto: Ontology, report: Report) -> dict[str, 
     return out
 
 
+def load_articles(garden_dir: Path, onto: Ontology, lang_ids: set[str], report: Report) -> list[dict]:
+    """Статьи цифрового сада: связи задаются во front matter статьи.
+
+    `languages: [id…]` и `concepts: [id…]` — ссылки на каталог и онтологию;
+    обратные ссылки (у карточки языка и у понятия) строит генератор.
+    Неопубликованная статья в обратные ссылки не попадает.
+    """
+    out = []
+    if not garden_dir.is_dir():
+        return out
+    for path in sorted(garden_dir.glob("*.md")):
+        if path.name == "index.md":
+            continue
+        try:
+            meta = page_metadata(path)
+        except ValueError as error:
+            report.error(str(error))
+            continue
+        where = f"garden/{path.name}"
+        for key, known, what in (("languages", lang_ids, "язык"), ("concepts", onto.concepts.keys(), "понятие")):
+            for ref in meta.get(key, []) or []:
+                if ref not in known:
+                    report.error(f"{where}: неизвестный {what} {ref}")
+        if not meta.get("publish"):
+            continue
+        if not isinstance(meta.get("title"), str) or not meta["title"].strip():
+            report.error(f"{where}: у опубликованной статьи нужен title")
+            continue
+        out.append({"title": meta["title"], "file": path.name,
+                    "languages": list(meta.get("languages") or []),
+                    "concepts": list(meta.get("concepts") or [])})
+    return out
+
+
 def load_registry(data_dir: Path, onto: Ontology, langs: list[Language], report: Report,
                   guide: dict | None = None,
-                  slides_dir: Path = SLIDES_DIR, examples_page: Path = EXAMPLES_PAGE) -> Registry:
+                  slides_dir: Path = SLIDES_DIR, examples_page: Path = EXAMPLES_PAGE,
+                  garden_dir: Path = GARDEN_DIR) -> Registry:
+    lang_ids = {lang.id for lang in langs}
     reg = Registry(lectures=load_lectures(slides_dir),
                    lecture_numbers={m.group(1) for p in slides_dir.glob("*.md")
                                     if (m := re.match(r"^(\d{2})-", p.name))},
-                   examples=load_example_links(examples_page, onto, report))
-    lang_ids = {lang.id for lang in langs}
+                   examples=load_example_links(examples_page, onto, report),
+                   articles=load_articles(garden_dir, onto, lang_ids, report))
     # Снятая с публикации колода — не ошибка данных: ссылка просто не выводится.
     for cid, item in (guide or {}).get("definitions", {}).items():
         for number in item.get("lectures", []) or []:
@@ -1123,6 +1164,10 @@ def build_glossary(onto: Ontology, guide: dict, reg: Registry | None = None,
                 out += ["", "**Различающие примеры:** " + ", ".join(
                     f"[{title}](../concepts/examples/index.md#{anchor})"
                     for title, anchor in reg.examples[cid])]
+            articles = reg.articles_of("concepts", cid)
+            if articles:
+                out += ["", "**Статьи сада:** " + ", ".join(
+                    f"[{a['title']}](../garden/{a['file']})" for a in articles)]
             lectures = concept_lectures(cid, guide, reg)
             if lectures:
                 out += ["", "**Слайды лекций:** " + ", ".join(lecture_link(reg, n) for n in lectures)]
@@ -1297,6 +1342,13 @@ def build_language(lang: Language, onto: Ontology, langs: list[Language],
                 kind += f" (с {lang.versions[str(v['release'])]['label']})"
             role = {"first": " — первый выпуск", "latest": " — актуальная"}.get(v.get("role"), "")
             out.append(f"| {v['label']}{role} | {v['date']} | {kind} | {md_escape(render_sources(v.get('sources')))} |")
+        out.append("")
+
+    # --- статьи цифрового сада об идеях языка
+    articles = reg.articles_of("languages", lang.id)
+    if articles:
+        out += ["## Статьи { #articles }", ""]
+        out += [f"- [{a['title']}](../garden/{a['file']})" for a in articles]
         out.append("")
 
     # --- люди: авторы и участники, связанные с языком в people.yaml

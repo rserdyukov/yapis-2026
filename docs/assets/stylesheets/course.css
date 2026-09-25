@@ -89,6 +89,20 @@
 .md-typeset .md-typeset__scrollwrap { overflow-x: auto; margin: 1.2rem 0; }
 .md-typeset pre > code { border: 1px solid var(--course-line); border-radius: 8px; }
 .course-roadmap { border-left: 3px solid var(--course-line); padding-left: 1.4rem; color: var(--course-muted); }
+.md-typeset .course-epigraph {
+  border-left: 3px solid var(--course-accent); padding: .2rem 0 .2rem 1.4rem; margin: 0 0 1.8rem;
+  color: var(--md-default-fg-color); font-family: ui-serif, Georgia, "Times New Roman", serif; font-size: 1.15rem;
+}
+.md-typeset .course-epigraph p { margin: 0 0 .4rem; }
+.md-typeset .course-epigraph cite {
+  display: block; font-family: var(--md-text-font); font-style: normal; font-size: .75rem; color: var(--course-muted);
+}
+.md-typeset .course-topic-links { margin-top: .4rem; }
+.md-typeset .practice-arrow { margin: -.4rem 0 -.4rem 2rem; font-size: 1.4rem; line-height: 1; color: var(--course-muted); }
+.md-typeset img { max-width: 100%; height: auto; }
+[data-md-color-scheme="slate"] .md-typeset img[src*="practice/img/"],
+[data-md-color-scheme="slate"] .md-typeset img[src*="img/task"] { background: #fff; border-radius: 4px; }
+.md-typeset .course-topic-links li { margin-bottom: .2rem; }
 .md-footer { background: var(--md-code-bg-color); color: var(--md-default-fg-color); }
 .md-footer-meta { background: transparent; }
 .md-copyright { color: var(--course-muted); }

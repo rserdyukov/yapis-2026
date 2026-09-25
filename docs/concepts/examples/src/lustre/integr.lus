@@ -1,0 +1,4 @@
+node integr(a: int) returns (i: int);
+let
+  i = 0 -> pre(i) + a;
+tel

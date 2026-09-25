@@ -7,6 +7,9 @@
   docs/labs/index.md       — страница сайта (читают студенты в браузере)
   admin/template-TASK.md   — уезжает в репозиторий студента как TASK.md
 
+Раздел вариантов заданий (variants.md) собирается только в страницу сайта:
+в TASK.md на него ведёт ссылка.
+
 Тексты различаются только обвязкой и способом ссылаться на документы
 студента: на сайте README.md/GUIDE.md студента не существует, поэтому
 в партиалах стоят токены {{README}} и {{GUIDE}}, а подстановка зависит
@@ -19,6 +22,7 @@
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -32,7 +36,7 @@ GENERATED_NOTICE = (
     "     Правки вносите в docs/_partials/, иначе они будут затёрты. -->"
 )
 
-# Подстановки для токенов {{README}} и {{GUIDE}} в партиалах.
+# Подстановки для токенов {{README}}, {{GUIDE}} и {{CODEGEN_HOWTO}} в партиалах.
 #
 # template — студент читает файл в своём репозитории, рядом лежат
 #            README.md и GUIDE.md, поэтому ссылки относительные.
@@ -42,10 +46,13 @@ LINKS = {
     "template": {
         "README": "[`README.md`](README.md)",
         "GUIDE": "[`GUIDE.md`](GUIDE.md)",
+        "CODEGEN_HOWTO": "[HOWTO: генерация целевого кода]"
+                         "(https://rserdyukov.github.io/yapis-2026/labs/codegen-howto/)",
     },
     "site": {
         "README": "`README.md` своего репозитория",
         "GUIDE": "`GUIDE.md` своего репозитория",
+        "CODEGEN_HOWTO": "[HOWTO: генерация целевого кода](codegen-howto.md)",
     },
 }
 
@@ -102,7 +109,7 @@ def build_template_task() -> str:
 автоматическом ИИ-ревью — в [`GUIDE.md`](GUIDE.md).
 
 Полный список вариантов и таблица распределения — на сайте курса:
-<https://rserdyukov.github.io/yapis-2026/labs/variants/>"""
+<https://rserdyukov.github.io/yapis-2026/labs/#varianty>"""
     footer = """## Свойства языка по варианту
 
 Помимо общих требований выше, ваш вариант задаёт конкретные свойства языка:
@@ -125,28 +132,55 @@ def build_template_task() -> str:
     return "\n\n---\n\n".join(parts) + "\n"
 
 
+# Стабильные якоря разделов страницы сайта. Номера разделов проставляет
+# renumber(), поэтому автоматический slug заголовка меняется при перестановке;
+# на эти якоря ссылаются план курса и старый адрес labs/variants/.
+SITE_SECTION_ANCHORS = {
+    "labs-sequence": "posledovatelnost",
+    "report-structure": "otchet",
+    "language-requirements": "trebovaniya",
+    "variants": "varianty",
+}
+
+RE_LAB_HEADING = re.compile(r"^\*\*Лабораторная работа (\d+)\*\*$", re.MULTILINE)
+
+
+def with_anchor(text: str, anchor: str) -> str:
+    """Добавить `{ #anchor }` к первому заголовку второго уровня."""
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if line.startswith("## "):
+            if "{ #" not in line:
+                lines[i] = f"{line} {{ #{anchor} }}"
+            break
+    return "\n".join(lines)
+
+
 def build_site_labs() -> str:
-    """docs/labs/index.md — страница сайта."""
-    body = renumber(
-        [
-            load_partial("labs-sequence", "site"),
-            load_partial("report-structure", "site"),
-            load_partial("language-requirements", "site"),
-        ]
-    )
+    """docs/labs/index.md — страница сайта.
+
+    Варианты заданий (партиал variants.md) есть только на сайте: в TASK.md
+    студента они не копируются — там ссылка на этот раздел сайта.
+    """
+    names = ["labs-sequence", "report-structure", "language-requirements", "variants"]
+    body = renumber([load_partial(name, "site") for name in names])
+    body = [with_anchor(text, SITE_SECTION_ANCHORS[name]) for name, text in zip(names, body)]
+    # Каждой работе — якорь lab-N: на него ссылается план курса.
+    body = [RE_LAB_HEADING.sub(r'<a id="lab-\1"></a>**Лабораторная работа \1**', text)
+            for text in body]
     header = f"""{GENERATED_NOTICE}
 
 # Лабораторный практикум
 
 Здесь описано, **что нужно сделать** и **каким требованиям** должен
-удовлетворять разрабатываемый язык. Требования одинаковы для всех вариантов.
-
-Конкретный вариант задания — язык, набор свойств и целевой код — выдаёт
-преподаватель. Списки вариантов и таблица распределения: [Варианты
-заданий](variants.md).
+удовлетворять разрабатываемый язык. Требования одинаковы для всех вариантов;
+конкретный вариант задания — язык, набор свойств и целевой код — выдаёт
+преподаватель и расшифровывается в разделе [Варианты заданий](#varianty).
 
 Порядок работы с репозиторием, ветки, Pull Request и правила ИИ-ревью
-описаны в `GUIDE.md` вашего репозитория."""
+описаны в `GUIDE.md` вашего репозитория. Схемы трансляции для ЛР 5 —
+в [HOWTO: генерация целевого кода](codegen-howto.md), разбор типичных
+решений — в [решениях прошлого года](past-works.md)."""
 
     return page_frontmatter(ROOT / "docs/labs/index.md") + "\n\n".join([header, *body]) + "\n"
 

@@ -1,215 +1,105 @@
-# Онтология концепций каталога языков программирования.
-#
-# Один словарь на весь каталог: карточка языка (languages/<id>.yaml) может
-# ссылаться только на концепции и значения, объявленные здесь. Это и делает
-# языки сравнимыми между собой — матрица «концепция × язык» на странице
-# concepts.md строится из этого файла.
-#
-# Категория variants повторяет девять свойств проектируемого языка из
-# docs/labs/variants.md (студент видит, как каждое свойство решено в
-# реальных языках); requirements — различающие пункты
-# docs/_partials/language-requirements.md. Остальные категории — оси, по
-# которым языки сравниваются в лекциях 02 и 20.
-#
-# Термины берутся из лекций, где они там есть (лекция 02 — типизация и
-# парадигмы, 03 — свойства языка, 20 — характеристики). Синонимы из лекций
-# указываются в aliases, чтобы поиск по сайту находил обе формулировки.
-#
-# Схема записи описана в README.md рядом.
-
-schema_version: 1
-
-# Доля покрытых значений (только kind: choice), ниже которой --check падает.
-# Непокрытое значение допустимо, если у него есть coverage.pending с note,
-# какой язык его покроет. Пороги растут вместе с числом языков.
-coverage_threshold:
-  variants: 0.8
-  requirements: 1.0
+# Независимая от практикума онтология; учебные соответствия — lab-mapping.yaml.
+# Примеры необязательны. Пробелы покрытия — информация, а не ошибка каталога.
+# Запись карточки: value, note, sources; layer по умолчанию language,
+# также standard_library | implementation | tooling; implementation — строка,
+# profile — ключ верхнеуровневого profiles карточки, applies_to — текст.
+# since/until ссылаются на versions карточки: since включительно, until исключительно.
+# Значения choice перечисляют возможности, а не обязательные взаимоисключающие классы.
+# legacy_slugs задают перенаправления и допустимые старые маркеры примеров.
+schema_version: 2
+coverage_policy: informational
 
 categories:
-
-  - id: variants
-    ru: Свойства проектируемого языка
-    en: Designed-language properties
-    note: >
-      Девять свойств, по которым студенту выдаётся вариант
-      (docs/labs/variants.md, раздел 1). Здесь — как эти свойства решены в
-      реальных языках.
+  - id: bindings
+    ru: Имена и связывание
+    en: Names and binding
     concepts:
-
-      - id: variants.1
-        slug: variants-1
-        ru: Объявление переменных
-        en: Variable declaration
+      - id: bindings.introduction
+        slug: bindings-introduction
+        legacy_slugs: [variants-1]
+        ru: Введение связывания
+        en: Binding introduction
         kind: choice
-        showcase: required
+        note: "Наличие объявления независимо от аннотации и вывода типа; var в Java — явное объявление."
         values:
-          - {id: explicit, ru: Явное, en: explicit declaration,
-             note: "переменная вводится отдельной конструкцией объявления (тип или ключевое слово)"}
-          - {id: implicit, ru: Неявное, en: implicit declaration,
-             note: "переменная возникает при первом присваивании"}
-
-      - id: variants.2
-        slug: variants-2
-        ru: Преобразование типов
-        en: Type conversion
+          - {id: explicit, ru: Явное объявление, en: explicit declaration}
+          - {id: assignment, ru: Связывание присваиванием, en: assignment binding}
+          - {id: pattern, ru: Связывание образцом, en: pattern binding}
+          - {id: logic_variable, ru: Логическая переменная в терме, en: logic variable in a term}
+      - id: bindings.mutation
+        slug: bindings-mutation
+        ru: Изменяемость связывания
+        en: Binding mutability
         kind: choice
-        showcase: required
+        note: "Изменяемость объекта отделена от возможности перепривязать имя."
         values:
-          - {id: explicit, ru: Явное, en: explicit conversion, note: "например, `a = (int) b`"}
-          - {id: implicit, ru: Неявное, en: implicit conversion (coercion)}
-
-      - id: variants.3
-        slug: variants-3
-        ru: Оператор присваивания
-        en: Assignment
+          - {id: rebindable, ru: Перепривязываемое, en: rebindable}
+          - {id: immutable, ru: Неизменяемое, en: immutable}
+          - {id: single_assignment, ru: Однократное связывание логической переменной, en: single-assignment logic binding}
+      - id: bindings.assignment
+        slug: bindings-assignment
+        legacy_slugs: [variants-3]
+        ru: Формы присваивания и связывания
+        en: Assignment and binding forms
         kind: choice
-        showcase: required
         values:
-          - {id: single, ru: Одиночный, en: single assignment, note: "например, `a = b`"}
-          - {id: multiple, ru: Множественный, en: multiple assignment, note: "например, `a, b = c, d`"}
+          - {id: single, ru: Одиночное присваивание, en: single-target assignment}
+          - {id: multiple, ru: Распаковка при присваивании, en: destructuring assignment}
+          - {id: unification, ru: Унификация термов, en: term unification}
+          - {id: immutable_definition, ru: Неизменяемое определение, en: immutable definition}
 
-      - id: variants.4
-        slug: variants-4
-        ru: Структуры, ограничивающие область видимости
+  - id: scope
+    ru: Области видимости
+    en: Scope
+    concepts:
+      - id: scope.resolution
+        slug: scope-resolution
+        ru: Правило разрешения имён
+        en: Name resolution
+        kind: choice
+        values:
+          - {id: lexical, ru: Лексическое, en: lexical}
+          - {id: dynamic, ru: Динамическое, en: dynamic, note: "Например, special-переменные Common Lisp; не синоним динамической типизации."}
+      - id: scope.constructs
+        slug: scope-constructs
+        legacy_slugs: [variants-4]
+        ru: Конструкции областей видимости
         en: Scoping constructs
         kind: choice
-        max_values: 1
-        showcase: required
         values:
-          - {id: subprograms, ru: Подпрограммы, en: subprograms only}
-          - {id: subprograms_and_blocks, ru: Подпрограммы и блочные операторы, en: subprograms and blocks}
-
-      - id: variants.5
-        slug: variants-5
-        ru: Маркер блочного оператора
-        en: Block delimiter
+          - {id: subprogram, ru: Подпрограмма, en: subprogram}
+          - {id: block, ru: Блок, en: block}
+          - {id: module, ru: Модуль, en: module}
+          - {id: class, ru: Класс, en: class}
+          - {id: comprehension, ru: Генераторная конструкция, en: comprehension}
+          - {id: binding_form, ru: Форма связывания let/where, en: let/where binding form}
+          - {id: clause, ru: Логическая клауза, en: logic clause}
+      - id: scope.globals
+        slug: scope-globals
+        legacy_slugs: [req-8-2]
+        ru: Связывания верхнего уровня
+        en: Top-level bindings
         kind: choice
-        max_values: 1
-        showcase: required
         values:
-          - {id: explicit, ru: Явный, en: explicit delimiters, note: "например, `{ }` или `begin end`"}
-          - {id: implicit, ru: Неявный, en: significant indentation, note: "как в Python"}
-
-      - id: variants.6
-        slug: variants-6
-        ru: Условные операторы
-        en: Conditional statements
+          - {id: globals, ru: Глобальные переменные, en: global variables}
+          - {id: module_bindings, ru: Имена модуля, en: module bindings}
+          - {id: static_members, ru: Статические члены типов, en: static type members}
+      - id: scope.shadowing
+        slug: scope-shadowing
+        legacy_slugs: [syntax-shadowing]
+        ru: Сокрытие имён
+        en: Name shadowing
         kind: choice
-        showcase: required
+        note: "Повторное присваивание тому же имени в Python — перепривязка, а не shadowing."
         values:
-          - {id: if_only, ru: Только двухвариантный if-then-else, en: if-then-else only,
-             coverage: {pending: true, note: "Lua, Bash, Pascal без case"}}
-          - {id: if_and_switch, ru: Двухвариантный и многовариантный switch-case, en: if and switch/match}
-
-      - id: variants.7
-        slug: variants-7
-        ru: Перегрузка подпрограмм
-        en: Subprogram overloading
-        kind: choice
-        max_values: 1
-        showcase: required
-        values:
-          - {id: absent, ru: Отсутствует, en: no overloading}
-          - {id: present, ru: Присутствует, en: overloading}
-
-      - id: variants.8
-        slug: variants-8
-        ru: Передача параметров в подпрограмму
-        en: Parameter passing
-        kind: choice
-        showcase: required
-        note: >
-          Перечисление расширено относительно variants.md: три исходных
-          варианта не описывают ни один из языков каталога.
-        values:
-          - {id: by_value, ru: По значению, en: by value}
-          - {id: by_result, ru: По результату, en: by result (out),
-             coverage: {pending: true, note: "Ada out, C# out"}}
-          - {id: by_ref, ru: По ссылке, en: by reference,
-             coverage: {pending: true, note: "C++ &, C# ref, Pascal var"}}
-          - {id: by_sharing, ru: По ссылке на объект, en: call by sharing,
-             note: "копируется ссылка на объект; сам объект не копируется"}
-          - {id: move, ru: Перемещение, en: move semantics}
-          - {id: borrow, ru: Заимствование, en: shared borrow}
-          - {id: borrow_mut, ru: Изменяемое заимствование, en: mutable borrow}
-
-      - id: variants.9
-        slug: variants-9
-        ru: Допустимое место объявления подпрограмм
-        en: Subprogram declaration placement
-        kind: choice
-        showcase: required
-        values:
-          - {id: program_start, ru: В начале программы, en: at program start,
-             coverage: {pending: true, note: "Pascal, C89-стиль"}}
-          - {id: anywhere, ru: В любом месте, а также внутри другой подпрограммы, en: anywhere, nested allowed}
-          - {id: class_members_only, ru: Только как члены класса, en: class members only,
-             note: "свободных и вложенных подпрограмм нет; обход — лямбды и локальные классы"}
-
-  - id: requirements
-    ru: Обязательные требования к языку
-    en: Mandatory language requirements
-    note: >
-      Из docs/_partials/language-requirements.md взяты только пункты, по
-      которым реальные языки различаются. Пункты, истинные для любого языка
-      (есть типы, операции, выражения, блок, if, for), не заводятся.
-    concepts:
-
-      - id: req.4
-        slug: req-4
-        ru: Встроенный ввод-вывод
-        en: Built-in I/O
-        kind: choice
-        showcase: required
-        note: "п. 4.1: read() и write() — чем они являются в языке"
-        values:
-          - {id: builtin, ru: Встроенные функции, en: built-in functions}
-          - {id: stdlib, ru: Функции стандартной библиотеки, en: standard library}
-          - {id: macro, ru: Макросы, en: macros}
-
-      - id: req.7.2.until
-        slug: req-7-2-until
-        ru: Цикл с постусловием until
-        en: until loop
-        kind: bool
-        showcase: required
-        note: "п. 7.2 требует while и until; until нет ни в одном языке каталога — показывается эквивалент"
-
-      - id: req.7.2.do_while
-        slug: req-7-2-do-while
-        ru: Цикл do-while
-        en: do-while loop
-        kind: bool
-        showcase: required
-
-      - id: req.7.3
-        slug: req-7-3
-        ru: Оператор цикла с итерациями for
-        en: for loop form
-        kind: choice
-        showcase: required
-        values:
-          - {id: c_style, ru: Счётный (в стиле C), en: C-style counted loop}
-          - {id: foreach, ru: По коллекции (foreach), en: foreach}
-
-      - id: req.8.2
-        slug: req-8-2
-        ru: Глобальная область видимости для переменных
-        en: Global variables
-        kind: choice
-        max_values: 1
-        showcase: required
-        values:
-          - {id: globals, ru: Есть глобальные переменные, en: globals}
-          - {id: no_globals, ru: Глобальных переменных нет, en: no globals, note: "эквивалент — статические поля класса"}
+          - {id: allowed, ru: Во вложенной области, en: nested-scope shadowing}
+          - {id: forbidden_in_block, ru: Запрет сокрытия локальных в охватывающем блоке, en: enclosing-local shadowing forbidden}
+          - {id: allowed_same_scope, ru: Новое связывание в той же области, en: new binding in the same scope}
 
   - id: typing
     ru: Типизация
     en: Typing
-    note: "Термины лекций 02 (классификация) и 20 (типы, проверка типов)."
     concepts:
-
       - id: typing.checking
         slug: typing-checking
         ru: Проверка типов
@@ -217,42 +107,365 @@ categories:
         kind: choice
         aliases: [статическая типизация, динамическая типизация]
         values:
-          - {id: static, ru: Статическая, en: static, note: "ошибки типов обнаруживаются до запуска программы"}
-          - {id: dynamic, ru: Динамическая, en: dynamic, note: "ошибка проявится при выполнении проблемной ветки"}
-          - {id: gradual, ru: Постепенная, en: gradual, note: "опциональные статические аннотации поверх динамической проверки"}
-
-      - id: typing.strength
-        slug: typing-strength
-        ru: Сильная и слабая типизация
-        en: Type strength
+          - {id: static, ru: Статическая, en: static}
+          - {id: dynamic, ru: Динамическая, en: dynamic}
+          - {id: gradual, ru: Постепенная, en: gradual, note: "Статически типизированные и динамические части; для внешнего анализатора указывается layer tooling."}
+      - id: typing.annotations
+        slug: typing-annotations
+        ru: Аннотации типов
+        en: Type annotations
         kind: choice
-        max_values: 1
-        aliases: [строгая типизация]
         values:
-          - {id: strong, ru: Сильная, en: strong, note: "большинство опасных приведений запрещены"}
-          - {id: weak, ru: Слабая, en: weak, note: "язык неявно приводит типы",
-             coverage: {pending: true, note: "JavaScript, C"}}
-
+          - {id: required, ru: Обязательны, en: required}
+          - {id: optional, ru: Необязательны, en: optional}
+          - {id: absent, ru: Отсутствуют, en: absent}
       - id: typing.inference
         slug: typing-inference
-        ru: Вывод типов
-        en: Type inference
+        ru: Вывод статических типов
+        en: Static type inference
         kind: bool
-
-      - id: typing.nullability
-        slug: typing-nullability
-        ru: Отсутствие значения (null)
-        en: Nullability
+      - id: typing.conversions
+        slug: typing-conversions
+        legacy_slugs: [variants-2, typing-strength]
+        ru: Преобразования типов
+        en: Type conversions
+        kind: choice
+        note: "Ось заменяет неоднозначное деление strong/weak; допустимость и потери описываются в контексте."
+        values:
+          - {id: explicit, ru: Явные, en: explicit}
+          - {id: implicit, ru: Неявные, en: implicit coercions}
+      - id: typing.compatibility
+        slug: typing-compatibility
+        ru: Совместимость типов
+        en: Type compatibility
         kind: choice
         values:
-          - {id: nullable_everywhere, ru: null допустим в любом ссылочном типе, en: nullable references}
-          - {id: optional_type, ru: Отдельный тип-обёртка (Option/Optional), en: option type}
-          - {id: nullable_types, ru: "Nullable-типы в системе типов (T?)", en: nullable types,
-             coverage: {pending: true, note: "Kotlin, C# 8, Swift, TypeScript strict"}}
+          - {id: nominal, ru: Номинальная, en: nominal}
+          - {id: structural, ru: Структурная, en: structural}
+          - {id: duck, ru: По доступным операциям во время выполнения, en: runtime duck typing}
+      - id: typing.sum_types
+        slug: typing-sum-types
+        ru: Типы-суммы
+        en: Sum types
+        kind: choice
+        values:
+          - {id: tagged, ru: Размеченные варианты, en: tagged variants}
+          - {id: union, ru: Объединения типов, en: type unions}
+          - {id: closed_hierarchy, ru: Закрытая иерархия, en: closed hierarchy}
+      - id: typing.product_types
+        slug: typing-product-types
+        ru: Типы-произведения
+        en: Product types
+        kind: choice
+        values:
+          - {id: tuple, ru: Кортежи, en: tuples}
+          - {id: record, ru: Записи и структуры, en: records and structs}
+      - id: typing.nullability
+        slug: typing-nullability
+        ru: Представление отсутствия значения
+        en: Absence of a value
+        kind: choice
+        values:
+          - {id: nullable_everywhere, ru: Nullable-ссылки по умолчанию, en: nullable references by default}
+          - {id: optional_type, ru: Тип Option/Optional, en: option type}
+          - {id: nullable_types, ru: Явно nullable-типы, en: explicitly nullable types}
+          - {id: sentinel, ru: Специальное значение, en: sentinel value, note: "Например, None; его допустимость зависит от операции."}
+      - id: typing.value_dependency
+        slug: typing-value-dependency
+        ru: Зависимость типа от значения
+        en: Value-dependent types
+        kind: choice
+        note: "Тип может зависеть от значения параметра: Vect n a связывает длину с n, в отличие от параметризации только типом a. Зависимые пары связывают тип второго компонента со значением первого. Проверка типов сама по себе не гарантирует тотальность."
+        values:
+          - {id: indexed_families, ru: Семейства типов с индексами-значениями, en: value-indexed type families}
+          - {id: dependent_functions, ru: Зависимые типы функций, en: dependent function types}
+          - {id: dependent_pairs, ru: Зависимые пары, en: dependent pairs}
+        sources:
+          - {url: "https://idris2.readthedocs.io/en/latest/tutorial/typesfuns.html", title: "Idris 2 — Types and Functions: Vect, Fin, dependent pairs"}
+      - id: typing.abstract_type_identity
+        slug: typing-abstract-type-identity
+        ru: Идентичность абстрактных типов модулей
+        en: Abstract module type identity
+        kind: choice
+        note: "Прозрачное сопоставление сигнатуре сохраняет известные равенства типов; opaque sealing скрывает представление абстрактных компонентов. В SML '97 применение functor с opaque result signature создаёт свежие абстрактные типы. Это не свойство каждого type alias и не синоним nominal/structural compatibility."
+        values:
+          - {id: transparent, ru: Сохранение равенств типов представления, en: transparent type equality}
+          - {id: opaque_fresh, ru: Свежая идентичность скрытого абстрактного типа, en: fresh opaque abstract identity}
+        sources:
+          - {url: "https://www.smlnj.org/doc/Conversion/modules.html", title: "SML '97 Modules — signatures and §1.3.9 opaque result signatures"}
+
+  - id: control
+    ru: Управление потоком
+    en: Control flow
+    concepts:
+      - id: control.selection
+        slug: control-selection
+        legacy_slugs: [variants-6]
+        ru: Условный выбор
+        en: Conditional selection
+        kind: choice
+        values:
+          - {id: statement, ru: Условный оператор, en: conditional statement}
+          - {id: expression, ru: Условное выражение, en: conditional expression}
+          - {id: guards, ru: Охранные условия, en: guards}
+      - id: control.switch
+        slug: control-switch
+        ru: Выбор по значению switch/case
+        en: Switch/case value selection
+        kind: bool
+        note: "Учитывается отдельная конструкция switch/case, не любая цепочка условий или match."
+      - id: control.pattern_matching
+        slug: control-pattern-matching
+        ru: Сопоставление с образцом
+        en: Pattern matching
+        kind: bool
+      - id: control.until
+        slug: control-until
+        legacy_slugs: [req-7-2-until]
+        ru: Цикл до истинности условия
+        en: Until loop
+        kind: choice
+        note: "Отрицательная полярность условия не определяет момент проверки. Имитирующий код не означает наличие конструкции."
+        values:
+          - {id: pre_test, ru: Проверка перед телом, en: pre-test until}
+          - {id: post_test, ru: Проверка после тела, en: post-test repeat-until}
+          - {id: absent, ru: Отдельная конструкция отсутствует, en: no dedicated until construct}
+      - id: control.do_while
+        slug: control-do-while
+        legacy_slugs: [req-7-2-do-while]
+        ru: Цикл do-while с постусловием
+        en: Post-test do-while loop
+        kind: bool
+      - id: control.iteration
+        slug: control-iteration
+        legacy_slugs: [req-7-3]
+        ru: Формы итерации
+        en: Iteration forms
+        kind: choice
+        values:
+          - {id: c_style, ru: Инициализация / условие / шаг, en: C-style loop}
+          - {id: foreach, ru: По последовательности или итератору, en: foreach}
+          - {id: comprehension, ru: Генераторная конструкция, en: comprehension}
+          - {id: higher_order, ru: Функции обхода, en: higher-order traversal}
+      - id: control.logic_search
+        slug: control-logic-search
+        ru: Логический поиск решений
+        en: Logic search
+        kind: choice
+        values:
+          - {id: backtracking, ru: Поиск с возвратом, en: backtracking}
+          - {id: tabling, ru: Табулирование подцелей, en: tabling}
+          - {id: constraints, ru: Распространение ограничений, en: constraint propagation}
+      - id: control.continuation_extent
+        slug: control-continuation-extent
+        ru: Граница захвата продолжения
+        en: Continuation capture boundary
+        kind: choice
+        note: "Продолжение представляет оставшийся контекст вычисления, а не только окружение замыкания. Undelimited захватывает полный текущий контекст; delimited — часть до заданной границы (prompt). Время жизни, escape-only и число допустимых возобновлений указываются отдельно в контексте: R7RS call/cc допускает сохранение и повторные вызовы, но это не определение границы захвата."
+        values:
+          - {id: undelimited, ru: Полное продолжение, en: undelimited continuation}
+          - {id: delimited, ru: Продолжение до ограничителя, en: delimited continuation}
+        sources:
+          - {url: "https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-8.html", title: "Scheme R7RS-small §6.10 — call-with-current-continuation"}
+          - {url: "https://docs.racket-lang.org/reference/cont.html", title: "Racket Reference §10.4 — prompts and delimited continuations"}
+
+  - id: subprograms
+    ru: Подпрограммы и абстракция
+    en: Subprograms and abstraction
+    concepts:
+      - id: subprograms.overloading
+        slug: subprograms-overloading
+        legacy_slugs: [variants-7]
+        ru: Перегрузка по сигнатуре
+        en: Signature overloading
+        kind: bool
+      - id: subprograms.parameter_passing
+        slug: subprograms-parameter-passing
+        legacy_slugs: [variants-8]
+        ru: Связывание параметров
+        en: Parameter passing
+        kind: choice
+        note: "Передача значения отделена от переноса владения; ссылка сама может передаваться по значению."
+        values:
+          - {id: by_value, ru: По значению, en: by value}
+          - {id: by_reference, ru: По ссылке на переменную, en: by reference}
+          - {id: by_result, ru: Копирование результата при возврате, en: copy out}
+          - {id: by_value_result, ru: Копирование входа и результата, en: copy in/copy out}
+          - {id: by_sharing, ru: Разделение объекта, en: call by sharing}
+          - {id: by_name, ru: По имени, en: by name}
+          - {id: by_need, ru: По необходимости с мемоизацией, en: by need}
+          - {id: unification, ru: Унификация аргументов с термами головы, en: head-argument unification}
+      - id: subprograms.placement
+        slug: subprograms-placement
+        legacy_slugs: [variants-9]
+        ru: Место определения подпрограмм
+        en: Subprogram definition placement
+        kind: choice
+        values:
+          - {id: declaration_region, ru: Выделенная область объявлений, en: declaration region}
+          - {id: module, ru: Верхний уровень модуля, en: module level}
+          - {id: type_member, ru: Член типа, en: type member}
+          - {id: local, ru: Локальное определение, en: local definition}
+      - id: subprograms.nesting
+        slug: subprograms-nesting
+        ru: Вложенные именованные подпрограммы
+        en: Nested named subprograms
+        kind: bool
+      - id: subprograms.closures
+        slug: subprograms-closures
+        ru: Захват окружения
+        en: Closure capture
+        kind: bool
+      - id: subprograms.lambda
+        slug: subprograms-lambda
+        ru: Анонимные функции
+        en: Anonymous functions
+        kind: bool
+      - id: subprograms.generics
+        slug: subprograms-generics
+        ru: Параметрический полиморфизм
+        en: Parametric polymorphism
+        kind: bool
+      - id: subprograms.generic_mechanism
+        slug: subprograms-generic-mechanism
+        ru: Реализация параметрического полиморфизма
+        en: Generic implementation mechanism
+        kind: choice
+        values:
+          - {id: erasure, ru: Стирание типов, en: type erasure}
+          - {id: monomorphization, ru: Мономорфизация, en: monomorphization}
+          - {id: reification, ru: Параметры типов во время выполнения, en: reified type parameters}
+          - {id: dictionary_passing, ru: Передача словарей операций, en: dictionary passing}
+      - id: subprograms.default_args
+        slug: subprograms-default-args
+        ru: Аргументы по умолчанию
+        en: Default arguments
+        kind: bool
+      - id: subprograms.named_args
+        slug: subprograms-named-args
+        ru: Именованные аргументы
+        en: Named arguments
+        kind: bool
+
+  - id: abstraction
+    ru: Полиморфизм и организация
+    en: Polymorphism and organization
+    concepts:
+      - id: abstraction.contracts
+        slug: abstraction-contracts
+        ru: Контракты полиморфизма
+        en: Polymorphic contracts
+        kind: choice
+        values:
+          - {id: interfaces, ru: Интерфейсы, en: interfaces}
+          - {id: traits, ru: Трейты, en: traits}
+          - {id: type_classes, ru: Классы типов, en: type classes}
+          - {id: protocols, ru: Структурные протоколы, en: structural protocols}
+      - id: abstraction.dispatch
+        slug: abstraction-dispatch
+        ru: Диспетчеризация вызовов
+        en: Call dispatch
+        kind: choice
+        values:
+          - {id: static, ru: Статическая, en: static dispatch}
+          - {id: single, ru: По одному динамическому типу, en: single dispatch}
+          - {id: multiple, ru: По нескольким динамическим типам, en: multiple dispatch}
+      - id: abstraction.inheritance
+        slug: abstraction-inheritance
+        ru: Наследование реализации
+        en: Implementation inheritance
+        kind: choice
+        values:
+          - {id: single, ru: Одиночное, en: single}
+          - {id: multiple, ru: Множественное, en: multiple}
+          - {id: absent, ru: Отсутствует, en: absent}
+      - id: abstraction.modules
+        slug: abstraction-modules
+        ru: Модульность
+        en: Modules
+        kind: choice
+        values:
+          - {id: textual_inclusion, ru: Текстовое включение, en: textual inclusion}
+          - {id: namespaces, ru: Пространства имён и пакеты, en: namespaces and packages}
+          - {id: explicit_exports, ru: Явная граница экспорта, en: explicit export boundary}
+          - {id: runtime_modules, ru: Модули как объекты времени выполнения, en: runtime module objects}
+          - id: module_functors
+            ru: Параметризация модулей модулями
+            en: module functors
+            note: "SML functor принимает структуру по сигнатуре, включая типовые компоненты, и строит структуру-результат. Это не generic function; скрытие и идентичность типов описывает typing.abstract_type_identity."
+            sources:
+              - {url: "https://www.smlnj.org/doc/Conversion/modules.html", title: "SML '97 Modules — structures, signatures and functors"}
+
+  - id: evaluation
+    ru: Вычисление и эффекты
+    en: Evaluation and effects
+    concepts:
+      - id: evaluation.strategy
+        slug: evaluation-strategy
+        ru: Стратегия вычисления
+        en: Evaluation strategy
+        kind: choice
+        values:
+          - {id: strict, ru: Строгая, en: strict}
+          - {id: non_strict, ru: Нестрогая, en: non-strict}
+        note: "Отложенный генератор сам по себе не делает вычисление обычных аргументов нестрогим."
+      - id: evaluation.effects
+        slug: evaluation-effects
+        ru: Контроль эффектов
+        en: Effect control
+        kind: choice
+        values:
+          - {id: unrestricted, ru: Без общего статического разделения эффектов, en: no general static effect separation}
+          - {id: type_tracked, ru: Эффекты отражены в типах, en: type-tracked effects}
+          - {id: effect_handlers, ru: Обработчики алгебраических эффектов, en: algebraic effect handlers}
+      - id: evaluation.tail_calls
+        slug: evaluation-tail-calls
+        ru: Гарантированное устранение хвостовых вызовов
+        en: Guaranteed tail-call elimination
+        kind: bool
+      - id: evaluation.rank_lifting
+        slug: evaluation-rank-lifting
+        ru: Поднятие операций по рангу массива
+        en: Array rank lifting
+        kind: choice
+        note: "Shape — размеры осей, rank — их число; cell — подмассив выбранного ранга, frame — оставшиеся оси. Ось описывает автоматическое применение операции к элементам или cells и согласование аргументов, а не просто наличие N-мерных массивов. Правила agreement J и Dyalog фиксируются отдельно; явный map не доказывает rank lifting."
+        values:
+          - {id: scalar_extension, ru: Распространение скаляра на элементы массива, en: scalar extension}
+          - {id: cell_rank, ru: Применение к ячейкам выбранного ранга, en: rank-selected cell application}
+        sources:
+          - {url: "https://www.jsoftware.com/help/dictionary/dicta.htm", title: "J Dictionary — Nouns: shape, rank and cells"}
+          - {url: "https://www.jsoftware.com/help/dictionary/dictb.htm", title: "J Dictionary — Verbs: rank and agreement"}
+          - {url: "https://help.dyalog.com/19.0/Content/Language/Primitive%20Operators/Rank.htm", title: "Dyalog APL 19.0 — Rank operator"}
+      - id: evaluation.result_protocol
+        slug: evaluation-result-protocol
+        ru: Протокол выдачи и возобновления результатов
+        en: Result and resumption protocol
+        kind: choice
+        note: "Кто запрашивает следующий результат: caller при обычном возврате, потребитель генератора/корутины или охватывающее выражение после неудачи? Python yield и Lua resume/yield дают явное возобновление; Icon автоматически ищет альтернативу внутреннего генератора при неудаче внешнего выражения. Несколько значений одного return не являются потоком альтернатив. Это не strictness и не гарантия конкурентного исполнения."
+        values:
+          - {id: ordinary_return, ru: Обычный возврат результата вызова, en: ordinary call return}
+          - {id: explicit_resume, ru: Явное возобновление генератора или корутины, en: explicit generator or coroutine resumption}
+          - {id: goal_directed, ru: Возобновление альтернатив по неудаче выражения, en: goal-directed resumption on failure}
+        sources:
+          - {url: "https://www2.cs.arizona.edu/icon/docs/ipd266.htm", title: "Griswold — Icon overview §§2–3: generators and goal-directed evaluation"}
+          - {url: "https://docs.python.org/3/library/stdtypes.html#iterator-types", title: "Python 3 — Iterator and Generator Types"}
+          - {url: "https://www.lua.org/manual/5.4/manual.html#2.6", title: "Lua 5.4 Reference Manual §2.6 — Coroutines"}
+      - id: evaluation.data_availability
+        slug: evaluation-data-availability
+        ru: Ожидание доступности данных
+        en: Data availability suspension
+        kind: choice
+        note: "В Oz 3 поток приостанавливается, когда операции не хватает информации о логической переменной; в G готовность узла определяется наличием всех требуемых входов. Это разные условия запуска, независимые от strictness, порядка операндов и mailbox/rendezvous. Наличие унификации не означает автоматического ожидания."
+        values:
+          - {id: needed_information, ru: Ожидание необходимой операции информации, en: suspension on needed information}
+          - {id: all_inputs, ru: Готовность по всем входам узла, en: all-input node readiness}
+        sources:
+          - {url: "https://mozart.github.io/mozart-v1/doc-1.4.0/tutorial/node1.html", title: "Mozart 1.4.0 tutorial — Oz 3 dataflow threads"}
+          - {url: "https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html", title: "NI — G dataflow and node readiness in LabVIEW"}
 
   - id: memory
-    ru: Управление памятью
-    en: Memory management
+    ru: Память и владение
+    en: Memory and ownership
     concepts:
       - id: memory.management
         slug: memory-management
@@ -260,16 +473,203 @@ categories:
         en: Memory reclamation
         kind: choice
         values:
-          - {id: gc, ru: Сборка мусора, en: garbage collection}
+          - {id: gc, ru: Трассирующая сборка мусора, en: tracing garbage collection}
           - {id: refcount, ru: Подсчёт ссылок, en: reference counting}
           - {id: ownership, ru: Владение и время жизни, en: ownership and lifetimes}
-          - {id: manual, ru: Ручное, en: manual,
-             coverage: {pending: true, note: "C, C++"}}
+          - {id: manual, ru: Ручное, en: manual}
+      - id: memory.transfer
+        slug: memory-transfer
+        ru: Передача и разделение владения
+        en: Ownership transfer and sharing
+        kind: choice
+        values:
+          - {id: copy, ru: Копирование значения, en: value copy}
+          - {id: move, ru: Перемещение владения, en: ownership move}
+          - {id: shared_reference, ru: Разделяемая ссылка на объект, en: shared object reference}
+          - {id: shared_borrow, ru: Разделяемое заимствование, en: shared borrow}
+          - {id: exclusive_borrow, ru: Исключительное заимствование, en: exclusive borrow}
+      - id: memory.reference_permissions
+        slug: memory-reference-permissions
+        ru: Права ссылок и ограничения алиасов
+        en: Reference permissions and alias restrictions
+        kind: choice
+        note: "Права относятся к ссылке и совместимым алиасам объекта, а не к перепривязке имени или способу освобождения памяти. Pony val гарантирует неизменяемость объекта, box — только read-only view, ref разрешает изменяемые алиасы, iso изолирует доступ. Изоляция не означает обязательное использование ровно один раз: линейность, аффинность и consume требуют отдельного утверждения; не помечать весь Pony как линейный."
+        values:
+          - {id: isolated, ru: Изолированный доступ, en: isolated access}
+          - {id: mutable_aliases, ru: Изменяемый доступ с алиасами, en: mutable aliased access}
+          - {id: immutable_shared, ru: Разделяемый неизменяемый объект, en: shared immutable object}
+          - {id: read_only_view, ru: Представление только для чтения, en: read-only view}
+          - {id: identity_only, ru: Только идентичность без чтения состояния, en: identity-only access}
+        sources:
+          - {url: "https://tutorial.ponylang.io/reference-capabilities/reference-capabilities.html", title: "Pony Tutorial — Reference Capabilities: iso, ref, val, box, tag"}
+
+  - id: errors
+    ru: Каналы ошибок
+    en: Error channels
+    concepts:
+      - id: errors.model
+        slug: errors-model
+        ru: Представление и передача ошибок
+        en: Error representation and propagation
+        kind: choice
+        values:
+          - {id: exceptions, ru: Исключения, en: exceptions}
+          - {id: result_type, ru: Размеченный результат, en: tagged result type}
+          - {id: error_code, ru: Код ошибки, en: error code}
+          - {id: conditions_restarts, ru: Условия и перезапуски, en: conditions and restarts}
+          - {id: logical_failure, ru: Логическая неудача, en: logical failure}
+          - {id: panic, ru: Паника, en: panic}
+        note: "Сигнал ОС не является общей моделью ошибок языка. Паника, исключение и логическая неудача различаются."
+      - id: errors.checked_exceptions
+        slug: errors-checked-exceptions
+        legacy_slugs: [errors-checked]
+        ru: Проверяемые исключения
+        en: Checked exceptions
+        kind: bool
+        note: "Статическое требование catch/throws для исключений; Result в возвращаемом типе — другой механизм."
+      - id: errors.must_use
+        slug: errors-must-use
+        ru: Диагностика неиспользованного результата
+        en: Unused-result diagnostics
+        kind: choice
+        values:
+          - {id: absent, ru: Нет специальной диагностики, en: no dedicated diagnostic}
+          - {id: warning, ru: Предупреждение, en: warning}
+          - {id: error, ru: Ошибка, en: error}
+        note: "Предупреждение не означает обязательную обработку ошибки; явное отбрасывание может быть разрешено."
+
+  - id: resources
+    ru: Ресурсы и взаимодействие
+    en: Resources and interaction
+    concepts:
+      - id: resources.cleanup
+        slug: resources-cleanup
+        legacy_slugs: [errors-finally]
+        ru: Освобождение ресурсов
+        en: Resource cleanup
+        kind: choice
+        values:
+          - {id: finally, ru: Блок finally / unwind-protect, en: finally / unwind-protect}
+          - {id: context_manager, ru: Контекстный менеджер, en: context manager}
+          - {id: resource_statement, ru: Конструкция управления ресурсом, en: resource-management statement}
+          - {id: raii, ru: Деструктор при выходе из области, en: scope-bound destruction}
+          - {id: defer, ru: Отложенный вызов при выходе, en: deferred scope-exit call}
+          - {id: manual, ru: Явное освобождение, en: manual release}
+        note: "Гарантии зависят от пути выхода; аварийное завершение процесса может пропустить очистку."
+      - id: resources.io
+        slug: resources-io
+        legacy_slugs: [req-4]
+        ru: Интерфейс ввода-вывода
+        en: I/O interface
+        kind: choice
+        values:
+          - {id: builtin, ru: Встроенные функции, en: built-in functions}
+          - {id: stdlib, ru: API стандартной библиотеки, en: standard-library API}
+          - {id: macro, ru: Макросы, en: macros}
+      - id: resources.concurrency
+        slug: resources-concurrency
+        ru: Конкурентное выполнение
+        en: Concurrency
+        kind: choice
+        values:
+          - {id: threads, ru: Потоки, en: threads}
+          - {id: async_await, ru: Асинхронные корутины, en: async/await coroutines}
+          - {id: actors, ru: Акторы, en: actors}
+          - {id: message_passing, ru: Передача сообщений, en: message passing}
+          - {id: processes, ru: Процессы, en: processes}
+      - id: resources.communication_coupling
+        slug: resources-communication-coupling
+        ru: Синхронизация отправки и приёма
+        en: Send and receive coupling
+        kind: choice
+        note: "Асинхронная отправка в mailbox не требует одновременного receive; rendezvous завершает коммуникацию при встрече отправителя и получателя по небуферизованному каналу. Это не выбор сообщения, не модель времени и не гарантия доставки/fairness. Свидетели — Erlang/OTP и occam 2; scheduler архивного occam runtime не обобщается на язык."
+        values:
+          - {id: asynchronous_mailbox, ru: Асинхронная отправка в почтовый ящик, en: asynchronous mailbox send}
+          - {id: synchronous_rendezvous, ru: Синхронное рандеву по каналу, en: synchronous channel rendezvous}
+        sources:
+          - {url: "https://www.erlang.org/doc/system/conc_prog.html", title: "Erlang/OTP — Concurrent Programming: send and receive"}
+          - {url: "https://www.transputer.net/obooks/sw-0064-4/sw-0064-4.html", title: "INMOS occam Run-time Model Specification SW-0064-4 §3 — synchronized unbuffered channels"}
+      - id: resources.receive_selection
+        slug: resources-receive-selection
+        ru: Выбор сообщения из очереди
+        en: Message selection from a queue
+        kind: choice
+        note: "Selective receive ищет первое подходящее сообщение, сохраняя более ранние неподходящие; head-only допускает извлечение только головы очереди. Асинхронный mailbox сам по себе не задаёт эту политику. Значение head_only — контраст для документирования, а не утверждение об occam: к rendezvous без очереди эта ось неприменима."
+        values:
+          - {id: head_only, ru: Только голова очереди, en: queue head only}
+          - {id: selective_matching, ru: Выбор по образцу с пропуском неподходящих, en: selective matching}
+        sources:
+          - {url: "https://www.erlang.org/doc/system/conc_prog.html", title: "Erlang/OTP — Concurrent Programming: selective receive and retained messages"}
+
+  - id: syntax
+    ru: Синтаксис и метапрограммирование
+    en: Syntax and metaprogramming
+    concepts:
+      - id: syntax.blocks
+        slug: syntax-blocks
+        legacy_slugs: [variants-5]
+        ru: Границы синтаксических групп
+        en: Syntactic grouping boundaries
+        kind: choice
+        values:
+          - {id: explicit, ru: Явные разделители, en: explicit delimiters}
+          - {id: indentation, ru: Значимые отступы, en: significant indentation}
+          - {id: s_expressions, ru: S-выражения, en: S-expressions}
+      - id: syntax.statement_terminator
+        slug: syntax-statement-terminator
+        ru: Границы операторов и определений
+        en: Statement and definition boundaries
+        kind: choice
+        values:
+          - {id: semicolon, ru: Точка с запятой, en: semicolon}
+          - {id: newline, ru: Перевод строки, en: newline}
+          - {id: optional_semicolon, ru: Необязательная точка с запятой, en: optional semicolon}
+          - {id: period, ru: Точка в конце клаузы, en: clause-ending period}
+          - {id: structural, ru: Структура выражения, en: expression structure}
+      - id: syntax.case_sensitive
+        slug: syntax-case-sensitive
+        ru: Чувствительность имён к регистру
+        en: Identifier case sensitivity
+        kind: bool
+      - id: syntax.metaprogramming
+        slug: syntax-metaprogramming
+        ru: Метапрограммирование
+        en: Metaprogramming
+        kind: choice
+        values:
+          - {id: textual_macros, ru: Текстовые макросы, en: textual macros}
+          - {id: syntactic_macros, ru: Синтаксические макросы, en: syntactic macros}
+          - {id: procedural_macros, ru: Процедурные макросы, en: procedural macros}
+          - {id: reflection, ru: Рефлексия, en: reflection}
+          - {id: compile_time_execution, ru: Вычисление при компиляции, en: compile-time execution}
+          - {id: runtime_code, ru: Построение и выполнение кода, en: runtime code generation and execution}
+      - id: syntax.macro_hygiene
+        slug: syntax-macro-hygiene
+        ru: Гигиена макросов
+        en: Macro hygiene
+        kind: choice
+        note: "Ось описывает защиту связываний от непреднамеренного захвата имён при раскрытии, независимо от textual/syntactic/procedural формы трансформера. R7RS syntax-rules сохраняет лексические связывания; негигиеничный механизм требует ручного предотвращения capture. Намеренное нарушение гигиены нужно описывать для конкретного API, не выводить из слова macro."
+        values:
+          - {id: hygienic, ru: Автоматическая защита от захвата имён, en: hygienic binding preservation}
+          - {id: unhygienic, ru: Нет автоматической защиты от захвата, en: no automatic capture protection}
+        sources:
+          - {url: "https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-6.html", title: "Scheme R7RS-small §4.3 — hygienic macros"}
+      - id: syntax.program_representation
+        slug: syntax-program-representation
+        ru: Нотация исходной программы
+        en: Source program notation
+        kind: choice
+        note: "Текст или структурный граф являются исходной программой, а не иллюстрацией, AST компилятора или визуализацией отладчика. Нотация независима от dataflow semantics: не каждый графический язык имеет правило готовности G. G — язык, LabVIEW — среда; для Prograph/Marten подтверждена графическая нотация, но не все правила исполнения."
+        values:
+          - {id: textual, ru: Текстовая нотация, en: textual notation}
+          - {id: graphical_graph, ru: Граф из узлов и связей, en: graphical nodes and links}
+        sources:
+          - {url: "https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html", title: "NI — G graphical programming in LabVIEW"}
+          - {url: "https://www.andescotia.com/products/marten/", title: "Marten 1.6 — Prograph cases, operations and links (notation only)"}
 
   - id: paradigm
-    ru: Парадигмы программирования
-    en: Programming paradigms
-    note: "Список лекции 02."
+    ru: Парадигмы
+    en: Paradigms
     concepts:
       - id: paradigm.supported
         slug: paradigm-supported
@@ -281,94 +681,167 @@ categories:
           - {id: procedural, ru: Процедурная, en: procedural}
           - {id: object_oriented, ru: Объектно-ориентированная, en: object-oriented}
           - {id: functional, ru: Функциональная, en: functional}
-          - {id: declarative, ru: Декларативная, en: declarative,
-             coverage: {pending: true, note: "SQL, Prolog, HTML"}}
-          - {id: logic, ru: Логическая, en: logic,
-             coverage: {pending: true, note: "Prolog"}}
-          - {id: event_driven, ru: Событийно-ориентированная, en: event-driven,
-             coverage: {pending: true, note: "JavaScript, C#"}}
+          - {id: declarative, ru: Декларативная, en: declarative}
+          - {id: logic, ru: Логическая, en: logic}
+          - {id: event_driven, ru: Событийно-ориентированная, en: event-driven}
 
-  - id: errors
-    ru: Обработка исключительных ситуаций
-    en: Error handling
-    note: "Лекция 20, слайд «Обработка исключительных ситуаций»."
+  - id: data
+    ru: Семантика данных
+    en: Data semantics
     concepts:
-      - id: errors.model
-        slug: errors-model
-        ru: Модель обработки ошибок
-        en: Error handling model
+      - id: data.collection_multiplicity
+        slug: data-collection-multiplicity
+        ru: Кратность элементов коллекции
+        en: Collection multiplicity
         kind: choice
+        note: "Set хранит присутствие элемента, bag — число вхождений, sequence — отдельные позиционные вхождения. Ось задаёт модель конкретной коллекции или результата операции, а не всех данных языка: SQL SELECT ALL сохраняет дубли, DISTINCT устраняет их. Порядок выдачи строк и ORDER BY описываются отдельно; SQL bag не превращается в sequence из-за порядка конкретного плана."
         values:
-          - {id: unstructured, ru: Неструктурная (регистрируемый обработчик), en: unstructured handlers,
-             coverage: {pending: true, note: "C signal, Go panic/recover"}}
-          - {id: exceptions, ru: Структурная (try-throw-catch), en: structured exceptions}
-          - {id: result_type, ru: Значение-результат (Result / коды ошибок), en: result values}
-      - id: errors.finally
-        slug: errors-finally
-        ru: Блоки с гарантированным завершением
-        en: Guaranteed cleanup blocks
-        kind: bool
-      - id: errors.checked
-        slug: errors-checked
-        ru: Проверяемые исключения в сигнатуре
-        en: Checked exceptions
-        kind: bool
+          - {id: set, ru: Множество без дубликатов, en: set}
+          - {id: bag, ru: Мультимножество с кратностями, en: bag or multiset}
+          - {id: sequence, ru: Последовательность позиционных вхождений, en: sequence of positional occurrences}
+        sources:
+          - {url: "https://souffle-lang.github.io/relations", title: "Soufflé — Relations as sets of tuples"}
+          - {url: "https://www.postgresql.org/docs/18/queries-select-lists.html", title: "PostgreSQL 18 — Select Lists: ALL and DISTINCT"}
+          - {url: "https://docs.python.org/3/library/stdtypes.html#sequence-types-list-tuple-range", title: "Python 3 — Sequence Types"}
+      - id: data.numeric_radix
+        slug: data-numeric-radix
+        ru: Основание числового представления
+        en: Numeric representation radix
+        kind: choice
+        note: "Binary/decimal относится к представлению и арифметике конкретного числового типа, а не к записи литерала. Основание независимо от точности и fixed/floating scale: десятичное число не обязательно имеет фиксированный масштаб. COBOL PICTURE с V задаёт десятичные позиции и подразумеваемую точку; Python float — двоичное представление."
+        values:
+          - {id: binary, ru: Двоичное, en: binary}
+          - {id: decimal, ru: Десятичное, en: decimal}
+        sources:
+          - {url: "https://gnucobol.sourceforge.io/HTML/gnucobpg.html", title: "GnuCOBOL 3.1 RC-1 Programmer's Guide §6.9.33 — PICTURE and V scale"}
+          - {url: "https://docs.python.org/3/library/stdtypes.html#additional-methods-on-float", title: "Python 3 — binary float representation and hex conversion"}
+      - id: data.numeric_precision
+        slug: data-numeric-precision
+        ru: Ограничение числовой точности
+        en: Numeric precision bound
+        kind: choice
+        note: "Fixed precision ограничивает число разрядов выбранным типом/объявлением; arbitrary precision позволяет увеличивать его по значению или настраиваемому контексту в пределах ресурсов. Это не fixed point: положение точки, rounding и overflow описываются отдельно. Python int точен без фиксированной разрядности, decimal.Decimal использует контекст точности стандартной библиотеки; COBOL PIC ограничивает число позиций поля."
+        values:
+          - {id: fixed_precision, ru: Фиксированная разрядность типа или поля, en: fixed type or field precision}
+          - {id: arbitrary_precision, ru: Нефиксированная заранее разрядность, en: arbitrary precision}
+        sources:
+          - {url: "https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex", title: "Python 3 — unlimited-precision integers and user-definable Decimal precision"}
+          - {url: "https://gnucobol.sourceforge.io/HTML/gnucobpg.html", title: "GnuCOBOL 3.1 RC-1 Programmer's Guide §6.9.33 — numeric PICTURE"}
 
-  - id: subprograms
-    ru: Подпрограммы и абстракция
-    en: Subprograms and abstraction
+  - id: computation
+    ru: Правила вычисления и модели времени
+    en: Computation rules and time models
     concepts:
-      - id: subprograms.lambda
-        slug: subprograms-lambda
-        ru: Лямбда-функции
-        en: Lambda functions
-        kind: bool
-        aliases: [анонимные функции, замыкания]
-      - id: subprograms.generics
-        slug: subprograms-generics
-        ru: Обобщённые типы и подпрограммы
-        en: Generics
-        kind: bool
-        aliases: [шаблоны, дженерики]
-      - id: subprograms.default_args
-        slug: subprograms-default-args
-        ru: Параметры по умолчанию
-        en: Default arguments
-        kind: bool
-      - id: subprograms.named_args
-        slug: subprograms-named-args
-        ru: Именованные аргументы
-        en: Named arguments
-        kind: bool
+      - id: computation.rule_semantics
+        slug: computation-rule-semantics
+        ru: Смысл применения правил
+        en: Rule application semantics
+        kind: choice
+        note: "Поиск решает заданную цель, fixed-point deduction задаёт замыкание отношений, committed rewriting меняет store без возврата к отвергнутому правилу. Это семантика конкретного ядра/профиля, не алгоритм реализации: top-down/bottom-up и tabling не подменяют определение результата. Наименьшая неподвижная точка здесь относится к положительному конечному Datalog без порождения новых значений; CHR может удалять ограничения и не обязан вычислять такое замыкание."
+        values:
+          - {id: goal_search, ru: Поиск решений заданной цели, en: goal-directed solution search}
+          - {id: least_fixed_point, ru: Наименьшее замыкание отношений, en: least fixed-point deduction}
+          - {id: committed_rewriting, ru: Переписывание хранилища с фиксацией выбора, en: committed store rewriting}
+        sources:
+          - {url: "https://www.mercurylang.org/information/doc-release/mercury_ref/Determinism-categories.html", title: "Mercury Reference Manual — goal solutions and determinism"}
+          - {url: "https://microsoft.github.io/z3guide/docs/fixedpoints/basicdatalog/", title: "Z3 Guide — Basic Datalog fixed-point engine"}
+          - {url: "https://souffle-lang.github.io/tutorial", title: "Soufflé Tutorial — recursive relations and arithmetic extension limits"}
+          - {url: "https://www.swi-prolog.org/pldoc/man?section=chr-syntaxandsemantics", title: "SWI-Prolog CHR — simplification, propagation and simpagation"}
+      - id: computation.instantiation_modes
+        slug: computation-instantiation-modes
+        ru: Режимы связанности аргументов
+        en: Argument instantiation modes
+        kind: choice
+        note: "Режим описывает состояние аргумента до и после вызова: например, Mercury in соответствует ground→ground, out — free→ground. Mode mapping независим от типа, by-reference передачи и числа решений. Точные допустимые структуры inst и ограничения реализации задаются в профиле."
+        values:
+          - {id: ground_to_ground, ru: Связанный вход остаётся связанным, en: ground to ground}
+          - {id: free_to_ground, ru: Свободный аргумент становится связанным, en: free to ground}
+          - {id: declared_transition, ru: Пользовательское отображение состояний inst, en: declared instantiation transition}
+        sources:
+          - {url: "https://www.mercurylang.org/information/doc-release/mercury_ref/Insts-modes-and-mode-definitions.html", title: "Mercury Reference Manual — Insts, modes and mode definitions"}
+      - id: computation.solution_cardinality
+        slug: computation-solution-cardinality
+        ru: Объявленная кратность решений
+        en: Declared solution cardinality
+        kind: choice
+        note: "Классификация числа решений и допустимости failure относится к конкретному mode вызова. Mercury det — одно решение, semidet — ноль или одно, multi — одно или больше, nondet — ноль или больше. Гарантия условна для возвращающихся вызовов: det не доказывает завершение, отсутствие исключений или детерминированный порядок планирования потоков."
+        values:
+          - {id: det, ru: Ровно одно решение, en: exactly one solution}
+          - {id: semidet, ru: Ноль или одно решение, en: zero or one solution}
+          - {id: multi, ru: Одно или больше решений, en: one or more solutions}
+          - {id: nondet, ru: Ноль или больше решений, en: zero or more solutions}
+        sources:
+          - {url: "https://www.mercurylang.org/information/doc-release/mercury_ref/Determinism-categories.html", title: "Mercury Reference Manual — Determinism categories and returning-call qualification"}
+      - id: computation.time_domain
+        slug: computation-time-domain
+        ru: Временная область модели
+        en: Model time domain
+        kind: choice
+        note: "Логические такты потоков Lustre, дискретное время HDL-симуляции и непрерывная динамика с событиями Modelica — разные смыслы времени. Hybrid сочетает непрерывную эволюцию и дискретные события. Область времени не определяет deadline реального времени, rendezvous, scheduler или реализуемость модели; при отсутствии встроенного времени нужна контекстная запись, а не вывод по пропуску данных."
+        values:
+          - {id: logical_ticks, ru: Дискретные логические такты, en: discrete logical ticks}
+          - {id: discrete_simulation, ru: Дискретное время симуляции, en: discrete simulation time}
+          - {id: continuous, ru: Непрерывное модельное время, en: continuous model time}
+          - {id: hybrid, ru: Непрерывная динамика и дискретные события, en: hybrid continuous and discrete time}
+        sources:
+          - {url: "https://www-verimag.imag.fr/The-Lustre-Programming-Language-and.html", title: "Verimag — Lustre clocked streams"}
+          - {url: "https://specification.modelica.org/maint/3.6/equations.html", title: "Modelica Specification 3.6 §8 — continuous integration and events"}
+          - {url: "https://steveicarus.github.io/iverilog/usage/simulation.html", title: "Icarus Verilog — discrete-event simulation"}
+      - id: computation.equation_causality
+        slug: computation-equation-causality
+        ru: Направленность уравнений и присваиваний
+        en: Equation and assignment causality
+        kind: choice
+        note: "Присваивание обновляет выбранную цель; направленное уравнение потока задаёт выход через входы; ненаправленная система уравнений задаёт отношения для совместного решения. Modelica equation с = не является algorithm assignment с :=. Уравнения не обещают существования или единственности решения; Lustre clocks и HDL очереди обновлений описываются отдельными осями."
+        values:
+          - {id: directed_assignment, ru: Направленное обновление цели, en: directed assignment}
+          - {id: directed_equation, ru: Направленное определение потока, en: directed stream equation}
+          - {id: acausal_equation, ru: Ненаправленное отношение для совместного решения, en: acausal simultaneous equation}
+        sources:
+          - {url: "https://www-verimag.imag.fr/The-Lustre-Programming-Language-and.html", title: "Verimag — Lustre unordered stream equations"}
+          - {url: "https://specification.modelica.org/maint/3.6/equations.html", title: "Modelica Specification 3.6 §8 — equations versus assignments"}
+      - id: computation.update_scheduling
+        slug: computation-update-scheduling
+        ru: Планирование обновлений в HDL-симуляции
+        en: HDL simulation update scheduling
+        kind: choice
+        note: "В процедурном Verilog blocking assignment без задержки обновляет цель перед следующим оператором; nonblocking assignment вычисляет RHS и планирует применение значения позже. Ось описывает симуляционное обновление, не форму множественного присваивания и не порядок потоков. Источник — Icarus; точные IEEE event regions, delays и synthesizable subset требуют отдельного версионного профиля."
+        values:
+          - {id: blocking_update, ru: Блокирующее процедурное обновление, en: blocking procedural update}
+          - {id: deferred_nonblocking, ru: Отложенное неблокирующее обновление, en: deferred nonblocking update}
+        sources:
+          - {url: "https://steveicarus.github.io/iverilog/usage/simulation.html", title: "Icarus Verilog — Simulation"}
+          - {url: "https://steveicarus.github.io/iverilog/developer/guide/vvp/vvp.html", title: "Icarus VVP Simulation Engine — blocking and nonblocking assignment events"}
 
-  - id: syntax
-    ru: Синтаксическая структура
-    en: Syntax
-    note: "Лекция 20, слайд «Синтаксическая структура»."
+  - id: verification
+    ru: Проверяемые свойства программ
+    en: Program verification properties
     concepts:
-      - id: syntax.statement_terminator
-        slug: syntax-statement-terminator
-        ru: Разделитель операторов
-        en: Statement terminator
+      - id: verification.totality
+        slug: verification-totality
+        ru: Режим гарантии тотальности
+        en: Totality guarantee policy
         kind: choice
-        max_values: 1
+        note: "Ось задаёт обязательность проверки тотальности для определения/профиля, а не наличие dependent types. Нужно явно назвать проверяемые обязательства: coverage, termination либо productivity для corecursion. Idris 2 covering не равен total; Agda допускает отключения/утверждения вне safe-профиля. Принятая через escape hatch тотальность не считается доказанной; checked_required относится лишь к области, где профиль действительно требует все заявленные проверки."
         values:
-          - {id: semicolon, ru: Точка с запятой обязательна, en: mandatory semicolon}
-          - {id: newline, ru: Перевод строки, en: newline}
-          - {id: optional_semicolon, ru: Точка с запятой необязательна, en: optional semicolon,
-             coverage: {pending: true, note: "Kotlin, Go, JavaScript, Swift"}}
-      - id: syntax.case_sensitive
-        slug: syntax-case-sensitive
-        ru: Чувствительность к регистру
-        en: Case sensitivity
-        kind: bool
-      - id: syntax.shadowing
-        slug: syntax-shadowing
-        ru: Совмещение имён (shadowing)
-        en: Shadowing
+          - {id: checked_required, ru: Проверка обязательна в указанной области, en: checking required in the stated scope}
+          - {id: checked_opt_in, ru: Проверка включается для определения или профиля, en: opt-in checking for a definition or profile}
+          - {id: unchecked_escape, ru: Непроверенное допущение или обход проверки, en: unchecked assumption or escape hatch}
+          - {id: partial_allowed, ru: Частичные определения разрешены, en: partial definitions allowed}
+        sources:
+          - {url: "https://idris2.readthedocs.io/en/latest/tutorial/typesfuns.html", title: "Idris 2 — covering, total, partial and Totality"}
+          - {url: "https://agda.readthedocs.io/en/latest/language/termination-checking.html", title: "Agda — Termination Checking, TERMINATING, NON_TERMINATING and --safe"}
+      - id: verification.behavioral_contracts
+        slug: verification-behavioral-contracts
+        ru: Поведенческие контракты
+        en: Behavioral contracts
         kind: choice
-        aliases: [совпадение имён, ограниченное совмещение имен]
+        note: "Предикаты допустимого входа, результата/перехода состояния и инвариантов объекта. Это не abstraction.contracts: interfaces/traits задают контракт полиморфизма, а не такие предикаты. Наличие require/ensure/Pre/Post не означает доказательство: runtime monitoring, assertion policy и статический proof tool фиксируются отдельно с layer/profile; old обозначает состояние до вызова."
         values:
-          - {id: allowed, ru: Разрешено во вложенной области, en: allowed in nested scope}
-          - {id: forbidden_in_block, ru: Запрещено внутри одной подпрограммы, en: forbidden within a subprogram}
-          - {id: allowed_same_scope, ru: Разрешено даже в той же области, en: allowed in the same scope}
+          - {id: preconditions, ru: Предусловия, en: preconditions}
+          - {id: postconditions, ru: Постусловия, en: postconditions}
+          - {id: invariants, ru: Инварианты объектов, en: object invariants}
+        sources:
+          - {url: "https://www.eiffel.org/doc/eiffel/ET-_Design_by_Contract_(tm),_Assertions_and_Exceptions", title: "Eiffel — Design by Contract: assertions, old and monitoring"}
+          - {url: "https://www.adaic.org/resources/add_content/standards/12rm/html/RM-6-1-1.html", title: "Ada 2012 RM §6.1.1 — preconditions, postconditions and assertion policy"}
+          - {url: "https://docs.adacore.com/spark2014-docs/html/ug/en/spark_2014.html", title: "SPARK User's Guide — language subset, contracts and GNATprove boundaries"}

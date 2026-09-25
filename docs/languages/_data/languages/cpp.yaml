@@ -1,0 +1,176 @@
+id: cpp
+publish: true
+default_profile: cpp23
+
+meta:
+  name: C++
+  ru: C++
+  wikidata: Q2407
+  appeared:
+    value: 1983
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q2407", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Bjarne Stroustrup]
+  organizations: [Bell Labs]
+  website: https://isocpp.org/
+  spec: https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf
+  summary: >
+    C++23 сочетает статическую типизацию, классы, шаблоны и управление временем
+    жизни объектов через конструкторы и деструкторы.
+    За основу взят проект стандарта N4950, без расширений компиляторов.
+
+versions: []
+profiles:
+  cpp23: "C++23, проект WG21 N4950; базовый профиль всех записей, включая отдельно отмеченную стандартную библиотеку."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+    - value: pattern
+      note: "Structured bindings объявляют набор имён; это не произвольное сопоставление с образцом."
+  bindings.mutation:
+    - value: rebindable
+      note: "Изменяемому объекту можно присвоить новое значение; reference после инициализации не переназначается на другой объект."
+    - value: immutable
+      applies_to: const-объекты
+      note: "const не означает глубокую неизменяемость всего достижимого графа; mutable-члены имеют особые правила."
+  bindings.assignment:
+    - value: single
+      note: "operator= для классов может быть перегружен; structured binding — объявление, а не множественное присваивание."
+  scope.resolution:
+    - value: lexical
+  scope.constructs:
+    - value: block
+    - value: class
+  typing.checking:
+    - value: static
+  typing.annotations:
+    - value: optional
+      applies_to: объявления с auto и выводимыми типами
+      note: "Явные типы по-прежнему нужны во многих сигнатурах; auto не отменяет объявления."
+  typing.inference:
+    - value: true
+      note: "auto, вывод аргументов шаблона и class template argument deduction."
+  typing.conversions:
+    - value: implicit
+      note: "Стандартные и пользовательские преобразования участвуют в разрешении перегрузки; сужающие преобразования в list-initialization ограничены."
+    - value: explicit
+      note: "Именованные cast имеют разные контракты; reinterpret_cast не обеспечивает безопасный доступ к произвольной памяти."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [conv], [expr.cast], [dcl.init.list]"}
+  typing.compatibility:
+    - value: nominal
+      applies_to: типы классов и перечислений
+      note: "Совпадение набора полей не делает два независимо объявленных класса одним типом."
+  typing.sum_types:
+    - value: tagged
+      layer: standard_library
+      note: "std::variant хранит активную альтернативу. Встроенный union сам по себе не хранит метку."
+  typing.product_types:
+    - value: record
+      note: "struct/class с полями."
+    - value: tuple
+      layer: standard_library
+      note: "std::tuple и std::pair."
+  typing.nullability:
+    - value: sentinel
+      note: "nullptr для указателей; корректно инициализированная ссылка должна обозначать объект или функцию."
+    - value: optional_type
+      layer: standard_library
+      note: "`std::optional<T>` хранит значение либо состояние отсутствия."
+  control.selection:
+    - value: statement
+    - value: expression
+      note: "if и ?:; if constexpr выбирает ветвь при инстанцировании шаблона по правилам стандарта."
+  control.switch:
+    - value: true
+  control.iteration:
+    - value: c_style
+    - value: foreach
+      note: "Range-based for работает с диапазонами через begin/end."
+  subprograms.overloading:
+    - value: true
+      note: "Свободные функции, методы и операторы; один лишь возвращаемый тип не различает перегрузки обычных функций."
+  subprograms.parameter_passing:
+    - value: by_value
+    - value: by_reference
+      note: "Параметры T&, const T& и T&& связываются с объектом. Ссылки не обеспечивают проверку владения или исключительности, аналогичную Rust borrow checker."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [dcl.ref], [dcl.init.ref], [expr.call]"}
+  subprograms.nesting:
+    - value: false
+      note: "Определение свободной именованной функции внутри функции запрещено; локальные классы могут иметь методы, а лямбды — свои тела."
+  subprograms.closures:
+    - value: true
+      note: "Лямбды захватывают по значению или по ссылке; захват по ссылке не продлевает автоматически время жизни объекта."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [expr.prim.lambda]"}
+  subprograms.lambda:
+    - value: true
+  subprograms.generics:
+    - value: true
+      note: "Шаблоны функций, классов и переменных; concepts ограничивают допустимые аргументы шаблонов."
+  abstraction.dispatch:
+    - value: static
+      note: "Разрешение перегрузок и невиртуальные вызовы."
+    - value: single
+      note: "Виртуальный вызов выбирает final overrider по динамическому типу получателя."
+  abstraction.inheritance:
+    - value: multiple
+      note: "Возможны несколько базовых классов и виртуальное наследование."
+  abstraction.modules:
+    - value: textual_inclusion
+    - value: namespaces
+    - value: explicit_exports
+      note: "Именованные модули с export/import; #include и пространства имён также поддерживаются. Модуль не создаёт собственного пространства имён."
+  evaluation.strategy:
+    - value: strict
+      note: "Аргументы вычисляются перед входом в функцию; строгая стратегия не задаёт единого порядка аргументов слева направо."
+  memory.management:
+    - value: manual
+      note: "new/delete позволяют явное управление динамической памятью; обычный указатель не выражает проверяемое владение."
+    - value: ownership
+      layer: standard_library
+      applies_to: std::unique_ptr и владеющие контейнеры
+      note: "Владение реализовано библиотечными типами и деструкторами; общей статической проверки всех времён жизни нет."
+    - value: refcount
+      layer: standard_library
+      applies_to: std::shared_ptr
+      note: "Разделяемое владение; циклы сильных ссылок автоматически не разрываются, для невладеющих связей есть weak_ptr."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [unique.ptr], [util.smartptr.shared], [util.smartptr.weak]"}
+  memory.transfer:
+    - value: copy
+    - value: move
+      applies_to: типы с перемещающими операциями
+      note: "Перенос ресурса определяется move-конструктором/присваиванием. std::move лишь меняет категорию выражения; исходный объект остаётся существовать, а копирование тоже может быть выбрано."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [class.copy.ctor], [class.copy.assign], [forward]"}
+  errors.model:
+    - value: exceptions
+    - value: result_type
+      layer: standard_library
+      profile: cpp23
+      note: "`std::expected<T, E>` — явный результат или ошибка; исключения при этом сохраняются как отдельный канал."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [except], [expected]"}
+  resources.cleanup:
+    - value: raii
+      note: "Деструкторы автоматических объектов вызываются при обычном выходе и раскрутке стека исключением; terminate и аварийное завершение не дают общей гарантии очистки."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [class.dtor], [except.ctor]"}
+  resources.io:
+    - value: stdlib
+      layer: standard_library
+      note: "iostream, fstream и std::print; ввод-вывод не является оператором ядра языка."
+  syntax.blocks:
+    - value: explicit
+  syntax.metaprogramming:
+    - value: textual_macros
+    - value: compile_time_execution
+      note: "constexpr/consteval и шаблонные вычисления; препроцессор — отдельный механизм."
+  paradigm.supported:
+    - value: imperative
+    - value: procedural
+    - value: object_oriented
+    - value: functional

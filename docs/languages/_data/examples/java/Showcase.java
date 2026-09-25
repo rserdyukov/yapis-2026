@@ -63,14 +63,15 @@ public class Showcase {
     public static void main(String[] args) {
         // --8<-- [start:variants-1]
         // 1. Объявление явное — тип перед именем. С версии 10 для локальных
-        // переменных допустим `var`: тип выводится, но объявление остаётся.
+        // переменных допустим `var`: тип выводится, объявление остаётся явным.
         int total = 0;
         var name = "ЯПИС"; // String
         // --8<-- [end:variants-1]
 
         // --8<-- [start:variants-2]
         // 2. Преобразование типов явное — оператор приведения `(int) x`;
-        // неявное — только расширяющее (int → long → double) и boxing.
+        // неявное — например расширение и boxing/unboxing. Расширение
+        // int → float и long → float/double может терять точность.
         int count = Integer.parseInt("42");
         double ratio = count / 5.0;   // int → double неявно (расширение)
         int truncated = (int) ratio;  // double → int только явно
@@ -141,11 +142,16 @@ public class Showcase {
         // --8<-- [end:req-7-3]
 
         // --8<-- [start:req-7-2-until]
-        // 7.2. Цикла until нет; эквивалент — while с отрицанием условия.
+        // 7.2. Отдельного until нет. Предусловие: while с отрицанием условия;
+        // постусловие repeat-until: do-while с отрицанием (тело хотя бы раз).
         int n = 0;
         while (!(n >= 3)) {
             n++;
         }
+        n = 0;
+        do {
+            n++;
+        } while (!(n >= 3));
         // --8<-- [end:req-7-2-until]
 
         // --8<-- [start:req-7-2-do-while]

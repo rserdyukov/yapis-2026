@@ -1,5 +1,6 @@
 id: rust
 publish: true
+default_profile: rust2024
 
 meta:
   name: Rust
@@ -61,80 +62,135 @@ publications:
     venue: "No Starch Press"
     url: https://doc.rust-lang.org/book/
 
+profiles:
+  rust2024: "Rust, edition 2024; базовый профиль языка и стандартной библиотеки. Редакция языка не равна номеру выпуска rustc; исторические границы и контексты safe/locals/signatures отмечены отдельно."
+  safe: Безопасный Rust без unsafe-операций.
+  locals: Локальные связывания и замыкания с выводом типов.
+  signatures: Сигнатуры именованных функций.
+
 concepts:
-  variants.1:
+  bindings.introduction:
     - value: explicit
       note: "ключевое слово `let`; тип указывается или выводится компилятором; без `mut` переменная неизменяема"
-  variants.2:
+    - value: pattern
+      applies_to: let и образцы match
+  bindings.mutation:
+    - value: immutable
+      note: "по умолчанию; внутренняя изменяемость объекта не равна перепривязке имени"
+    - value: rebindable
+      applies_to: let mut
+  typing.annotations:
+    - value: optional
+      profile: locals
+    - value: required
+      profile: signatures
+  typing.conversions:
     - value: explicit
       note: "`as` для примитивов, `From`/`Into`, `parse`; арифметика между i32 и f64 без приведения — ошибка компиляции"
-  variants.3:
+    - value: implicit
+      applies_to: разрешённые позиции coercion
+      note: "ограниченные coercions, например &mut T → &T, &[T; N] → &[T], deref coercion; не произвольное числовое расширение"
+  bindings.assignment:
     - value: single
     - value: multiple
       since: "1.59"
       note: "деструктуризация кортежа: `(a, b) = (b, a)`; при объявлении `let (a, b) = …` — с 1.0"
-  variants.4:
-    - value: subprograms_and_blocks
+  scope.resolution:
+    - value: lexical
+  scope.constructs:
+    - value: subprogram
+    - value: module
+    - value: block
       note: "любой блок `{ }` — область видимости; блок — выражение"
-  variants.5:
+  syntax.blocks:
     - value: explicit
       note: "фигурные скобки обязательны даже для одного оператора"
-  variants.6:
-    - value: if_and_switch
+  control.selection:
+    - value: expression
       note: "`if`/`else if`/`else` и `match` — сопоставление с образцом с проверкой полноты; оба — выражения"
-  variants.7:
-    - value: absent
+  control.switch:
+    - value: false
+  control.pattern_matching:
+    - value: true
+  subprograms.overloading:
+    - value: false
       note: "две `fn` с одним именем в одной области — ошибка; полиморфизм — через трейты и обобщения"
-  variants.8:
+  subprograms.parameter_passing:
     - value: by_value
-      applies_to: типы с трейтом Copy (числа, bool, char, ссылки)
+      note: "аргумент передаёт значение; это относится и к значениям ссылок. Копирование, перемещение и заимствование — отдельная ось."
+  memory.transfer:
+    - value: copy
+      applies_to: типы Copy, включая &T, но не &mut T
     - value: move
-      applies_to: остальные типы
+      applies_to: передача принадлежащего вызывающему значения не-Copy типа
       note: "после вызова исходная переменная недоступна — компилятор запрещает использование"
-    - value: borrow
-      note: "`&T` — разделяемая ссылка только на чтение; таких ссылок может быть несколько"
-    - value: borrow_mut
-      note: "`&mut T` — единственная ссылка с правом записи; проверяется компилятором (borrow checker)"
-  variants.9:
-    - value: anywhere
+    - value: shared_borrow
+      profile: safe
+      note: "&T допускает разделяемый доступ; изменение через внутреннюю изменяемость (например Cell/Mutex) возможно"
+    - value: exclusive_borrow
+      profile: safe
+      note: "&mut T даёт исключительный доступ на время активного заимствования; возможны временные reborrow"
+  subprograms.placement:
+    - value: module
+    - value: type_member
+    - value: local
       note: "вложенная `fn` не захватывает переменные внешней; для этого — замыкания `|x| …`"
+  subprograms.nesting:
+    - value: true
+  subprograms.closures:
+    - value: true
 
-  req.4:
+  resources.io:
     - value: macro
+      layer: standard_library
       applies_to: вывод
       note: "`println!`, `print!`, `eprintln!` — макросы стандартной библиотеки"
     - value: stdlib
+      layer: standard_library
       applies_to: ввод
       note: "`std::io::stdin().read_line(&mut s)` и `parse`; встроенных функций ввода нет"
-  req.7.2.until:
+  control.until:
+    - value: absent
+      note: "Предусловие: `while !cond`; постусловие: `loop { ...; if cond { break } }`."
+  control.do_while:
     - value: false
-      note: "эквивалент — `while !cond`"
-  req.7.2.do_while:
-    - value: false
-      note: "эквивалент — `loop { …; if cond { break } }`"
-  req.7.3:
+      note: "do-while(cond) имитируется `loop { ...; if !cond { break } }`"
+  control.iteration:
     - value: foreach
       note: "`for x in iter`; счётный цикл — диапазон `0..n`"
-  req.8.2:
-    - value: globals
+  scope.globals:
+    - value: module_bindings
       note: "`static`; изменение `static mut` требует `unsafe`, обычно используют атомики или `Mutex`"
 
   typing.checking:
     - value: static
-  typing.strength:
-    - value: strong
-      note: "неявных приведений между числовыми типами нет"
   typing.inference:
     - value: true
+      profile: locals
       note: "локальный вывод (Hindley–Milner-подобный) внутри функции; сигнатуры функций аннотируются явно"
+  typing.compatibility:
+    - value: nominal
+      applies_to: struct, enum и явные реализации trait
+    - value: structural
+      applies_to: кортежи и типы указателей на функции
+  typing.sum_types:
+    - value: tagged
+      note: "enum с данными вариантов"
+  typing.product_types:
+    - value: tuple
+    - value: record
   typing.nullability:
     - value: optional_type
+      layer: standard_library
+      profile: safe
       note: "`Option<T>`; null-ссылок в безопасном коде нет"
 
   memory.management:
     - value: ownership
+      profile: safe
       note: "владение, перемещение, заимствование и времена жизни проверяются компилятором; освобождение — при выходе владельца из области (`Drop`)"
     - value: refcount
+      layer: standard_library
       applies_to: разделяемое владение
       note: "`Rc<T>` / `Arc<T>` — явно, по выбору программиста"
 
@@ -148,13 +204,20 @@ concepts:
 
   errors.model:
     - value: result_type
-      note: "`Result<T, E>` и `Option<T>`, оператор `?` для проброса; `panic!` — для невосстановимых ошибок, не для управления потоком"
-  errors.finally:
+      layer: standard_library
+      note: "`Result<T, E>` представляет успех или ошибку; оператор ? распространяет ошибку. `Option<T>` представляет отсутствие значения, а не отдельный тип ошибки."
+    - value: panic
+      note: "panic! запускает unwinding либо abort в зависимости от конфигурации; это отдельный от Result канал"
+  resources.cleanup:
+    - value: raii
+      note: "Drop при обычном выходе из области и unwinding; abort, утечка или mem::forget могут пропустить деструктор"
+  errors.checked_exceptions:
     - value: false
-      note: "освобождение ресурсов — через `Drop` при выходе из области (RAII), отдельного `finally` нет"
-  errors.checked:
-    - value: true
-      note: "тип ошибки — часть сигнатуры `fn f() -> Result<T, E>`; игнорировать `Result` без `#[must_use]`-предупреждения нельзя"
+      note: "Result — возвращаемое значение, не checked exception; требований catch/throws нет"
+  errors.must_use:
+    - value: warning
+      applies_to: "значения типов и функций с #[must_use], в частности Result"
+      note: "unused_must_use по умолчанию предупреждение; `let _ = result;` явно отбрасывает результат. Уровень lint настраивается."
 
   subprograms.lambda:
     - value: true
@@ -162,6 +225,44 @@ concepts:
   subprograms.generics:
     - value: true
       note: "мономорфизация во время компиляции; ограничения через трейты (`T: Display`)"
+  subprograms.generic_mechanism:
+    - value: monomorphization
+      layer: implementation
+      implementation: rustc
+  abstraction.contracts:
+    - value: traits
+  abstraction.dispatch:
+    - value: static
+      applies_to: обобщённые функции с ограничениями trait
+    - value: single
+      applies_to: вызовы через dyn Trait
+  abstraction.inheritance:
+    - value: absent
+      note: "supertraits выражают ограничения, а не наследование полей и реализации класса"
+  abstraction.modules:
+    - value: namespaces
+    - value: explicit_exports
+      note: "mod, pub и pub use"
+  evaluation.strategy:
+    - value: strict
+  evaluation.effects:
+    - value: unrestricted
+      note: "владение и Send/Sync ограничивают отдельные операции, но общей системы чистых и эффектных функций нет"
+  evaluation.tail_calls:
+    - value: false
+  resources.concurrency:
+    - value: threads
+      layer: standard_library
+    - value: message_passing
+      layer: standard_library
+    - value: async_await
+      note: "синтаксис языка; исполнитель Future выбирается отдельно"
+  syntax.metaprogramming:
+    - value: syntactic_macros
+      note: "macro_rules!"
+    - value: procedural_macros
+    - value: compile_time_execution
+      note: "const-выражения и const fn с ограничениями"
   subprograms.default_args:
     - value: false
       note: "эквивалент — `Option<T>` в параметре или паттерн builder"
@@ -174,7 +275,7 @@ concepts:
       note: "`;` превращает выражение в оператор; последнее выражение блока без `;` — его значение"
   syntax.case_sensitive:
     - value: true
-  syntax.shadowing:
+  scope.shadowing:
     - value: allowed
     - value: allowed_same_scope
       note: "повторный `let x` в той же области создаёт новую переменную (идиома для смены типа)"
@@ -208,20 +309,21 @@ assessment:
     text: >
       Синтаксис явный и единообразный (скобки, `let`, типы в сигнатурах), но
       аннотации времён жизни и обобщений с ограничениями трейтов делают
-      сигнатуры длинными; для новичка — самый сложный из языков каталога.
-    concepts: [variants.1, variants.5, typing.inference]
+      сигнатуры длинными и требуют изучения дополнительных понятий.
+    concepts: [bindings.introduction, syntax.blocks, typing.inference]
   writability:
     text: >
       Вывод типов внутри функций и выражения-блоки сокращают код, но
       проверка заимствований заставляет заранее продумывать владение
       данными; высокая «входная цена».
-    concepts: [variants.8, memory.management]
+    concepts: [subprograms.parameter_passing, memory.transfer, memory.management]
   reliability:
     text: >
-      Статическая сильная типизация, отсутствие null, обязательная обработка
-      `Result` и проверка владения исключают целые классы ошибок на этапе
-      компиляции.
-    concepts: [typing.checking, typing.nullability, errors.model, errors.checked, memory.management]
+      Статическая проверка типов, ненулевые ссылки и проверка владения
+      предотвращают многие ошибки памяти в безопасном коде. Result явно
+      представляет ошибку; предупреждение о неиспользованном результате
+      допускает явное отбрасывание и не гарантирует обработку ошибки.
+    concepts: [typing.checking, typing.nullability, errors.model, errors.must_use, memory.management]
   cost:
     text: >
       Дольше учить и дольше компилировать; окупается там, где критичны

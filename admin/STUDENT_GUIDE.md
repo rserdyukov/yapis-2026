@@ -22,7 +22,7 @@
 **Собирается автоматически** из партиалов `docs/_partials/` командой
 `python3 tools/build-docs.py`; править `admin/template-TASK.md` руками
 нельзя — правки затрёт следующая сборка. Таблицы вариантов в нём нет:
-конкретный вариант студент находит на [сайте курса](https://rserdyukov.github.io/yapis-2026/labs/variants/)
+конкретный вариант студент находит на [сайте курса](https://rserdyukov.github.io/yapis-2026/labs/#varianty)
 и выписывает в свой `README.md`.
 
 **`GUIDE.md`** — как работать: ветки `task<номер>`, Pull Request, правила

@@ -1,5 +1,24 @@
 {% extends "base.html" %}
 
+{# Перенесённая страница: redirect во front matter — адрес относительно этой
+   страницы. Якорь исходной ссылки (#svoystva) сохраняется, если он задан;
+   иначе используется якорь из redirect. Без JS работает meta refresh. #}
+{% block extrahead %}
+  {{ super() }}
+  {% if page and page.meta.redirect %}
+    <meta name="robots" content="noindex">
+    <meta http-equiv="refresh" content="0; url={{ page.meta.redirect }}">
+    <link rel="canonical" href="{{ page.meta.redirect }}">
+    <script>
+      (function () {
+        var target = new URL({{ page.meta.redirect | tojson }}, location.href);
+        if (location.hash) target.hash = location.hash;
+        location.replace(target.href);
+      })();
+    </script>
+  {% endif %}
+{% endblock %}
+
 {# Верхние вкладки остаются видимыми и на телефоне; боковые меню не нужны. #}
 {% block site_nav %}{% endblock %}
 

@@ -1,5 +1,6 @@
 id: java
 publish: true
+default_profile: java21
 
 meta:
   name: Java
@@ -21,6 +22,8 @@ meta:
     мусора и структурными исключениями, компилируемый в байт-код JVM —
     одну из целевых платформ курса. Второй по частоте язык реализации
     компиляторов в практикуме.
+    Текущий срез свойств карточки — Java SE 21 без preview-возможностей;
+    Java SE 26 в истории выпусков не означает проверки этих свойств для 26.
 
 versions:
   - id: "1.0"
@@ -36,18 +39,42 @@ versions:
     kind: release
     sources:
       - {url: "https://www.oracle.com/java/technologies/javase/jdk5-relnotes.html", title: "JDK 5.0 Release Notes", retrieved: 2026-09-18}
+  - id: "7"
+    label: Java SE 7
+    date: 2011-07-28
+    kind: release
+    sources:
+      - {url: "https://openjdk.org/projects/jdk7/", title: "OpenJDK: JDK 7 General Availability", retrieved: 2026-09-20}
   - id: "8"
     label: Java SE 8
     date: 2014-03-18
     kind: release
     sources:
       - {url: "https://www.wikidata.org/wiki/Q251", title: "Wikidata P348 Java SE 8", retrieved: 2026-09-18}
+  - id: "9"
+    label: Java SE 9
+    date: 2017-09-21
+    kind: release
+    sources:
+      - {url: "https://openjdk.org/projects/jdk9/", title: "OpenJDK: JDK 9 General Availability", retrieved: 2026-09-20}
   - id: "10"
     label: Java SE 10
     date: 2018-03-20
     kind: release
     sources:
       - {url: "https://openjdk.org/jeps/286", title: "JEP 286: Local-Variable Type Inference", retrieved: 2026-09-18}
+  - id: "17"
+    label: Java SE 17
+    date: 2021-09-14
+    kind: release
+    sources:
+      - {url: "https://openjdk.org/projects/jdk/17/", title: "OpenJDK: JDK 17 General Availability", retrieved: 2026-09-20}
+  - id: "21"
+    label: Java SE 21
+    date: 2023-09-19
+    kind: release
+    sources:
+      - {url: "https://openjdk.org/projects/jdk/21/", title: "OpenJDK: JDK 21 General Availability", retrieved: 2026-09-20}
   - id: "26"
     label: Java SE 26
     date: 2026-03-17
@@ -72,82 +99,139 @@ publications:
     year: 2018
     venue: "Addison-Wesley"
 
+profiles:
+  java21: "Java SE 21, JLS 21 и стандартная библиотека, без preview-возможностей; базовый срез карточки. Исторические границы и локальные контексты отмечены отдельно."
+  local_variables: Локальные переменные с инициализатором.
+  signatures: Параметры и результаты методов, поля классов.
+
 concepts:
-  variants.1:
+  bindings.introduction:
     - value: explicit
-      note: "тип перед именем: `int x = 1;`"
-    - value: implicit
+      note: "`int x = 1;` и `var x = 1;` — явные объявления; var опускает только аннотацию типа"
+  typing.annotations:
+    - value: required
+      profile: signatures
+    - value: optional
       since: "10"
+      profile: local_variables
       applies_to: локальные переменные с инициализатором
-      note: "`var x = 1;` — тип выводится, но объявление остаётся явным (JEP 286); поля и параметры — только с типом"
-  variants.2:
+      note: "`var x = 1;` — тип выводится, но объявление остаётся явным (JEP 286); поля и параметры именованных методов требуют типа"
+  bindings.mutation:
+    - value: rebindable
+    - value: immutable
+      applies_to: final-переменные
+      note: "final запрещает перепривязку, но не изменение объекта по ссылке."
+  typing.conversions:
     - value: explicit
-      note: "оператор приведения `(int) x` — буквально пример из вариантов заданий"
+      note: "оператор приведения `(int) x`; сужение может терять информацию"
     - value: implicit
       applies_to: расширяющие преобразования и boxing
-      note: "int → long → double без потери (JLS 5.1.2); int ↔ Integer с версии 5; сужающие — только явно"
-  variants.3:
+      note: "Расширение int → float и long → float/double может терять точность (JLS 5.1.2). Есть boxing/unboxing и расширение ссылок; некоторые сужения констант допустимы без cast."
+  bindings.assignment:
     - value: single
       note: "`a = b = 0` — цепочка одиночных присваиваний; множественного `a, b = c, d` нет"
-  variants.4:
-    - value: subprograms_and_blocks
-      note: "любой блок `{ }`; повторное объявление имени во вложенном блоке — ошибка"
-  variants.5:
+  scope.resolution:
+    - value: lexical
+  scope.constructs:
+    - value: subprogram
+    - value: block
+    - value: class
+  syntax.blocks:
     - value: explicit
       note: "фигурные скобки; для одного оператора их можно опустить, но это не блок"
-  variants.6:
-    - value: if_and_switch
+  control.selection:
+    - value: statement
+    - value: expression
+      note: "тернарное условное выражение `cond ? a : b`"
+  control.switch:
+    - value: true
       note: "`switch` по константам с 1.0; выражение `switch` со стрелками — с 14 (JEP 361); сопоставление по типам — с 21 (JEP 441)"
-  variants.7:
-    - value: present
+  control.pattern_matching:
+    - value: true
+      since: "21"
+      applies_to: record patterns
+      note: "Деконструкция record-значений, включая вложенные образцы; граница относится к финализации record patterns, а не ко всем формам pattern matching."
+      sources:
+        - {url: "https://openjdk.org/jeps/440", title: "JEP 440: Record Patterns", retrieved: 2026-09-20}
+  subprograms.overloading:
+    - value: true
       note: "выбор по статическим типам аргументов на этапе компиляции"
-  variants.8:
+  subprograms.parameter_passing:
     - value: by_value
-      applies_to: примитивные типы
-      note: "копия значения"
-    - value: by_sharing
-      applies_to: ссылочные типы
+      applies_to: примитивные и ссылочные типы
       note: "JLS 8.4.1 формально называет это передачей по значению — копируется ссылка; изменение объекта видно вызывающему, перепривязка параметра — нет"
       sources:
         - {url: "https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.4.1", title: "JLS 8.4.1 Formal Parameters", retrieved: 2026-09-18}
-  variants.9:
-    - value: class_members_only
+  memory.transfer:
+    - value: copy
+      note: "копируется значение примитива или ссылки"
+    - value: shared_reference
+      applies_to: объекты ссылочных типов
+  subprograms.placement:
+    - value: type_member
       note: "вложенных методов нет; обход — лямбды (с 8) и локальные классы внутри метода"
-
-  req.4:
-    - value: stdlib
-      note: "`System.out.println`, `Scanner`, `BufferedReader` — классы стандартной библиотеки"
-  req.7.2.until:
+  subprograms.nesting:
     - value: false
-      note: "эквивалент — `while (!cond)`"
-  req.7.2.do_while:
+  subprograms.closures:
     - value: true
-  req.7.3:
+      since: "8"
+      applies_to: лямбды
+      note: "Лямбды захватывают final/effectively final локальные переменные. До лямбд локальные и анонимные внутренние классы уже могли захватывать final-локальные переменные."
+
+  resources.io:
+    - value: stdlib
+      layer: standard_library
+      note: "`System.out.println`, `Scanner`, `BufferedReader` — классы стандартной библиотеки"
+  control.until:
+    - value: absent
+      note: "Предусловие имитируется `while (!cond)`, постусловие — `do { ... } while (!cond)`."
+  control.do_while:
+    - value: true
+  control.iteration:
     - value: c_style
       note: "`for (int i = 0; i < n; i++)`"
     - value: foreach
       since: "5"
       note: "`for (T x : iterable)`"
-  req.8.2:
-    - value: no_globals
+  scope.globals:
+    - value: static_members
       note: "любая переменная — член класса или локальная; эквивалент глобальной — `static`-поле"
 
   typing.checking:
     - value: static
-  typing.strength:
-    - value: strong
-      note: "`\"1\" + 2` даёт строку `\"12\"` — единственное заметное неявное приведение (конкатенация)"
   typing.inference:
     - value: true
       since: "10"
-      applies_to: локальные переменные (`var`), лямбды, обобщённые вызовы (diamond с 7)
+      profile: local_variables
+      applies_to: локальные переменные с var
+    - value: true
+      since: "5"
+      applies_to: аргументы типов при вызове обобщённых методов
+    - value: true
+      since: "8"
+      applies_to: типы параметров лямбды из целевого функционального интерфейса
+  typing.compatibility:
+    - value: nominal
+  typing.sum_types:
+    - value: closed_hierarchy
+      since: "17"
+      applies_to: sealed-иерархии
+      sources:
+        - {url: "https://openjdk.org/jeps/409", title: "JEP 409: Sealed Classes", retrieved: 2026-09-20}
+  typing.product_types:
+    - value: record
+      applies_to: классы с полями; record-классы в Java 16 и новее
   typing.nullability:
     - value: nullable_everywhere
       note: "любая ссылка может быть `null`; `Optional<T>` (с 8) — библиотечная обёртка, не часть системы типов"
+    - value: optional_type
+      layer: standard_library
+      since: "8"
+      note: "`Optional<T>` представляет отсутствие значения, но сама ссылка Optional тоже может быть null."
 
   memory.management:
     - value: gc
-      note: "трассирующие сборщики JVM (G1, ZGC, Shenandoah); освобождение недетерминировано"
+      note: "автоматическое освобождение памяти; конкретный сборщик выбирает реализация JVM, момент освобождения не гарантирован"
 
   paradigm.supported:
     - value: imperative
@@ -162,12 +246,20 @@ concepts:
   errors.model:
     - value: exceptions
       note: "try / catch / finally; иерархия от Throwable"
-  errors.finally:
-    - value: true
-      note: "`finally` и try-with-resources (с 7)"
-  errors.checked:
+  resources.cleanup:
+    - value: finally
+    - value: resource_statement
+      since: "7"
+      applies_to: try-with-resources
+      note: "вызывает close для AutoCloseable; прекращение процесса может пропустить очистку"
+      sources:
+        - {url: "https://openjdk.org/projects/jdk7/features#f618", title: "OpenJDK: JDK 7 — Project Coin (try-with-resources)", retrieved: 2026-09-20}
+  errors.checked_exceptions:
     - value: true
       note: "проверяемые исключения объявляются в `throws`; непроверяемые (RuntimeException) — нет"
+  errors.must_use:
+    - value: absent
+      note: "язык не требует использовать возвращённое значение метода"
 
   subprograms.lambda:
     - value: true
@@ -177,6 +269,39 @@ concepts:
     - value: true
       since: "5"
       note: "стирание типов: во время выполнения параметры типов недоступны"
+  subprograms.generic_mechanism:
+    - value: erasure
+      since: "5"
+  abstraction.contracts:
+    - value: interfaces
+  abstraction.dispatch:
+    - value: static
+      applies_to: статические методы и выбор перегрузки
+    - value: single
+      applies_to: переопределяемые методы экземпляра
+  abstraction.inheritance:
+    - value: single
+      note: "один суперкласс; интерфейсов может быть несколько, включая default-методы"
+  abstraction.modules:
+    - value: namespaces
+    - value: explicit_exports
+      since: "9"
+      applies_to: модульная система Java
+      sources:
+        - {url: "https://openjdk.org/jeps/261", title: "JEP 261: Module System", retrieved: 2026-09-20}
+  evaluation.strategy:
+    - value: strict
+  evaluation.effects:
+    - value: unrestricted
+      note: "checked exceptions отслеживают часть ошибок, но общей системы эффектов нет"
+  evaluation.tail_calls:
+    - value: false
+  resources.concurrency:
+    - value: threads
+      layer: standard_library
+  syntax.metaprogramming:
+    - value: reflection
+      layer: standard_library
   subprograms.default_args:
     - value: false
       note: "эквивалент — перегрузка"
@@ -188,7 +313,7 @@ concepts:
     - value: semicolon
   syntax.case_sensitive:
     - value: true
-  syntax.shadowing:
+  scope.shadowing:
     - value: forbidden_in_block
       applies_to: локальные переменные
       note: "локальная переменная не может повторить имя другой локальной в охватывающем блоке того же метода"
@@ -223,22 +348,22 @@ examples:
 assessment:
   readability:
     text: >
-      Явные типы в объявлениях и сигнатурах делают код самодокументируемым,
-      но многословным: обвязка классов и обязательные скобки увеличивают
+      Явные объявления и типы в сигнатурах помогают читать код,
+      но обвязка классов и скобки увеличивают
       объём по сравнению с Python и Kotlin.
-    concepts: [variants.1, variants.5, variants.9]
+    concepts: [bindings.introduction, typing.annotations, syntax.blocks, subprograms.placement]
   writability:
     text: >
       Перегрузка, `var`, лямбды и Stream API сократили код по сравнению с
       ранними версиями; отсутствие свободных функций, параметров по умолчанию
       и множественного присваивания остаётся.
-    concepts: [variants.7, variants.3, subprograms.default_args]
+    concepts: [subprograms.overloading, bindings.assignment, subprograms.default_args]
   reliability:
     text: >
       Статическая типизация и проверяемые исключения ловят ошибки на этапе
-      компиляции; `null` допустим в любой ссылке и остаётся главным
-      источником ошибок времени выполнения.
-    concepts: [typing.checking, errors.checked, typing.nullability]
+      компиляции; `null` допустим в ссылочных типах и остаётся одним из
+      источников ошибок времени выполнения.
+    concepts: [typing.checking, errors.checked_exceptions, typing.nullability]
   cost:
     text: >
       Зрелая экосистема JVM и инструменты; цена — многословность, время

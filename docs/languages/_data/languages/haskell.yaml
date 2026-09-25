@@ -1,0 +1,204 @@
+id: haskell
+publish: true
+default_profile: haskell2010
+
+meta:
+  name: Haskell
+  ru: Haskell
+  wikidata: Q34010
+  appeared:
+    value: 1990
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q34010", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Paul Hudak, John Hughes, Simon Peyton Jones, Philip Wadler]
+  organizations: [Haskell Committee]
+  website: https://www.haskell.org/
+  spec: https://www.haskell.org/onlinereport/haskell2010/
+  summary: >
+    Haskell 2010 — нестрогий чисто функциональный язык со статическими
+    полиморфными типами, алгебраическими данными и классами типов.
+    Вычисление по необходимости, сборщик памяти и дополнительные библиотеки
+    GHC выделены в слой реализации, а не приписаны нормативной семантике языка.
+
+versions: []
+profiles:
+  haskell2010: "Haskell 2010 Language Report; базовый профиль языка и его стандартных библиотек, без расширений GHC."
+  ghc: "GHC с базовым языковым режимом Haskell2010 и библиотекой base; свойства реализации отмечены отдельно. Конкретный выпуск и latest не заявляются."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "Имена вводятся определениями и параметрами; сигнатура типа — отдельное, часто необязательное объявление."
+    - value: pattern
+      note: "Образцы связывают переменные в уравнениях функций, case, let и генераторах списков."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html", title: "Haskell 2010, Declarations and Bindings"}
+  bindings.mutation:
+    - value: immutable
+      note: "Связывания неизменяемы. Повторное имя во внутренней области создаёт новое связывание, а IORef изменяет содержимое ячейки через IO, не перепривязывая чистую переменную."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html", title: "Haskell 2010, Let Expressions and Pattern Matching"}
+        - {url: "https://hackage.haskell.org/package/base-4.19.1.0/docs/Data-IORef.html", title: "GHC base: Data.IORef (reference snapshot)"}
+  bindings.assignment:
+    - value: immutable_definition
+      note: "Знак = вводит уравнение определения; <- в do связывает результат монадического действия. Ни то ни другое не является обычным изменяемым присваиванием."
+  scope.resolution:
+    - value: lexical
+  scope.constructs:
+    - value: module
+    - value: binding_form
+      note: "let и where задают лексические, в общем случае взаимно рекурсивные связывания."
+    - value: comprehension
+    - value: subprogram
+      applies_to: параметры и образцы уравнений функций
+  scope.globals:
+    - value: module_bindings
+      note: "Определения модуля неизменяемы; экспорт управляет видимостью для импортирующих модулей."
+  scope.shadowing:
+    - value: allowed
+      note: "Вложенные связывания могут скрывать внешние; повторные уравнения функции описывают одно определение, а не мутацию имени."
+  typing.checking:
+    - value: static
+      note: "Выражения проверяются до выполнения; полиморфизм и ограничения классов типов входят в статическую систему."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html", title: "Haskell 2010, Overview of Types and Classes"}
+  typing.annotations:
+    - value: optional
+      note: "Сигнатуры функций часто выводятся; объявления data/newtype и классов задают структуру типов явно."
+  typing.inference:
+    - value: true
+      note: "Вывод полиморфных типов с ограничениями классов; monomorphism restriction и defaulting влияют на итоговый тип."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html", title: "Haskell 2010, Static Semantics of Function and Pattern Bindings"}
+  typing.conversions:
+    - value: explicit
+      note: "fromIntegral, realToFrac и другие функции меняют числовое представление. Перегруженные литералы и defaulting не означают общего неявного приведения уже типизированных числовых значений."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch6.html", title: "Haskell 2010, Numbers and Numeric Conversions"}
+  typing.compatibility:
+    - value: nominal
+      applies_to: объявленные data/newtype
+      note: "Одинаковый набор полей не делает независимо объявленные типы совместимыми; type вводит синоним, newtype — отдельный тип."
+  typing.sum_types:
+    - value: tagged
+      note: "data может объявить несколько конструкторов; образцы различают альтернативы."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html", title: "Haskell 2010, Algebraic Datatype Declarations"}
+  typing.product_types:
+    - value: tuple
+    - value: record
+      note: "Кортежи и конструкторы с несколькими полями, в том числе именованными; record update создаёт новое значение."
+  typing.nullability:
+    - value: optional_type
+      layer: standard_library
+      note: "Maybe a различает Nothing и Just. undefined/bottom может встретиться в любом типе, но означает ошибку или расходимость вычисления, а не обычное отсутствие значения."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch6.html", title: "Haskell 2010, The Maybe Type"}
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html", title: "Haskell 2010, §3.1 Errors"}
+  control.selection:
+    - value: expression
+      note: "if/then/else возвращает значение; обе ветви имеют один тип."
+    - value: guards
+      note: "Охранные условия в уравнениях функций и альтернативах case."
+  control.switch:
+    - value: false
+      note: "case — сопоставление с образцом; отдельного switch только по значению нет."
+  control.pattern_matching:
+    - value: true
+      note: "Сопоставление по конструкторам, литералам и структуре; оно может потребовать вычисления значения, а ленивые образцы откладывают эту проверку."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch3.html", title: "Haskell 2010, §3.17 Pattern Matching"}
+  control.until:
+    - value: absent
+      note: "Prelude.until — функция высшего порядка, а не отдельная синтаксическая конструкция цикла."
+  control.iteration:
+    - value: comprehension
+      note: "Генераторы списков; ключевого слова for и обычного императивного цикла в Haskell 2010 нет."
+    - value: higher_order
+      layer: standard_library
+      note: "map, foldr и mapM/sequence выражают обходы; рекурсия — общий механизм повторения."
+  subprograms.overloading:
+    - value: false
+      applies_to: перегрузка отдельных функций по сигнатурам
+      note: "Одно имя функции не образует Java-подобный набор перегрузок. Ad-hoc полиморфизм операций выражается классами типов и экземплярами."
+  subprograms.parameter_passing:
+    - value: by_need
+      profile: ghc
+      layer: implementation
+      implementation: GHC
+      note: "Обычный механизм — разделяемые отложенные вычисления с обновлением thunk после вычисления. Анализ строгости может вычислить аргумент заранее, сохраняя семантику; Report требует нестрогость, а не конкретное представление thunk."
+      sources:
+        - {url: "https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/rts/storage/heap-objects", title: "GHC Commentary: Heap Objects (thunks and indirections)"}
+  subprograms.nesting:
+    - value: true
+      note: "Локальные именованные функции в let/where."
+  subprograms.closures:
+    - value: true
+      note: "Функции первого класса захватывают лексические связывания; частичное применение создаёт функции с оставшимися параметрами."
+  subprograms.lambda:
+    - value: true
+  subprograms.generics:
+    - value: true
+      note: "Параметрический полиморфизм функций и типов данных; ограничения классов добавляют доступные операции."
+  abstraction.contracts:
+    - value: type_classes
+      note: "class объявляет набор операций, instance — реализацию для типов. Это не класс объектов и не наследование реализации через CLOS/Java-классы."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch4.html", title: "Haskell 2010, Type Classes and Overloading"}
+  abstraction.modules:
+    - value: explicit_exports
+      note: "module/import, списки экспорта и квалифицированный импорт; при отсутствии списка экспорта действуют стандартные правила экспорта локальных определений."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch5.html", title: "Haskell 2010, Modules"}
+  evaluation.strategy:
+    - value: non_strict
+      profile: haskell2010
+      note: "Результат может не зависеть от вычисления аргумента. seq и строгие поля позволяют требовать вычисление; нестрогость не равна обещанию мемоизировать каждый вызов функции."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch6.html", title: "Haskell 2010, §6.2 Strict Evaluation"}
+  evaluation.effects:
+    - value: type_tracked
+      note: "Действия ввода-вывода имеют тип IO a; do — синтаксис монадического связывания, а не разрешение произвольной мутации чистых переменных."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch7.html", title: "Haskell 2010, Basic Input/Output"}
+  memory.management:
+    - value: gc
+      profile: ghc
+      layer: implementation
+      implementation: GHC
+      note: "Среда выполнения управляет кучей и сборкой мусора; конкретный алгоритм и настройки — свойства GHC, а не Report."
+      sources:
+        - {url: "https://downloads.haskell.org/ghc/9.8.2/docs/users_guide/runtime_control.html", title: "GHC User's Guide: RTS control and garbage collection (reference snapshot)"}
+  errors.model:
+    - value: result_type
+      layer: standard_library
+      note: "Either e a позволяет явно возвращать ошибку как данные; обработка выражается сопоставлением или функциями."
+    - value: exceptions
+      profile: haskell2010
+      layer: standard_library
+      applies_to: ошибки IO
+      note: "Report задаёт IOError и catch/ioError для IO. Ошибки чистых выражений описаны как bottom, а не как универсально перехватываемые исключения."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch7.html", title: "Haskell 2010, Exception Handling in the I/O Monad"}
+    - value: exceptions
+      profile: ghc
+      layer: implementation
+      implementation: GHC / base
+      applies_to: Control.Exception
+      note: "Расширяет модель типизированными синхронными и асинхронными исключениями; bracket/finally — библиотечные комбинаторы очистки, не конструкции синтаксиса Haskell 2010."
+      sources:
+        - {url: "https://hackage.haskell.org/package/base-4.19.1.0/docs/Control-Exception.html", title: "GHC base: Control.Exception (reference snapshot)"}
+  resources.io:
+    - value: stdlib
+      layer: standard_library
+      note: "Prelude и System.IO предоставляют действия чтения, записи и работы с потоками; чистое выражение не выполняет I/O само по себе."
+  syntax.blocks:
+    - value: indentation
+      note: "Layout rule вставляет границы групп объявлений и do/case по отступам."
+    - value: explicit
+      note: "Те же группы могут использовать явные фигурные скобки и точки с запятой; синтаксис смешанный, а не только отступы."
+      sources:
+        - {url: "https://www.haskell.org/onlinereport/haskell2010/haskellch2.html", title: "Haskell 2010, §2.7 Layout"}
+  paradigm.supported:
+    - value: functional
+    - value: declarative

@@ -1,0 +1,59 @@
+# Учебные пункты ссылаются на независимые понятия, а не определяют онтологию.
+schema_version: 1
+mappings:
+  - id: 'variants.1'
+    title: Объявление переменных
+    concepts: [bindings.introduction, typing.annotations, typing.inference]
+    note: "Явное введение имени, наличие аннотации и вывод типа независимы: Java var и Rust let вводят имя явно даже без написанного типа."
+  - id: 'variants.2'
+    title: Преобразование типов
+    concepts: [typing.conversions]
+    note: "Язык может поддерживать и явные преобразования, и ограниченные coercions; допустимость и потеря точности описываются для конкретных типов."
+  - id: 'variants.3'
+    title: Оператор присваивания
+    concepts: [bindings.assignment, bindings.mutation]
+    note: "Одиночное и распаковывающее присваивание отделены от возможности перепривязки. Унификация Prolog и неизменяемые определения Haskell не являются обычным изменяющим присваиванием."
+  - id: 'variants.4'
+    title: Структуры, ограничивающие область видимости
+    concepts: [scope.constructs, scope.resolution, scope.shadowing]
+    note: "Какая конструкция вводит область, как разрешаются имена и разрешено ли скрывать внешнее имя — разные вопросы; область класса или comprehension не сводится к подпрограмме."
+  - id: 'variants.5'
+    title: Маркер блочного оператора
+    concepts: [syntax.blocks, scope.constructs]
+    note: "Синтаксическая группа может не создавать область видимости. Учитываются явные разделители, отступы и S-выражения без требования блочного оператора во всех языках."
+  - id: 'variants.6'
+    title: Условные операторы
+    concepts: [control.selection, control.switch, control.pattern_matching]
+    note: "Условный выбор, switch по значениям и структурное сопоставление учитываются независимо; Python match не означает наличие отдельного switch."
+  - id: 'variants.7'
+    title: Перегрузка подпрограмм
+    concepts: [subprograms.overloading, abstraction.dispatch, abstraction.contracts]
+    note: "Перегрузка по сигнатуре отличается от динамической диспетчеризации, трейтов Rust, классов типов Haskell и generic functions Common Lisp."
+  - id: 'variants.8'
+    title: Передача параметров в подпрограмму
+    concepts: [subprograms.parameter_passing, memory.transfer, evaluation.strategy]
+    note: "Связывание параметра отделено от копирования, перемещения владения и заимствования. Rust передаёт значения, включая ссылки; C# out — ссылка для выходного параметра, не обязательно copy-out. Для нестрогих языков отдельно учитывается вычисление аргумента."
+  - id: 'variants.9'
+    title: Допустимое место объявления подпрограмм
+    concepts: [subprograms.placement, subprograms.nesting, subprograms.closures]
+    note: "Размещение, вложенность именованной функции и захват окружения независимы: вложенная Rust fn не захватывает окружение, Java lambda захватывает его без вложенного метода."
+  - id: 'req.4'
+    title: Ввод-вывод
+    concepts: [resources.io, evaluation.effects, errors.model]
+    note: "read/write сопоставляются с API языка или библиотеки; эффект ввода-вывода (например IO в Haskell) и канал ошибки описываются отдельно."
+  - id: 'req.7.2.until'
+    title: Цикл until
+    concepts: [control.until]
+    note: "Until прекращает повторение при истинном условии. Предусловие while-not может выполнить тело ноль раз; постусловие repeat-until выполняет тело хотя бы раз. Учебную форму нужно уточнять по положению проверки."
+  - id: 'req.7.2.do_while'
+    title: Цикл do-while
+    concepts: [control.do_while, control.until]
+    note: "Do-while проверяет условие после тела и продолжает при истине; repeat-until также имеет постусловие, но противоположную полярность. Эмуляция через loop/break не означает наличие отдельной конструкции."
+  - id: 'req.7.3'
+    title: Цикл for
+    concepts: [control.iteration]
+    note: "C-style for, обход итератора, comprehension и функции обхода представляют разные механизмы; range не превращает Python for в трёхчастный C-style for."
+  - id: 'req.8.2'
+    title: Глобальная область видимости для переменных
+    concepts: [scope.globals, scope.resolution, bindings.mutation]
+    note: "Различаются глобальные переменные, модульные связывания и статические члены; доступность имени не означает изменяемость или динамическую область видимости."

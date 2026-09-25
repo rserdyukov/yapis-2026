@@ -1,0 +1,178 @@
+id: javascript
+publish: true
+default_profile: es2024
+
+meta:
+  name: JavaScript
+  ru: JavaScript
+  wikidata: Q2005
+  appeared:
+    value: 1995
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q2005", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Brendan Eich]
+  organizations: [Netscape, Ecma International TC39]
+  website: https://tc39.es/
+  spec: https://262.ecma-international.org/15.0/
+  summary: >
+    JavaScript описан здесь как ECMAScript 2024 с динамическими типами,
+    прототипными объектами и функциями первого класса.
+    Ввод-вывод предоставляется хостом (например, браузером или Node.js), а не самим ECMAScript.
+
+versions: []
+profiles:
+  es2024: "ECMA-262, 15-я редакция (ECMAScript 2024); общий базовый профиль, если не указан strict или sloppy."
+  strict: "ECMAScript 2024, strict mode: модули и тела классов всегда строгие, скрипты/функции могут включить use strict."
+  sloppy: "ECMAScript 2024, нестрогий код Script/функций; не применяется к модулям и телам классов."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "let, const, var, объявления функций и классов."
+    - value: pattern
+      note: "Деструктурирующие объявления и параметры."
+    - value: assignment
+      profile: sloppy
+      applies_to: присваивание неразрешимому имени
+      note: "В обычном хосте может создать свойство глобального объекта, а не лексическое let-связывание. В strict mode такое присваивание вызывает ReferenceError."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-putvalue", title: "ECMA-262 2024, PutValue"}
+  bindings.mutation:
+    - value: rebindable
+      applies_to: let и var
+    - value: immutable
+      applies_to: const
+      note: "const запрещает перепривязку; объект, на который ссылается значение, может быть изменяемым."
+  bindings.assignment:
+    - value: single
+    - value: multiple
+      note: "Деструктуризация массивов и объектов; это также возможно при присваивании существующим переменным."
+  scope.resolution:
+    - value: lexical
+      profile: strict
+      note: "with запрещён; direct eval не добавляет var-связывания в окружение вызывающего."
+    - value: lexical
+      profile: sloppy
+      note: "Лексическая основа с исключениями: with добавляет объектное окружение, а direct eval может вводить var в окружение вызывающего. Это не общая динамическая область переменных по стеку вызовов."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-strict-mode-code", title: "ECMA-262 2024, Strict Mode Code"}
+  scope.constructs:
+    - value: subprogram
+    - value: block
+      note: "let/const имеют область блока; var — область функции либо скрипта."
+    - value: module
+    - value: class
+      note: "Именование класса и приватные имена; обычное поле не становится лексической переменной метода."
+  scope.globals:
+    - value: globals
+      note: "В Script глобальные var и глобальные лексические let/const представлены разными частями окружения."
+    - value: module_bindings
+      note: "Имена верхнего уровня модуля не становятся свойствами глобального объекта."
+  scope.shadowing:
+    - value: allowed
+      note: "Вложенное let может скрывать внешнее имя; повторное лексическое объявление в одной области запрещено."
+  typing.checking:
+    - value: dynamic
+  typing.annotations:
+    - value: absent
+      note: "Аннотации TypeScript не входят в ECMAScript 2024."
+  typing.conversions:
+    - value: implicit
+      note: "Операторы применяют ToPrimitive/ToNumber/ToString/ToBoolean по своим правилам; смешанная арифметика Number и BigInt обычно вызывает TypeError."
+    - value: explicit
+      note: "Number, String, Boolean и BigInt выполняют преобразования значений."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-type-conversion", title: "ECMA-262 2024, Type Conversion"}
+  typing.compatibility:
+    - value: duck
+      note: "Пользовательские протоколы часто зависят от свойств и вызываемых методов; встроенные операции могут дополнительно проверять внутренние слоты и brand объекта."
+  typing.nullability:
+    - value: sentinel
+      note: "null и undefined — разные значения; большинство обращений к их свойствам вызывает TypeError."
+  control.selection:
+    - value: statement
+    - value: expression
+      note: "if/else и ?: используют проверку истинности, а не требование значения типа Boolean."
+  control.switch:
+    - value: true
+      note: "Сравнение case использует строгое равенство; возможен fall-through."
+  control.pattern_matching:
+    - value: false
+      profile: es2024
+      note: "Деструктуризация есть, но отдельной конструкции match в этой редакции нет."
+  control.iteration:
+    - value: c_style
+    - value: foreach
+      note: "for-of обходит iterable; for-in перечисляет перечислимые строковые ключи, включая унаследованные."
+    - value: higher_order
+      layer: standard_library
+      note: "Методы Array.prototype.map/filter/forEach."
+  control.do_while:
+    - value: true
+  subprograms.overloading:
+    - value: false
+      note: "Нет выбора перегрузки по статическим типам сигнатур; функция может сама анализировать аргументы."
+  subprograms.parameter_passing:
+    - value: by_value
+      applies_to: значения аргументов
+      note: "Присваивание параметру не изменяет переменную вызывающего."
+    - value: by_sharing
+      applies_to: объектные значения
+      note: "Вызывающий и параметр могут обозначать один объект; изменение его свойств наблюдаемо с обеих сторон."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-functiondeclarationinstantiation", title: "ECMA-262 2024, FunctionDeclarationInstantiation"}
+  subprograms.nesting:
+    - value: true
+  subprograms.closures:
+    - value: true
+      note: "Функция сохраняет лексическое окружение; стрелочная функция также использует лексический this."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-ordinaryfunctioncreate", title: "ECMA-262 2024, OrdinaryFunctionCreate"}
+  subprograms.lambda:
+    - value: true
+      note: "Function expressions и arrow functions."
+  subprograms.default_args:
+    - value: true
+      note: "Инициализатор параметра вычисляется при вызове, если аргумент отсутствует или равен undefined."
+  abstraction.inheritance:
+    - value: single
+      note: "Обычный объект имеет одну цепочку [[Prototype]]; class extends использует прототипное наследование."
+  abstraction.modules:
+    - value: explicit_exports
+      note: "import/export и live bindings; разрешение спецификатора модуля и его загрузка зависят от хоста."
+  evaluation.strategy:
+    - value: strict
+      note: "Обычные аргументы вычисляются слева направо перед вызовом; генераторы откладывают выполнение тела, а не произвольных аргументов."
+  evaluation.tail_calls:
+    - value: true
+      profile: strict
+      note: "Спецификация требует proper tail calls для определённых хвостовых позиций; это не утверждение о поддержке всеми движками."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-tail-position-calls", title: "ECMA-262 2024, Tail Position Calls"}
+    - value: false
+      profile: sloppy
+      note: "Нестрогий код не получает этой гарантии спецификации."
+  memory.transfer:
+    - value: shared_reference
+      applies_to: объекты
+      note: "Присваивание не копирует граф объекта."
+  errors.model:
+    - value: exceptions
+      note: "throw принимает любое значение; try/catch перехватывает исключительное завершение."
+  resources.cleanup:
+    - value: finally
+      note: "try/finally выполняет очистку при обычном и исключительном выходе; возврат или throw из finally может заменить исходный результат."
+  resources.concurrency:
+    - value: async_await
+      note: "async/await и Promise координируют асинхронные вычисления; источники событий, I/O и запуск workers задаёт хост."
+      sources:
+        - {url: "https://262.ecma-international.org/15.0/#sec-async-function-definitions", title: "ECMA-262 2024, Async Function Definitions"}
+  syntax.blocks:
+    - value: explicit
+  syntax.statement_terminator:
+    - value: optional_semicolon
+      note: "Automatic Semicolon Insertion действует по формальным правилам; перенос строки не всегда эквивалентен точке с запятой."
+  paradigm.supported:
+    - value: imperative
+    - value: object_oriented
+    - value: functional

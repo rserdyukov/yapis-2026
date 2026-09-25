@@ -1,0 +1,5 @@
+loadFile("Ohm.mo");
+simulate(Ohm.FromVoltage, stopTime=1.0);
+val(i, 1.0);
+simulate(Ohm.FromCurrent, stopTime=1.0);
+val(v, 1.0);

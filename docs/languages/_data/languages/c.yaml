@@ -1,0 +1,153 @@
+id: c
+publish: true
+default_profile: c17
+
+meta:
+  name: C
+  ru: C
+  wikidata: Q15777
+  appeared:
+    value: 1972
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q15777", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Dennis M. Ritchie]
+  organizations: [Bell Labs]
+  website: https://www.open-std.org/jtc1/sc22/wg14/
+  spec: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf
+  summary: >
+    C17 — процедурный язык со статическими типами, адресуемыми объектами и
+    явным управлением динамической памятью.
+    Базовая среда — hosted C17; расширения отдельных компиляторов не включены.
+
+versions: []
+profiles:
+  c17: "ISO/IEC 9899:2018 (C17), hosted-реализация; все записи относятся к этому базовому профилю. Источник — проект WG14 N2176."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "Объекты и функции объявляются; C17 не допускает implicit int."
+  bindings.mutation:
+    - value: rebindable
+      note: "Присваивание меняет значение объекта, обозначенного именем; имя не меняет объявленный тип."
+    - value: immutable
+      applies_to: объекты с const-квалифицированным типом
+      note: "const ограничивает изменение объекта; const-указатель и указатель на const — разные типы."
+  bindings.assignment:
+    - value: single
+      note: "Левая часть — модифицируемое lvalue; цепочка присваиваний состоит из отдельных выражений."
+  scope.resolution:
+    - value: lexical
+  scope.constructs:
+    - value: block
+    - value: subprogram
+      applies_to: метки функции
+      note: "Область функции в терминологии C относится к меткам; параметры определения находятся в области блока."
+  scope.globals:
+    - value: globals
+      note: "Файловая область видимости; external/internal linkage определяет связь имён между единицами трансляции."
+  scope.shadowing:
+    - value: allowed
+      note: "Объявление во вложенном блоке может скрыть внешнее."
+  typing.checking:
+    - value: static
+      note: "Статические ограничения типов не исключают неопределённого поведения при выполнении."
+  typing.annotations:
+    - value: required
+      note: "Спецификаторы типа входят в объявления объектов, параметров и функций."
+  typing.inference:
+    - value: false
+      profile: c17
+      note: "Нет вывода типа объявления из инициализатора; auto в C17 — спецификатор класса хранения. Типы выражений определяются статически."
+  typing.conversions:
+    - value: implicit
+      note: "Целочисленные продвижения, обычные арифметические преобразования и преобразования при присваивании могут менять диапазон и точность."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.3 Conversions"}
+    - value: explicit
+      note: "Cast явно задаёт преобразование; не делает произвольное преобразование указателя или последующее обращение безопасным."
+  typing.product_types:
+    - value: record
+      note: "struct объединяет именованные поля; union использует перекрывающееся хранение и не содержит встроенной метки варианта."
+  typing.nullability:
+    - value: sentinel
+      note: "Null pointer обозначает отсутствие адресуемого объекта или функции; разыменование недопустимо. NULL — макрос стандартной библиотеки."
+  control.selection:
+    - value: statement
+      note: "if/else; скалярное условие сравнивается с нулём."
+    - value: expression
+      note: "Условный оператор ?: вычисляет только выбранный операнд."
+  control.switch:
+    - value: true
+      note: "switch по целочисленному значению; переход к следующей ветви возможен без break."
+  control.pattern_matching:
+    - value: false
+  control.iteration:
+    - value: c_style
+      note: "for; также есть while и do-while."
+  control.do_while:
+    - value: true
+  subprograms.overloading:
+    - value: false
+      note: "Функции не перегружаются по типам параметров. _Generic выбирает выражение по типу, но не создаёт перегруженные функции."
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Параметр получает значение аргумента. Указатель также копируется по значению; через него можно менять объект вызывающего. Массив в объявлении параметра корректируется до указателя."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.5.2.2 Function calls; §6.7.6.3 Function declarators"}
+  subprograms.placement:
+    - value: declaration_region
+      note: "Определения функций находятся на внешнем уровне единицы трансляции; объявить прототип можно и в блоке."
+  subprograms.nesting:
+    - value: false
+      note: "Вложенные определения функций — расширение, например GNU C, а не C17."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.9 External definitions"}
+  subprograms.closures:
+    - value: false
+      note: "Указатель на функцию не захватывает локальное окружение; контекст callback передают отдельно."
+  subprograms.lambda:
+    - value: false
+  abstraction.modules:
+    - value: textual_inclusion
+      note: "#include текстуально включает заголовок; единицы трансляции связываются посредством linkage."
+  evaluation.strategy:
+    - value: strict
+      note: "Аргументы вычисляются перед входом в функцию; порядок вычисления разных аргументов не задан."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.5.2.2 Function calls"}
+  memory.management:
+    - value: manual
+      layer: standard_library
+      applies_to: динамически выделенная память
+      note: "malloc/calloc/realloc и free; автоматические объекты имеют время жизни, определяемое областью выполнения, и не требуют free."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.2.4 Storage durations; §7.22.3 Memory management"}
+  memory.transfer:
+    - value: copy
+      note: "Присваивание структур и указателей копирует значение; копия указателя не передаёт и не проверяет владение выделенной памятью."
+  errors.model:
+    - value: error_code
+      layer: standard_library
+      note: "Библиотечные функции используют возвращаемые коды, специальные значения и в определённых случаях errno. Проверка ошибок возложена на вызывающего."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §7.5 Errors; §7.21 Input/output"}
+  resources.cleanup:
+    - value: manual
+      note: "free и fclose вызываются явно. longjmp не запускает автоматическую очистку пользовательских ресурсов."
+  resources.io:
+    - value: stdlib
+      layer: standard_library
+      profile: c17
+      note: "stdio.h задаёт потоки FILE и операции ввода-вывода; наличие всего hosted API не требуется от freestanding-реализации."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §7.21 Input/output"}
+  syntax.blocks:
+    - value: explicit
+      note: "Составные операторы ограничены фигурными скобками."
+  syntax.metaprogramming:
+    - value: textual_macros
+      note: "Препроцессор заменяет последовательности preprocessing tokens; макросы не имеют лексической гигиены."
+  paradigm.supported:
+    - value: imperative
+    - value: procedural

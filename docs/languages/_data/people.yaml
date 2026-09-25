@@ -1,0 +1,214 @@
+# Люди онтологии: авторы языков и формальной теории, на которую опирается курс.
+#
+# Связи хранятся в одном направлении и строятся в обратную сторону генератором:
+#   person.languages  → карточка языка показывает «Люди»
+#   person.concepts   → словарь показывает «Люди» у понятия
+#   person.lectures   → номер колоды docs/lectures/slides/NN-*.md
+#   source.people     → в sources.yaml; у человека строится список источников
+#
+# summary — короткое проверяемое утверждение о вкладе, а не биография.
+# wikidata — идентификатор для проверки имени и связей (проверено 2026-09-24).
+schema_version: 1
+people:
+  # --- авторы языков каталога
+  - id: ritchie
+    name: Dennis M. Ritchie
+    ru: Деннис Ритчи
+    wikidata: Q45575
+    summary: Создатель языка C и соавтор операционной системы Unix в Bell Labs.
+    languages: [c]
+
+  - id: stroustrup
+    name: Bjarne Stroustrup
+    ru: Бьёрн Страуструп
+    wikidata: Q92620
+    summary: Создатель C++; ввёл термин RAII — связывание освобождения ресурса со временем жизни объекта.
+    languages: [cpp]
+    concepts: [resources.cleanup]
+
+  - id: van-rossum
+    name: Guido van Rossum
+    ru: Гвидо ван Россум
+    wikidata: Q30942
+    summary: Автор Python; руководил развитием языка до 2018 года.
+    languages: [python]
+
+  - id: gosling
+    name: James Gosling
+    ru: Джеймс Гослинг
+    wikidata: Q92622
+    summary: Ведущий разработчик Java в Sun Microsystems и соавтор спецификации языка.
+    languages: [java]
+
+  - id: graydon-hoare
+    name: Graydon Hoare
+    ru: Грэйдон Хор
+    wikidata: Q28937563
+    summary: Начал Rust как личный проект; затем язык развивался в Mozilla Research.
+    languages: [rust]
+
+  - id: eich
+    name: Brendan Eich
+    ru: Брендан Эйх
+    wikidata: Q92648
+    summary: Создал первую реализацию JavaScript в Netscape в 1995 году и участвовал в стандартизации ECMAScript.
+    languages: [javascript]
+
+  - id: hejlsberg
+    name: Anders Hejlsberg
+    ru: Андерс Хейлсберг
+    wikidata: Q316544
+    summary: Автор Turbo Pascal; ведущий архитектор Delphi, C# и TypeScript.
+    languages: [csharp, typescript]
+
+  - id: colmerauer
+    name: Alain Colmerauer
+    ru: Ален Колмероэ
+    wikidata: Q93072
+    summary: Руководил созданием Prolog в Марселе в 1972 году.
+    languages: [prolog]
+    concepts: [control.logic_search]
+
+  - id: roussel
+    name: Philippe Roussel
+    ru: Филипп Руссель
+    wikidata: Q3380671
+    summary: Автор первой реализации Prolog.
+    languages: [prolog]
+
+  - id: kowalski
+    name: Robert Kowalski
+    ru: Роберт Ковальский
+    wikidata: Q3490465
+    summary: Предложил процедурную интерпретацию хорновских дизъюнктов — логическую основу Prolog.
+    languages: [prolog]
+    concepts: [control.logic_search]
+
+  - id: steele
+    name: Guy L. Steele Jr.
+    ru: Гай Стил
+    wikidata: Q92991
+    summary: Автор «Common Lisp the Language», соавтор Scheme и спецификации Java.
+    languages: [common-lisp, java]
+    concepts: [control.continuation_extent]
+
+  - id: gabriel
+    name: Richard P. Gabriel
+    ru: Ричард Гэбриел
+    wikidata: Q7328227
+    summary: Участник проектирования Common Lisp и соавтор спецификации CLOS.
+    languages: [common-lisp]
+    concepts: [abstraction.dispatch]
+
+  - id: fahlman
+    name: Scott E. Fahlman
+    ru: Скотт Фалман
+    wikidata: Q92769
+    summary: Один из основных участников проектирования Common Lisp в Carnegie Mellon University.
+    languages: [common-lisp]
+
+  - id: moon
+    name: David A. Moon
+    ru: Дэвид Мун
+    wikidata: Q5237671
+    summary: Участник проектирования Common Lisp и CLOS, разработчик Lisp-машин.
+    languages: [common-lisp]
+    concepts: [abstraction.dispatch]
+
+  - id: hudak
+    name: Paul Hudak
+    ru: Пол Худак
+    wikidata: Q15432950
+    summary: Один из редакторов первого отчёта о языке Haskell.
+    languages: [haskell]
+    concepts: [evaluation.strategy]
+
+  - id: peyton-jones
+    name: Simon Peyton Jones
+    ru: Саймон Пейтон-Джонс
+    wikidata: Q92949
+    summary: Участник комитета Haskell и один из ведущих разработчиков компилятора GHC.
+    languages: [haskell]
+    concepts: [evaluation.strategy, evaluation.effects]
+
+  - id: wadler
+    name: Philip Wadler
+    ru: Филип Уодлер
+    wikidata: Q3379094
+    summary: Участник комитета Haskell; вместе со Стивеном Блоттом предложил классы типов.
+    languages: [haskell]
+    concepts: [abstraction.contracts, subprograms.overloading]
+
+  - id: hughes
+    name: John Hughes
+    ru: Джон Хьюз
+    wikidata: Q5815940
+    summary: Участник комитета Haskell, автор статьи «Why Functional Programming Matters».
+    languages: [haskell]
+
+  # --- формальная теория и трансляция
+  - id: chomsky
+    name: Noam Chomsky
+    ru: Ноам Хомский
+    wikidata: Q9049
+    summary: Лингвист; предложил иерархию формальных грамматик, на которую опирается теория синтаксического анализа.
+    lectures: ["02", "04", "05"]
+
+  - id: backus
+    name: John Backus
+    ru: Джон Бэкус
+    wikidata: Q92746
+    summary: Руководил созданием Fortran; предложил нотацию описания синтаксиса ALGOL 60 — форму Бэкуса — Наура.
+    lectures: ["05"]
+
+  - id: knuth
+    name: Donald E. Knuth
+    ru: Дональд Кнут
+    wikidata: Q17457
+    summary: Ввёл LR(k)-грамматики и атрибутные грамматики.
+    lectures: ["06", "07"]
+
+  - id: perlis
+    name: Alan J. Perlis
+    ru: Алан Перлис
+    wikidata: Q62861
+    summary: Участник создания ALGOL, первый лауреат премии Тьюринга, автор «Epigrams on Programming».
+
+  - id: iverson
+    name: Kenneth E. Iverson
+    ru: Кеннет Айверсон
+    wikidata: Q92629
+    summary: Создатель APL; тьюринговская лекция «Notation as a Tool of Thought».
+    concepts: [evaluation.rank_lifting]
+
+  - id: aho
+    name: Alfred V. Aho
+    ru: Альфред Ахо
+    wikidata: Q62898
+    summary: "Соавтор книги «Компиляторы: принципы, технологии и инструменты» и языка AWK."
+    lectures: ["10", "11", "12"]
+
+  - id: sethi
+    name: Ravi Sethi
+    ru: Рави Сети
+    wikidata: Q253960
+    summary: "Соавтор книги «Компиляторы: принципы, технологии и инструменты»."
+
+  - id: ullman
+    name: Jeffrey D. Ullman
+    ru: Джеффри Ульман
+    wikidata: Q92794
+    summary: "Соавтор книги «Компиляторы: принципы, технологии и инструменты»."
+
+  - id: parr
+    name: Terence Parr
+    ru: Теренс Парр
+    wikidata: Q7701985
+    summary: Автор генератора анализаторов ANTLR.
+    lectures: ["09"]
+
+  - id: nystrom
+    name: Robert Nystrom
+    ru: Роберт Нистром
+    wikidata: Q120652994
+    summary: Автор книги «Crafting Interpreters» о реализации интерпретаторов.

@@ -1,0 +1,9 @@
+procedure main()
+   local text, first
+   text := "abxxabxxab"
+   first := find("ab", text)
+   write(first)
+   write(5 < find("ab", text))
+   if 5 < first then write(first) else write("stored: fail")
+   every write(find("ab", text))
+end

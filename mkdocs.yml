@@ -17,16 +17,41 @@ nav:
       - course/index.md
       - Лекции: lectures/index.md
       - Лабораторный практикум: labs/index.md
-      - Варианты заданий: labs/variants.md
+      - Практические занятия:
+          - practice/index.md
+          - "Задача 1. Конечный автомат": practice/task1.md
+          - "Задача 2. КС-грамматика": practice/task2.md
+          - "Задача 3. Предиктивный анализатор": practice/task3.md
+          - "Задача 4. SLR-анализатор": practice/task4.md
+          - "Задача 5. СУ-трансляция": practice/task5.md
+      - Тесты: tests/index.md
+      - "HOWTO: генерация кода": labs/codegen-howto.md
+      - Решения прошлого года: labs/past-works.md
+      - Связь с практикумом: languages/lab-mapping.md
+  # Порядок языков — по году появления, как в каталоге (build-catalog.py);
+  # совпадение проверяет tools/tests/test_catalog.py.
   - Каталог языков:
       - languages/index.md
+      - C: languages/c.md
+      - Prolog: languages/prolog.md
+      - C++: languages/cpp.md
+      - Common Lisp: languages/common-lisp.md
+      - Haskell: languages/haskell.md
       - Python: languages/python.md
       - Java: languages/java.md
+      - JavaScript: languages/javascript.md
+      - C#: languages/csharp.md
       - Rust: languages/rust.md
-  - Концепции:
+      - TypeScript: languages/typescript.md
+  - Онтология:
       - concepts/index.md
-      - Онтология: languages/concepts.md
-      - Книги и ресурсы: materials/index.md
+      - Понятия: languages/glossary.md
+      - Люди: languages/people.md
+      - Источники: languages/sources.md
+      - Сравнение языков: languages/concepts.md
+      - Различающие примеры: concepts/examples/index.md
+      - Проверочные вопросы: languages/questions.md
+      - Карта языков: concepts/language-map.md
   - Цифровой сад: garden/index.md
 
 extra_css:
@@ -95,6 +120,7 @@ markdown_extensions:
       base_path:
         - docs/_partials
         - docs/languages/_data
+        - docs/concepts/examples
       check_paths: true
       # Секции кода вырезаются из тела функций — убрать общий отступ.
       dedent_subsections: true

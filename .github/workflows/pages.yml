@@ -2,10 +2,10 @@ name: pages
 
 # Сборка и публикация сайта курса на GitHub Pages.
 #
-# Сайт собирается из docs/: практикум и варианты — обычные страницы MkDocs,
+# Сайт собирается из docs/: практикум с вариантами собирается build-docs.py,
 # лекции — HTML, который marp-cli делает из колод docs/lectures/slides/,
-# каталог языков — страницы, которые build-catalog.py собирает из YAML
-# в docs/languages/_data/.
+# каталог языков и онтология (понятия, люди, источники) — страницы, которые
+# build-catalog.py собирает из YAML в docs/languages/_data/.
 #
 # Деплой идёт артефактом через actions/deploy-pages: ветка gh-pages не
 # создаётся и в main ничего не пишется, поэтому guard-main.yml не срабатывает.

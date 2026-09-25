@@ -84,10 +84,10 @@ cd admin
 | Что | Источник |
 |---|---|
 | Требования практикума | `docs/_partials/` → сайт **и** `TASK.md` студента |
-| Варианты заданий | `docs/labs/variants.md` |
+| Варианты заданий | `docs/_partials/variants.md` (собирается в `docs/labs/index.md`) |
 | Лекции | `docs/lectures/slides/*.md` (Marp) → HTML |
 | Каталог языков | `docs/languages/_data/` (YAML, примеры, грамматики) → `docs/languages/*.md` |
-| Дополнительные материалы | `docs/materials/` |
+| Люди и источники онтологии | `docs/languages/_data/people.yaml`, `sources.yaml` → `docs/languages/people.md`, `sources.md` |
 
 Текст задания хранится в одном экземпляре: `admin/template-TASK.md` и
 `docs/labs/index.md` **собираются из партиалов** и руками не правятся.
@@ -110,6 +110,11 @@ mkdocs serve                    # локальный просмотр сайта
 ## Тесты
 
 ### Публикация материалов сайта
+
+Словарь определений, типизированные связи и 15 проверочных вопросов редактируются
+в `docs/languages/_data/concept-guide.yaml`. После правок запускайте
+`python3 tools/build-catalog.py`: обновятся `glossary.md`, `questions.md` и
+определения в `concepts.md`. Подробнее — в README каталога данных.
 
 В начале готовой Markdown-страницы или колоды Marp укажите:
 
@@ -155,6 +160,19 @@ python3 -m unittest discover -s tools/tests -v
 перечислены как план развития. Старые адреса лабораторных и лекций сохранены.
 
 ### Проверки инфраструктуры
+
+Различающие примеры языков находятся в `docs/concepts/examples/`.
+Описание включает исходники через snippets, ожидаемый результат и статус запуска.
+Повторить шесть пакетов, для которых подготовлен автоматический прогон:
+
+```bash
+python3 tools/check-concept-examples.py
+# В подготовленной среде со всеми шестью toolchain:
+python3 tools/check-concept-examples.py --require-all
+```
+
+Отсутствующий компилятор означает SKIP, не успешную проверку. Остальные девять
+пакетов описаны на странице примеров с отдельными командами и пометкой «без запуска».
 
 Логика проверок покрыта тестами, не обращающимися к API модели:
 

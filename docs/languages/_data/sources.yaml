@@ -1,0 +1,381 @@
+# Источники онтологии: книги, статьи, конференции, сайты, документация и
+# инструменты. Заменяет ручную страницу «Книги и ресурсы».
+#
+# kind      book | article | conference | site | documentation | tool
+# people    id из people.yaml — авторы или ключевые участники (обратная связь
+#           «Источники» у человека строится генератором)
+# authors   авторы, которых нет в people.yaml (свободный текст)
+# languages id карточек каталога; concepts — id понятий онтологии;
+# lectures  номера колод docs/lectures/slides/NN-*.md;
+# labs      номера лабораторных работ, к которым источник полезен
+# topic     подзаголовок группы для documentation/tool
+# note      зачем читать — обязательное поле: ссылка без причины не нужна
+#
+# DOI сверены с Crossref 2026-09-24.
+schema_version: 1
+sources:
+  # --- книги курса
+  - id: orlov-2013
+    kind: book
+    authors: [Орлов С. А.]
+    title: Теория и практика языков программирования
+    year: 2013
+    venue: "СПб.: Питер"
+    note: Основной учебник курса по устройству и классификации языков программирования.
+    lectures: ["02", "03", "20"]
+
+  - id: aho-sethi-ullman
+    kind: book
+    people: [aho, sethi, ullman]
+    title: "Компиляторы: принципы, технологии и инструменты"
+    year: 2001
+    venue: "Пер. с англ. М.: Вильямс"
+    note: Классический учебник по лексическому и синтаксическому анализу, промежуточному коду и оптимизации.
+    lectures: ["04", "05", "06", "07", "10", "11", "12"]
+    labs: [2, 3, 4, 5]
+
+  - id: sebesta
+    kind: book
+    authors: [Себеста Р. У.]
+    title: Основные концепции языков программирования, 5-е изд.
+    year: 2001
+    venue: "Пер. с англ. М.: Вильямс"
+    note: Сравнение конструкций языков и критерии их оценки; основа лекции о критериях.
+    lectures: ["20"]
+    concepts: [scope.resolution, subprograms.parameter_passing, typing.checking]
+
+  - id: stroustrup-de
+    kind: book
+    people: [stroustrup]
+    title: Дизайн и эволюция C++
+    year: 2006
+    venue: "Пер. с англ. М.: ДМК Пресс; СПб.: Питер"
+    note: Как автор языка обосновывает конкретные проектные решения и компромиссы.
+    languages: [cpp]
+    concepts: [resources.cleanup, subprograms.overloading]
+
+  - id: nepeivoda
+    kind: book
+    authors: [Непейвода Н. Н.]
+    title: Стили и методы программирования
+    year: 2016
+    note: Стили и парадигмы программирования как разные способы мышления о задаче.
+    lectures: ["02"]
+    concepts: [paradigm.supported]
+
+  - id: crafting-interpreters
+    kind: book
+    people: [nystrom]
+    title: Crafting Interpreters
+    year: 2021
+    url: https://craftinginterpreters.com/
+    note: Бесплатная онлайн-книга; пошаговая реализация интерпретатора и компилятора в байт-код.
+    labs: [3, 4, 5]
+
+  - id: antlr-reference
+    kind: book
+    people: [parr]
+    title: The Definitive ANTLR 4 Reference
+    year: 2013
+    venue: "Pragmatic Bookshelf"
+    url: https://pragprog.com/titles/tpantlr2/the-definitive-antlr-4-reference/
+    note: Справочник автора ANTLR по грамматикам, visitor/listener и обработке ошибок.
+    lectures: ["09"]
+    labs: [2, 3]
+
+  # --- статьи
+  - id: perlis-epigrams
+    kind: article
+    people: [perlis]
+    title: Epigrams on Programming
+    year: 1982
+    venue: "ACM SIGPLAN Notices 17(9)"
+    doi: 10.1145/947955.1083808
+    url: https://www.cs.yale.edu/homes/perlis-alan/quotes.html
+    note: "Эпиграмма 19: язык, который не влияет на то, как вы думаете о программировании, не стоит изучать."
+
+  - id: iverson-notation
+    kind: article
+    people: [iverson]
+    title: Notation as a Tool of Thought
+    year: 1980
+    venue: "Communications of the ACM 23(8)"
+    doi: 10.1145/358896.358899
+    note: Тьюринговская лекция о нотации как инструменте мышления; примеры на APL.
+    concepts: [evaluation.rank_lifting]
+
+  - id: chomsky-1956
+    kind: article
+    people: [chomsky]
+    title: Three Models for the Description of Language
+    year: 1956
+    venue: "IRE Transactions on Information Theory 2(3)"
+    doi: 10.1109/TIT.1956.1056813
+    note: Исходная работа, в которой сравниваются модели грамматик — основа иерархии Хомского.
+    lectures: ["02", "04", "05"]
+
+  - id: knuth-lr
+    kind: article
+    people: [knuth]
+    title: On the Translation of Languages from Left to Right
+    year: 1965
+    venue: "Information and Control 8(6)"
+    doi: 10.1016/S0019-9958(65)90426-2
+    note: Определение LR(k)-грамматик и анализатора, лежащего в основе LR- и SLR-разбора.
+    lectures: ["06"]
+
+  - id: knuth-attributes
+    kind: article
+    people: [knuth]
+    title: Semantics of Context-Free Languages
+    year: 1968
+    venue: "Mathematical Systems Theory 2(2)"
+    doi: 10.1007/BF01692511
+    note: Атрибутные грамматики — способ связать семантику с деревом разбора.
+    lectures: ["07", "12"]
+
+  - id: backus-1978
+    kind: article
+    people: [backus]
+    title: Can Programming Be Liberated from the von Neumann Style?
+    year: 1978
+    venue: "Communications of the ACM 21(8)"
+    doi: 10.1145/359576.359579
+    note: Тьюринговская лекция с критикой языков, построенных вокруг присваивания; программа функционального стиля FP.
+    concepts: [bindings.assignment, evaluation.effects]
+
+  - id: wadler-blott-1989
+    kind: article
+    people: [wadler]
+    authors: [Stephen Blott]
+    title: How to Make Ad-hoc Polymorphism Less Ad Hoc
+    year: 1989
+    venue: "POPL '89"
+    doi: 10.1145/75277.75283
+    note: Статья, в которой предложены классы типов Haskell.
+    languages: [haskell]
+    concepts: [abstraction.contracts, subprograms.overloading]
+
+  - id: hopl-c
+    kind: article
+    people: [ritchie]
+    title: The Development of the C Language
+    year: 1993
+    venue: "HOPL II"
+    doi: 10.1145/154766.155580
+    note: История C от BCPL и B; объяснение модели указателей и массивов.
+    languages: [c]
+
+  - id: hopl-cpp
+    kind: article
+    people: [stroustrup]
+    title: A History of C++
+    year: 1993
+    venue: "HOPL II"
+    doi: 10.1145/154766.155375
+    note: Происхождение классов, перегрузки и шаблонов C++.
+    languages: [cpp]
+
+  - id: hopl-prolog
+    kind: article
+    people: [colmerauer, roussel]
+    title: The Birth of Prolog
+    year: 1993
+    venue: "HOPL II"
+    doi: 10.1145/154766.155362
+    note: Как из задач обработки естественного языка появился Prolog.
+    languages: [prolog]
+    concepts: [control.logic_search]
+
+  - id: hopl-lisp
+    kind: article
+    people: [steele, gabriel]
+    title: The Evolution of Lisp
+    year: 1993
+    venue: "HOPL II"
+    doi: 10.1145/154766.155373
+    note: История диалектов Lisp и их объединения в Common Lisp.
+    languages: [common-lisp]
+
+  - id: hopl-haskell
+    kind: article
+    people: [hudak, hughes, peyton-jones, wadler]
+    title: A History of Haskell — Being Lazy with Class
+    year: 2007
+    venue: "HOPL III"
+    doi: 10.1145/1238844.1238856
+    note: Решения комитета Haskell о нестрогости, классах типов и монадическом вводе-выводе.
+    languages: [haskell]
+    concepts: [evaluation.strategy, evaluation.effects, abstraction.contracts]
+
+  - id: hopl-javascript
+    kind: article
+    people: [eich]
+    authors: [Allen Wirfs-Brock]
+    title: "JavaScript: The First 20 Years"
+    year: 2020
+    venue: "Proc. ACM Program. Lang. 4, HOPL IV"
+    doi: 10.1145/3386327
+    note: Создание JavaScript и развитие стандарта ECMAScript.
+    languages: [javascript]
+
+  # --- конференции
+  - id: hopl
+    kind: conference
+    title: HOPL — History of Programming Languages
+    url: https://hopl4.sigplan.org/
+    note: Конференция ACM SIGPLAN, где авторы языков описывают историю и мотивы проектных решений; проводится раз в 10–15 лет.
+
+  - id: popl
+    kind: conference
+    title: POPL — Principles of Programming Languages
+    url: https://www.sigplan.org/Conferences/POPL/
+    note: "Ведущая конференция по теории языков программирования: семантика, типы, верификация."
+
+  - id: pldi
+    kind: conference
+    title: PLDI — Programming Language Design and Implementation
+    url: https://www.sigplan.org/Conferences/PLDI/
+    note: Конференция по проектированию и реализации языков, компиляторам и анализу программ.
+
+  # --- сайты и каталоги
+  - id: pldb
+    kind: site
+    title: PLDB — Programming Language DataBase
+    url: https://pldb.io/
+    note: Справочная база языков программирования; годы появления и признаки.
+
+  - id: hopl-info
+    kind: site
+    title: HOPL — онлайн-энциклопедия языков программирования
+    url: https://hopl.info/
+    note: Каталог исторических языков с библиографией.
+
+  - id: rosetta-code
+    kind: site
+    title: Rosetta Code
+    url: https://rosettacode.org/
+    note: Одни и те же задачи на сотнях языков — удобно сравнивать запись решений.
+
+  - id: godbolt
+    kind: site
+    title: Compiler Explorer
+    url: https://godbolt.org/
+    note: Показывает, во что компилируется код на разных языках и платформах.
+    labs: [5]
+
+  # --- инструменты практикума
+  - id: antlr
+    kind: tool
+    topic: ANTLR
+    title: ANTLR — документация и загрузка
+    url: https://www.antlr.org/
+    note: Генератор лексических и синтаксических анализаторов — основной инструмент практикума.
+    lectures: ["09"]
+    labs: [2, 3]
+
+  - id: antlr-lab
+    kind: tool
+    topic: ANTLR
+    title: ANTLR Lab
+    url: http://lab.antlr.org/
+    note: Отладка грамматики в браузере, без установки.
+    labs: [2]
+
+  - id: grammars-v4
+    kind: tool
+    topic: ANTLR
+    title: Коллекция грамматик grammars-v4
+    url: https://github.com/antlr/grammars-v4
+    note: Справочник по стилю грамматик; не источник для копирования в лабораторную работу.
+    labs: [2]
+
+  # --- документация целевых платформ (ЛР 5)
+  - id: jvm-spec
+    kind: documentation
+    topic: "Целевой код: байт-код JVM"
+    title: The Java Virtual Machine Specification, Java SE 21
+    url: https://docs.oracle.com/javase/specs/jvms/se21/html/
+    note: Формат class-файла и набор инструкций JVM.
+    labs: [5]
+
+  - id: jasmin
+    kind: tool
+    topic: "Целевой код: байт-код JVM"
+    title: Jasmin
+    url: https://jasmin.sourceforge.net/
+    note: Ассемблер JVM; текст .j превращается в class-файл.
+    labs: [5]
+
+  - id: ow2-asm
+    kind: tool
+    topic: "Целевой код: байт-код JVM"
+    title: ASM
+    url: https://asm.ow2.io/
+    note: Библиотека генерации байт-кода JVM без промежуточного ассемблера.
+    labs: [5]
+
+  - id: ecma-335
+    kind: documentation
+    topic: "Целевой код: .NET CIL"
+    title: ECMA-335 Common Language Infrastructure
+    url: https://ecma-international.org/publications-and-standards/standards/ecma-335/
+    note: Стандарт CIL и формата сборок .NET; ассемблер — ilasm.
+    labs: [5]
+
+  - id: cecil
+    kind: tool
+    topic: "Целевой код: .NET CIL"
+    title: Mono.Cecil
+    url: https://github.com/jbevain/cecil
+    note: Библиотека генерации и чтения сборок .NET.
+    labs: [5]
+
+  - id: llvm-langref
+    kind: documentation
+    topic: "Целевой код: LLVM IR"
+    title: LLVM Language Reference Manual
+    url: https://llvm.org/docs/LangRef.html
+    note: Описание LLVM IR; инструменты — llvm-as и lli.
+    labs: [5]
+
+  - id: python-dis
+    kind: documentation
+    topic: "Целевой код: байт-код CPython"
+    title: Модуль dis
+    url: https://docs.python.org/3/library/dis.html
+    note: Инструкции байт-кода CPython и дизассемблер.
+    languages: [python]
+    labs: [5]
+
+  - id: python-bytecode
+    kind: tool
+    topic: "Целевой код: байт-код CPython"
+    title: bytecode
+    url: https://pypi.org/project/bytecode/
+    note: Библиотека сборки объектов кода CPython.
+    labs: [5]
+
+  - id: wasm-spec
+    kind: documentation
+    topic: "Целевой код: WAT / WebAssembly"
+    title: WebAssembly Specification
+    url: https://webassembly.github.io/spec/core/
+    note: Спецификация WebAssembly и его текстового формата WAT.
+    labs: [5]
+
+  - id: wabt
+    kind: tool
+    topic: "Целевой код: WAT / WebAssembly"
+    title: WABT
+    url: https://github.com/WebAssembly/wabt
+    note: wat2wasm и другие утилиты WebAssembly.
+    labs: [5]
+
+  - id: wasmtime
+    kind: tool
+    topic: "Целевой код: WAT / WebAssembly"
+    title: Wasmtime
+    url: https://wasmtime.dev/
+    note: Среда выполнения WebAssembly вне браузера.
+    labs: [5]

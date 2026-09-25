@@ -1,0 +1,186 @@
+id: csharp
+publish: true
+default_profile: csharp12
+
+meta:
+  name: C#
+  ru: C#
+  wikidata: Q2370
+  appeared:
+    value: 2001
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q2370", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Anders Hejlsberg]
+  organizations: [Microsoft]
+  website: https://dotnet.microsoft.com/languages/csharp
+  spec: https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/specifications
+  summary: >
+    C# 12 — статически типизированный язык с классами, значимыми типами,
+    обобщениями и асинхронными методами.
+    Базовый профиль включает nullable-анализ; поведение управляемой памяти
+    и библиотек отдельно привязано к .NET 8. Новшества C# 12 описываются
+    официальными feature specifications в дополнение к основной спецификации.
+
+versions: []
+profiles:
+  csharp12: "C# 12, nullable enable; базовый профиль языка. Nullable-анализ выдаёт предупреждения, если проект отдельно не повышает их до ошибок."
+  dotnet8: ".NET 8 / CLR и базовая библиотека при использовании C# 12; профиль реализации, а не утверждение о последнем выпуске."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+      note: "Объявления локальных переменных, параметров и членов; var — объявление с выводом типа, а не динамическая переменная."
+    - value: pattern
+      note: "Объявления при деконструкции и переменные в образцах."
+  bindings.mutation:
+    - value: rebindable
+      applies_to: обычные локальные переменные и поля
+    - value: immutable
+      applies_to: const и readonly-поля после разрешённой инициализации
+      note: "readonly-ссылка на изменяемый объект не делает сам объект неизменяемым. init ограничивает время записи свойства, а не все эффекты объекта."
+  bindings.assignment:
+    - value: single
+    - value: multiple
+      note: "Деконструирующее присваивание распределяет компоненты кортежа или результаты Deconstruct по переменным."
+  scope.resolution:
+    - value: lexical
+  scope.shadowing:
+    - value: forbidden_in_block
+      note: "Вложенная локальная переменная не может заново объявить имя локальной из охватывающего пространства объявлений. Локальная переменная при этом может скрыть член типа."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/basic-concepts#73-declarations", title: "C# specification: Declarations"}
+  typing.checking:
+    - value: static
+      note: "Основной режим проверки; var сохраняет статический тип."
+    - value: dynamic
+      applies_to: операции с dynamic
+      note: "Для dynamic связывание определённых операций переносится во время выполнения; это не поведение всех значений object."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/advanced-topics/interop/using-type-dynamic", title: "Using type dynamic"}
+  typing.annotations:
+    - value: optional
+      applies_to: локальные объявления с var и выводимые параметры лямбд
+      note: "Типы обычных параметров методов и возвращаемых значений в сигнатурах по-прежнему задаются явно."
+  typing.inference:
+    - value: true
+      note: "var, вывод аргументов обобщённых методов, контекстная типизация лямбд."
+  typing.conversions:
+    - value: implicit
+      note: "Числовые, ссылочные, boxing и пользовательские преобразования; даже разрешённое неявное преобразование числа может терять точность."
+    - value: explicit
+      note: "Cast и пользовательские explicit conversions; checked/unchecked влияет на определённые числовые преобразования."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/language-specification/conversions", title: "C# specification: Conversions"}
+  typing.compatibility:
+    - value: nominal
+      applies_to: классы, структуры и интерфейсы
+      note: "Совпадения методов недостаточно для реализации интерфейса: требуется объявленная связь. Отдельные языковые протоколы, например foreach, также допускают pattern-based правила."
+  typing.product_types:
+    - value: record
+      note: "struct, class, record class и record struct; record сам по себе не является типом-суммой."
+    - value: tuple
+      note: "Кортежные типы с именованными или позиционными компонентами; имена элементов не определяют совместимость."
+  typing.nullability:
+    - value: nullable_types
+      profile: csharp12
+      note: "T? для значимого T обозначает `Nullable<T>`. Для ссылочного T аннотация ? участвует в статическом анализе и не создаёт отдельный runtime-тип; нарушение обычно диагностируется предупреждением."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/nullable-references", title: "Nullable reference types"}
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/nullable-value-types", title: "Nullable value types"}
+  control.selection:
+    - value: statement
+    - value: expression
+      note: "if/else, ?: и switch expression; обычное условие требует bool либо соответствующих пользовательских операторов истинности."
+  control.switch:
+    - value: true
+      note: "switch поддерживает константы и образцы; неявный переход из непустой секции в следующую запрещён."
+  control.pattern_matching:
+    - value: true
+      note: "is и switch поддерживают типовые, константные, property, positional, relational и list patterns."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/patterns", title: "C# patterns reference"}
+  control.iteration:
+    - value: c_style
+    - value: foreach
+      note: "foreach и await foreach; интерфейс или подходящий pattern определяет протокол перечисления."
+  subprograms.overloading:
+    - value: true
+      note: "Методы и операторы могут перегружаться по допустимым различиям сигнатур; один возвращаемый тип не различает перегрузки методов."
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "По умолчанию копируется значение: у class это ссылка, у struct — значение структуры. Изменение объекта class видно вызывающему, перепривязка параметра — нет."
+    - value: by_reference
+      note: "ref, out, in и ref readonly задают ссылочные параметры с разными ограничениями. out — ссылка на хранилище вызывающего с требованиями definite assignment, а не copy-out при возврате."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/method-parameters", title: "Method parameters and modifiers"}
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/proposals/csharp-12.0/ref-readonly-parameters", title: "C# 12 feature specification: ref readonly parameters"}
+  subprograms.nesting:
+    - value: true
+      note: "Local functions могут быть объявлены в телах методов и других допустимых локальных контекстах."
+  subprograms.closures:
+    - value: true
+      note: "Лямбды и локальные функции могут захватывать внешние переменные; static local functions и static lambdas запрещают такой захват."
+  subprograms.lambda:
+    - value: true
+  subprograms.generics:
+    - value: true
+      note: "Обобщённые типы и методы; where задаёт ограничения параметров типов."
+  subprograms.generic_mechanism:
+    - value: reification
+      profile: dotnet8
+      layer: implementation
+      implementation: .NET 8 / CLR
+      note: "Сведения об аргументах обобщённых типов доступны во время выполнения. Разделение либо специализация машинного кода — отдельное решение CLR/JIT."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/generics-in-the-run-time", title: "Generics in the runtime"}
+  abstraction.contracts:
+    - value: interfaces
+      note: "Интерфейсы могут иметь default implementations и static abstract members; применимые правила различаются для экземплярных и статических членов."
+  abstraction.dispatch:
+    - value: static
+      note: "Обычное разрешение перегрузок и невиртуальные вызовы."
+    - value: single
+      applies_to: виртуальные экземплярные методы
+      note: "Переопределение выбирается по динамическому типу получателя. Операции dynamic используют отдельный runtime binder."
+  abstraction.inheritance:
+    - value: single
+      note: "Класс имеет один непосредственный базовый класс и может реализовывать несколько интерфейсов; структуры не наследуются от пользовательских структур или классов."
+  abstraction.modules:
+    - value: namespaces
+      note: "namespace группирует имена; сборки и модификаторы доступности задают другие границы, пространство имён не равно сборке."
+  evaluation.strategy:
+    - value: strict
+      note: "Обычные аргументы вычисляются слева направо; iterator methods откладывают обход тела, а не вычисление произвольных аргументов вызова."
+  memory.management:
+    - value: gc
+      profile: dotnet8
+      layer: implementation
+      implementation: .NET 8 / CLR
+      note: "Сборщик освобождает недостижимые управляемые объекты; это не своевременное освобождение файлов, сокетов или иной неуправляемой памяти."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/standard/garbage-collection/fundamentals", title: "Fundamentals of garbage collection"}
+  memory.transfer:
+    - value: copy
+      applies_to: значимые типы при передаче и присваивании по значению
+      note: "Ссылочные поля структуры продолжают обозначать те же объекты; глубокого копирования графа нет."
+    - value: shared_reference
+      applies_to: значения ссылочных типов
+  errors.model:
+    - value: exceptions
+      note: "throw, try/catch, фильтры when и finally; общего требования объявлять throws нет."
+  resources.cleanup:
+    - value: finally
+    - value: resource_statement
+      note: "using statement/declaration организует Dispose при выходе, await using — DisposeAsync. Метод-деструктор C# является финализатором, а не детерминированным RAII-деструктором C++."
+      sources:
+        - {url: "https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/statements/using", title: "The using statement"}
+  resources.io:
+    - value: stdlib
+      profile: dotnet8
+      layer: standard_library
+      note: "System.Console и System.IO в библиотеках .NET; это API, а не ключевые слова C#."
+  resources.concurrency:
+    - value: async_await
+      note: "async/await — языковой протокол ожидаемых операций; он не гарантирует выделение отдельного потока для метода."
+  syntax.blocks:
+    - value: explicit

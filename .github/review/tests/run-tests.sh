@@ -2127,6 +2127,22 @@ _catalog_run() {
   CATALOG_RC=$?
 }
 
+# Мутации YAML адресуются по ключам, а не по форматированию исходника.
+# Неизменившийся fixture или ошибка setup обязаны провалить тест.
+_catalog_mutate() {
+  python3 -c '
+from copy import deepcopy
+from pathlib import Path
+import sys, yaml
+path = Path(sys.argv[1])
+data = yaml.safe_load(path.read_text(encoding="utf-8"))
+before = deepcopy(data)
+exec(sys.stdin.read())
+assert data != before, f"мутация не изменила {path}"
+path.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False), encoding="utf-8")
+' "$1" || { fail "не удалось подготовить мутацию $1"; return 1; }
+}
+
 # КЛЮЧЕВАЯ ГАРАНТИЯ: страницы каталога собираются из YAML. Правка
 # docs/languages/*.md руками затирается следующей сборкой; правка YAML без
 # пересборки оставляет сайт со старыми данными. --check ловит оба случая
@@ -2141,14 +2157,15 @@ test_generated_catalog_is_up_to_date() {
   return 0
 }
 
-# Сборка с нуля на копии данных даёт ровно тот набор страниц, что
-# закоммичен, и повторный --check на нём зелёный.
+# Сборка с нуля создаёт страницу для каждой карточки и служебные страницы;
+# повторный --check на ней зелёный, независимо от свежести страниц в репо.
 test_catalog_builds_from_scratch() {
   local sb; sb="$(_catalog_sandbox)"
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -eq 0 ] || { fail "сборка каталога упала: ${CATALOG_OUT}"; return 1; }
   local f
-  for f in index.md concepts.md python.md java.md rust.md; do
+  for f in index.md concepts.md lab-mapping.md "${sb}"/data/languages/*.yaml; do
+    f="$(basename "${f}" .yaml)"; f="${f%.md}.md"
     [ -f "${sb}/out/${f}" ] || { fail "не создан ${f}"; return 1; }
     grep -q '^<!-- ВНИМАНИЕ. Файл собирается автоматически:' "${sb}/out/${f}" \
       || { fail "${f} без пометки о генерации"; return 1; }
@@ -2162,33 +2179,35 @@ test_catalog_builds_from_scratch() {
 # у каждого языка появится своя формулировка одной и той же концепции.
 test_catalog_rejects_unknown_value() {
   local sb; sb="$(_catalog_sandbox)"
-  python3 - "${sb}/data/languages/python.yaml" <<'PY'
-import sys, re
-p = sys.argv[1]; s = open(p, encoding="utf-8").read()
-s = s.replace("    - value: implicit\n      note: \"двоеточие и отступ", "    - value: fuzzy\n      note: \"двоеточие и отступ", 1)
-open(p, "w", encoding="utf-8").write(s)
+  _catalog_mutate "${sb}/data/languages/python.yaml" <<'PY' || return 1
+data["concepts"]["syntax.blocks"][0]["value"] = "fuzzy"
 PY
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -ne 0 ] || { fail "значение fuzzy принято"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "variants.5" || { fail "в ошибке нет имени концепции: ${CATALOG_OUT}"; return 1; }
+  assert_contains "${CATALOG_OUT}" "syntax.blocks" || return 1
   echo "${CATALOG_OUT}" | grep -q "fuzzy" || { fail "в ошибке нет значения: ${CATALOG_OUT}"; return 1; }
   echo "${CATALOG_OUT}" | grep -q "допустимо" || { fail "в ошибке нет списка допустимых: ${CATALOG_OUT}"; return 1; }
   return 0
 }
 
-# max_values: 1 — утверждение о предметной области (маркер блока не может
-# быть одновременно явным и неявным). Второе значение — ошибка.
+# Искусственное ограничение в песочнице: проверяем механизм max_values,
+# а не утверждаем, что способы выделения блоков обязательно исключают друг друга.
 test_catalog_rejects_extra_value_for_max_values() {
   local sb; sb="$(_catalog_sandbox)"
-  python3 - "${sb}/data/languages/rust.yaml" <<'PY'
-import sys
-p = sys.argv[1]; s = open(p, encoding="utf-8").read()
-s = s.replace("  variants.5:\n    - value: explicit\n", "  variants.5:\n    - value: implicit\n    - value: explicit\n", 1)
-open(p, "w", encoding="utf-8").write(s)
+  _catalog_mutate "${sb}/data/ontology.yaml" <<'PY' || return 1
+concept = next(c for cat in data["categories"] for c in cat["concepts"] if c["id"] == "syntax.blocks")
+concept["max_values"] = 1
+PY
+  _catalog_mutate "${sb}/data/languages/rust.yaml" <<'PY' || return 1
+entries = data["concepts"]["syntax.blocks"]
+assert entries[0]["value"] == "explicit"
+entry = dict(entries[0], value="indentation")
+assert entry not in entries
+entries.append(entry)
 PY
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -ne 0 ] || { fail "два значения при max_values: 1 приняты"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "допускает 1 значение" || { fail "нет сообщения про max_values: ${CATALOG_OUT}"; return 1; }
+  assert_contains "${CATALOG_OUT}" "rust.yaml: syntax.blocks: max_values=1, одновременно 2" || return 1
   return 0
 }
 
@@ -2197,16 +2216,20 @@ PY
 # правило в источнике.
 test_catalog_rejects_bad_grammar_license() {
   local sb; sb="$(_catalog_sandbox)"
-  sed -i.bak 's/license: MIT/license: GPL-3.0/' "${sb}/data/languages/python.yaml"
+  _catalog_mutate "${sb}/data/languages/python.yaml" <<'PY' || return 1
+data["grammar"]["sources"][0]["license"] = "GPL-3.0"
+PY
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -ne 0 ] || { fail "лицензия GPL-3.0 принята"; return 1; }
   echo "${CATALOG_OUT}" | grep -q "BSD-3-Clause" || { fail "в ошибке нет списка допустимых лицензий: ${CATALOG_OUT}"; return 1; }
 
   sb="$(_catalog_sandbox)"
-  sed -i.bak '/commit: 20efa537/d' "${sb}/data/languages/rust.yaml"
+  _catalog_mutate "${sb}/data/languages/rust.yaml" <<'PY' || return 1
+assert data["grammar"]["sources"][0].pop("commit")
+PY
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -ne 0 ] || { fail "источник без commit принят"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "commit обязателен" || { fail "нет сообщения про commit: ${CATALOG_OUT}"; return 1; }
+  assert_contains "${CATALOG_OUT}" ".commit: ожидается непустая строка" || return 1
   return 0
 }
 
@@ -2226,23 +2249,35 @@ test_catalog_check_detects_orphan_page() {
   local sb; sb="$(_catalog_sandbox)"
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -eq 0 ] || { fail "сборка упала: ${CATALOG_OUT}"; return 1; }
-  cp "${sb}/out/python.md" "${sb}/out/haskell.md"
+  [ ! -e "${sb}/data/languages/nonexistent-language.yaml" ] || { fail "имя сироты занято"; return 1; }
+  cp "${sb}/out/python.md" "${sb}/out/nonexistent-language.md"
   _catalog_run "${sb}" --check
-  [ "${CATALOG_RC}" -ne 0 ] || { fail "лишняя страница haskell.md не замечена"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "haskell.md" || { fail "в ошибке нет имени сироты: ${CATALOG_OUT}"; return 1; }
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "лишняя страница nonexistent-language.md не замечена"; return 1; }
+  assert_contains "${CATALOG_OUT}" "nonexistent-language.md" || return 1
   echo "${CATALOG_OUT}" | grep -q "лишний" || { fail "нет пометки «лишний»: ${CATALOG_OUT}"; return 1; }
   return 0
 }
 
-# Секции showcase — единственная связь между кодом и концепциями. Без
-# секции утверждение «пример демонстрирует свойство» непроверяемо.
+# Только явно запрошенная showcase: required требует секцию концепции.
 test_catalog_requires_showcase_section() {
   local sb; sb="$(_catalog_sandbox)"
-  sed -i.bak 's/\[start:variants-3\]/[start:variants-3x]/; s/\[end:variants-3\]/[end:variants-3x]/' \
-    "${sb}/data/examples/python/showcase.py"
+  _catalog_mutate "${sb}/data/ontology.yaml" <<'PY' || return 1
+concept = next(c for cat in data["categories"] for c in cat["concepts"] if c["id"] == "bindings.assignment")
+concept["showcase"] = "required"
+PY
+  python3 - "${sb}/data/examples/python/showcase.py" <<'PY' || { fail "не удалены маркеры секции"; return 1; }
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text(encoding="utf-8")
+for marker in ("[start:variants-3]", "[end:variants-3]"):
+    assert s.count(marker) == 1, marker
+    s = "\n".join(line for line in s.split("\n") if marker not in line)
+p.write_text(s, encoding="utf-8")
+PY
   _catalog_run "${sb}"
-  [ "${CATALOG_RC}" -ne 0 ] || { fail "showcase без секции variants-3 принят"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "variants-3" || { fail "в ошибке нет имени секции: ${CATALOG_OUT}"; return 1; }
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "showcase без обязательной секции принят"; return 1; }
+  assert_contains "${CATALOG_OUT}" "python.yaml: showcase без секции bindings-assignment" || return 1
   return 0
 }
 
@@ -2253,8 +2288,17 @@ test_catalog_check_rejects_invalid_marker_without_regeneration() {
   local sb; sb="$(_catalog_sandbox)"
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -eq 0 ] || { fail "сборка упала: ${CATALOG_OUT}"; return 1; }
-  sed -i.bak 's/\[start:variants-3\]/[start:variants.3]/; s/\[end:variants-3\]/[end:variants.3]/' \
-    "${sb}/data/examples/python/showcase.py"
+  python3 - "${sb}/data/examples/python/showcase.py" <<'PY' || { fail "не изменены маркеры секции"; return 1; }
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text(encoding="utf-8")
+for kind in ("start", "end"):
+    marker = f"[{kind}:variants-3]"
+    assert s.count(marker) == 1, marker
+    s = s.replace(marker, f"[{kind}:variants.3]")
+p.write_text(s, encoding="utf-8")
+PY
   _catalog_run "${sb}" --check
   [ "${CATALOG_RC}" -ne 0 ] || { fail "маркер variants.3 прошёл --check"; return 1; }
   echo "${CATALOG_OUT}" | grep -q "не распознаётся snippets" || { fail "нет сообщения про маркер: ${CATALOG_OUT}"; return 1; }
@@ -2265,7 +2309,10 @@ test_catalog_check_rejects_invalid_marker_without_regeneration() {
 # «с версии 9.9», которой нет в таблице версий.
 test_catalog_rejects_unknown_version_reference() {
   local sb; sb="$(_catalog_sandbox)"
-  sed -i.bak 's/since: "3.10"/since: "9.9"/' "${sb}/data/languages/python.yaml"
+  _catalog_mutate "${sb}/data/languages/python.yaml" <<'PY' || return 1
+assert "9.9" not in {v["id"] for v in data["versions"]}
+data["concepts"]["control.pattern_matching"][0]["since"] = "9.9"
+PY
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -ne 0 ] || { fail "since на несуществующую версию принят"; return 1; }
   echo "${CATALOG_OUT}" | grep -q "9.9" || { fail "в ошибке нет версии: ${CATALOG_OUT}"; return 1; }
@@ -2275,47 +2322,95 @@ test_catalog_rejects_unknown_version_reference() {
 # assessment ссылается на концепции онтологии — иначе ссылка в никуда.
 test_catalog_rejects_unknown_assessment_concept() {
   local sb; sb="$(_catalog_sandbox)"
-  sed -i.bak 's/concepts: \[typing.checking, typing.strength, errors.model, errors.finally\]/concepts: [net-takoy]/' \
-    "${sb}/data/languages/python.yaml"
+  _catalog_mutate "${sb}/data/languages/python.yaml" <<'PY' || return 1
+refs = data["assessment"]["reliability"]["concepts"]
+assert isinstance(refs, list) and "net-takoy" not in refs
+refs.append("net-takoy")
+PY
   _catalog_run "${sb}"
   [ "${CATALOG_RC}" -ne 0 ] || { fail "assessment с неизвестной концепцией принят"; return 1; }
   echo "${CATALOG_OUT}" | grep -q "net-takoy" || { fail "в ошибке нет имени концепции: ${CATALOG_OUT}"; return 1; }
   return 0
 }
 
-# Покрытие перечислений — метрика каталога. Непокрытое значение допустимо
-# только с пометкой, какой язык его покроет; порог задан в онтологии.
+# Покрытие информационное; только явный порог делает пробел ошибкой.
 test_catalog_enforces_coverage_threshold() {
   local sb; sb="$(_catalog_sandbox)"
-  sed -i.bak 's/^  variants: 0.8$/  variants: 0.95/' "${sb}/data/ontology.yaml"
-  _catalog_run "${sb}" --check
-  [ "${CATALOG_RC}" -ne 0 ] || { fail "покрытие ниже порога 95% принято"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "ниже порога" || { fail "нет сообщения про порог: ${CATALOG_OUT}"; return 1; }
-
-  sb="$(_catalog_sandbox)"
-  python3 - "${sb}/data/ontology.yaml" <<'PY'
-import sys
-p = sys.argv[1]; s = open(p, encoding="utf-8").read()
-s = s.replace(",\n             coverage: {pending: true, note: \"Ada out, C# out\"}", "", 1)
-open(p, "w", encoding="utf-8").write(s)
+  _catalog_mutate "${sb}/data/ontology.yaml" <<'PY' || return 1
+concept = next(c for cat in data["categories"] for c in cat["concepts"] if c["id"] == "subprograms.parameter_passing")
+assert any(v["id"] == "by_name" for v in concept["values"])
+data["coverage_threshold"] = {"subprograms": 1.0}
 PY
-  _catalog_run "${sb}" --check
-  [ "${CATALOG_RC}" -ne 0 ] || { fail "непокрытое значение без pending принято"; return 1; }
-  echo "${CATALOG_OUT}" | grep -q "by_result" || { fail "в ошибке нет значения: ${CATALOG_OUT}"; return 1; }
+  # Убираем by_name, даже если будущая карточка уже покрывает его.
+  python3 - "${sb}/data/languages" <<'PY' || { fail "не подготовлен пробел by_name"; return 1; }
+from pathlib import Path
+import sys, yaml
+for p in Path(sys.argv[1]).glob("*.yaml"):
+    data = yaml.safe_load(p.read_text(encoding="utf-8"))
+    concepts = data["concepts"]
+    cid = "subprograms.parameter_passing"
+    entries = concepts.get(cid, [])
+    kept = [e for e in entries if e["value"] != "by_name"]
+    if kept != entries:
+        if kept:
+            concepts[cid] = kept
+        else:
+            del concepts[cid]
+        p.write_text(yaml.safe_dump(data, allow_unicode=True), encoding="utf-8")
+    assert all(e["value"] != "by_name" for e in concepts.get(cid, []))
+PY
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "покрытие ниже порога 100% принято"; return 1; }
+  assert_contains "${CATALOG_OUT}" "subprograms.parameter_passing.by_name" || return 1
+  assert_contains "${CATALOG_OUT}" "покрытие subprograms:" || return 1
+  assert_contains "${CATALOG_OUT}" "ниже порога 100%" || return 1
   return 0
 }
 
-# Свойства варианта задания должны быть в онтологии под своими номерами —
-# иначе каталог перестаёт быть справочником к variants.md.
-test_catalog_ontology_covers_variant_properties() {
-  local onto="$(_catalog_data)/ontology.yaml" n bad=""
-  for n in 1 2 3 4 5 6 7 8 9; do
-    grep -q "id: variants.${n}$" "${onto}" || bad="${bad} variants.${n}"
-  done
-  for n in req.4 req.7.2.until req.7.2.do_while req.7.3 req.8.2; do
-    grep -q "id: ${n}$" "${onto}" || bad="${bad} ${n}"
-  done
-  [ -z "${bad}" ] || { fail "в онтологии нет концепций:${bad}"; return 1; }
+test_catalog_allows_uncovered_values_by_default() {
+  local sb; sb="$(_catalog_sandbox)"
+  _catalog_mutate "${sb}/data/ontology.yaml" <<'PY' || return 1
+assert data["coverage_policy"] == "informational"
+assert not data.get("coverage_threshold")
+concept = next(c for cat in data["categories"] for c in cat["concepts"] if c["id"] == "subprograms.parameter_passing")
+assert all(v["id"] != "test_uncovered" for v in concept["values"])
+concept["values"].append({"id": "test_uncovered", "ru": "Непокрытое тестовое значение"})
+PY
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -eq 0 ] || { fail "информационный пробел отклонён: ${CATALOG_OUT}"; return 1; }
+  assert_contains "${CATALOG_OUT}" "subprograms.parameter_passing.test_uncovered" || return 1
+  return 0
+}
+
+test_catalog_rejects_unknown_coverage_category() {
+  local sb; sb="$(_catalog_sandbox)"
+  _catalog_mutate "${sb}/data/ontology.yaml" <<'PY' || return 1
+assert all(c["id"] != "nonexistent-category" for c in data["categories"])
+data["coverage_threshold"] = {"nonexistent-category": 1.0}
+PY
+  _catalog_run "${sb}"
+  [ "${CATALOG_RC}" -ne 0 ] || { fail "порог для неизвестной категории принят"; return 1; }
+  assert_contains "${CATALOG_OUT}" "coverage_threshold: неизвестная категория nonexistent-category" || return 1
+  return 0
+}
+
+# Учебные ID живут в mapping; концепции независимы, старые slug допустимы.
+test_catalog_lab_mapping_references_independent_ontology() {
+  python3 - "$(_catalog_data)" <<'PY' || { fail "нарушена связь mapping → ontology"; return 1; }
+from pathlib import Path
+import sys, yaml
+root = Path(sys.argv[1])
+onto = yaml.safe_load((root / "ontology.yaml").read_text(encoding="utf-8"))
+mapping = yaml.safe_load((root / "lab-mapping.yaml").read_text(encoding="utf-8"))
+ids = {c["id"] for cat in onto["categories"] for c in cat["concepts"]}
+assert ids
+assert not any(cid.startswith(("variants.", "req.")) for cid in ids)
+assert not {cat["id"] for cat in onto["categories"]} & {"variants", "requirements"}
+assert mapping["mappings"]
+for item in mapping["mappings"]:
+    assert item["concepts"], item["id"]
+    assert set(item["concepts"]) <= ids, item["id"]
+PY
   return 0
 }
 

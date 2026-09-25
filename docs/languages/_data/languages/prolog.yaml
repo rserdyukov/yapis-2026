@@ -1,0 +1,193 @@
+id: prolog
+publish: true
+default_profile: iso
+
+meta:
+  name: Prolog
+  ru: Prolog
+  wikidata: Q163468
+  appeared:
+    value: 1972
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q163468", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Alain Colmerauer, Philippe Roussel, Robert Kowalski]
+  website: https://www.swi-prolog.org/
+  spec: https://www.iso.org/standard/21413.html
+  summary: >
+    Prolog описывает отношения посредством клауз, логических переменных и
+    унификации; поиск решений использует возврат.
+    Основа — ISO Prolog (ISO/IEC 13211-1); модули, табулирование, ограничения
+    и управление памятью SWI-Prolog отмечены как свойства реализации.
+    Сайт и открытое руководство относятся к SWI-Prolog, а не ко всем диалектам.
+
+versions: []
+profiles:
+  iso: "ISO/IEC 13211-1:1995, General core; базовый профиль записей без другого контекста. Руководство SWI отмечает ISO-предикаты отдельно."
+  swi: "Расширения SWI-Prolog, описанные в его Reference Manual; версия выпуска и дата не фиксируются, профиль не означает последнюю версию."
+
+concepts:
+  bindings.introduction:
+    - value: logic_variable
+      note: "Переменная вводится своим вхождением в терм; имя обычно начинается с прописной буквы или подчёркивания. Каждое вхождение одиночного _ — отдельная анонимная переменная."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=syntax", title: "SWI-Prolog: Syntax"}
+  bindings.mutation:
+    - value: single_assignment
+      note: "Унификация уточняет значение или связывает переменные друг с другом. Связывания отменяются при возврате за создавшую их точку; это не императивное переприсваивание."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=compare", title: "Comparison and Unification of Terms"}
+  bindings.assignment:
+    - value: unification
+      note: "=/2 унифицирует термы; is/2 вычисляет арифметическое выражение справа и унифицирует результат слева. Ни один из них не является обычным изменяемым присваиванием."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=compare", title: "ISO unification predicates"}
+        - {url: "https://www.swi-prolog.org/pldoc/man?predicate=is/2", title: "ISO is/2"}
+  scope.resolution:
+    - value: lexical
+      applies_to: логические переменные клаузы
+      note: "Совпадение написания переменной в разных клаузах не связывает их; при использовании клаузы её переменные свежие."
+  scope.constructs:
+    - value: clause
+      profile: iso
+      note: "Переменные общей головы и тела относятся к одной клаузе; запрос имеет собственные переменные."
+    - value: module
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      note: "Модуль задаёт пространство имён предикатов; это отдельное расширение относительно выбранного ISO core."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=modules", title: "SWI-Prolog: Modules"}
+  scope.globals:
+    - value: module_bindings
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      applies_to: имена предикатов
+      note: "Имя и арность идентифицируют предикат в модуле. Это не глобальные логические переменные."
+  typing.checking:
+    - value: dynamic
+      note: "Типы и достаточная инстанцированность проверяются операциями при выполнении. Несовместимость термов при унификации обычно означает неудачу, а не type error."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=typetest", title: "Verify Type of a Term"}
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=exception", title: "Exception handling"}
+  typing.annotations:
+    - value: absent
+      profile: iso
+      note: "ISO core не требует сигнатур статических типов; режимы +/−/? в документации описывают ожидаемую инстанцированность аргументов."
+  typing.inference:
+    - value: false
+      profile: iso
+      note: "Унификация логических термов во время поиска — не вывод статических типов программы."
+  typing.conversions:
+    - value: explicit
+      note: "Предикаты atom_chars/2 и number_chars/2 связывают разные представления. Арифметика is/2 требует вычислимого выражения, а не автоматически вычисляет любой терм при унификации."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?predicate=number_chars/2", title: "ISO number_chars/2"}
+  control.switch:
+    - value: false
+      note: "Выбор клаузы по унификации головы и индексирование реализации не являются конструкцией switch/case."
+  control.do_while:
+    - value: false
+      note: "Повторение задаётся рекурсией и поиском с возвратом, а не оператором do-while."
+  control.logic_search:
+    - value: backtracking
+      profile: iso
+      note: "Обычный поиск перебирает клаузы и цели в процедурном порядке; cut отсекает часть альтернатив. Бесконечная ветвь может помешать достижению других решений. Условие ->/2 — цель, а не булево выражение; конструкция фиксирует первый успех условия."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=control", title: "Control predicates and cut"}
+    - value: tabling
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      note: "Объявленные табулируемые предикаты сохраняют ответы и переиспользуют подцели; это не стандартное поведение каждого ISO-предиката."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=tabling", title: "SWI-Prolog: Table execution (SLG resolution)"}
+    - value: constraints
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      applies_to: library(clpfd)
+      note: "Ограничения на целые распространяются без обязательной немедленной конкретизации переменных; поиск конкретных значений — отдельный шаг."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=clpfd", title: "SWI-Prolog: CLP(FD)"}
+  subprograms.overloading:
+    - value: false
+      note: "Предикаты с разными арностями — разные предикаты; несколько клауз одного предиката задают альтернативы поиска, а не перегрузки по типам сигнатур."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=preddesc", title: "Notation of Predicate Descriptions"}
+  subprograms.parameter_passing:
+    - value: unification
+      note: "Аргументы цели унифицируются с термами головы свежего экземпляра клаузы. Режим вход/выход зависит от вызова и контракта предиката, а не от отдельного механизма copy-out."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=compare", title: "Implicit unification in predicate heads"}
+  subprograms.placement:
+    - value: declaration_region
+      profile: iso
+      note: "Клаузы и директивы записываются как термы верхнего уровня исходного текста."
+    - value: module
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      note: "Клаузы принадлежат предикатам модуля."
+  subprograms.nesting:
+    - value: false
+      profile: iso
+      note: "Тело клаузы содержит цели, а не лексически вложенные определения предикатов."
+  subprograms.lambda:
+    - value: false
+      profile: iso
+      note: "call/1 вызывает цель-терм; анонимные функции не являются конструкцией ISO core."
+  abstraction.modules:
+    - value: explicit_exports
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      note: "module/2 и списки экспортируемых предикатов; система SWI не отождествляется с ISO/IEC 13211-2."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=modules", title: "SWI-Prolog module system"}
+  evaluation.effects:
+    - value: unrestricted
+      note: "Ввод-вывод и изменение динамической базы доступны без общей статической системы эффектов; возврат не отменяет произвольные побочные эффекты."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=db", title: "Database predicates"}
+  memory.management:
+    - value: gc
+      profile: swi
+      layer: implementation
+      implementation: SWI-Prolog
+      note: "SWI автоматически собирает недостижимые термы и имеет отдельные механизмы сбора атомов и клауз; это не требование ISO к алгоритму управления памятью."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=memory", title: "SWI-Prolog: Memory Management"}
+  errors.model:
+    - value: logical_failure
+      note: "fail/0 и неуспешная унификация означают отсутствие решения на текущем пути и могут запустить поиск альтернатив. Это обычный исход отношения, а не обязательно ошибка программы."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=control", title: "ISO fail/0 and control predicates"}
+    - value: exceptions
+      note: "throw/1 и catch/3 передают и перехватывают исключительный терм; type_error и instantiation_error отличны от логической неудачи."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=exception", title: "ISO exception handling"}
+  resources.io:
+    - value: builtin
+      note: "ISO core включает потоковые предикаты open/4, close/2 и чтение/запись термов; дополнительные средства SWI имеют собственные контракты."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=IO", title: "Input and output; ISO-marked predicates"}
+  syntax.blocks:
+    - value: explicit
+      note: "Скобки группируют цели и термы; запятая и точка с запятой — операторы конъюнкции и дизъюнкции, а не границы императивных блоков."
+  syntax.statement_terminator:
+    - value: period
+      note: "Исходный терм заканчивается точкой с последующим layout или концом ввода."
+  syntax.case_sensitive:
+    - value: true
+      note: "Регистр значим, а начальный символ также различает обычную запись переменной и атома."
+  syntax.metaprogramming:
+    - value: runtime_code
+      note: "call/1 вызывает представленные термами цели; assertz/1 и retract/1 изменяют динамические предикаты."
+      sources:
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=metacall", title: "Meta-Call Predicates"}
+        - {url: "https://www.swi-prolog.org/pldoc/man?section=db", title: "Database predicates"}
+  paradigm.supported:
+    - value: logic
+    - value: declarative
+      note: "Порядок целей, cut, ввод-вывод и изменение базы добавляют процедурную семантику поверх отношений."

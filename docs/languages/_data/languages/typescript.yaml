@@ -1,0 +1,169 @@
+id: typescript
+publish: true
+default_profile: ts5_strict
+
+meta:
+  name: TypeScript
+  ru: TypeScript
+  wikidata: Q978185
+  appeared:
+    value: 2012
+    sources:
+      - {url: "https://www.wikidata.org/wiki/Q978185", title: "Wikidata P571", retrieved: 2026-09-24}
+  designers: [Anders Hejlsberg]
+  organizations: [Microsoft]
+  website: https://www.typescriptlang.org/
+  spec: https://www.typescriptlang.org/docs/handbook/
+  summary: >
+    TypeScript добавляет к JavaScript статическую проверку, структурную
+    совместимость и стираемые типы.
+    Базовый профиль — TypeScript 5.0 со strict; Handbook служит первичным
+    описанием, а не отдельным стандартом ISO. Ввод-вывод зависит от JavaScript-хоста.
+
+versions: []
+profiles:
+  ts5_strict: "TypeScript 5.0, strict: true (включая strictNullChecks и noImplicitAny), модули ES и target ES2022; базовый профиль всех записей. Более поздние возможности ветки 5.x не предполагаются."
+  javascript_runtime: "JavaScript после стирания типов TypeScript 5.0; семантика выполнения ECMAScript, без runtime-проверки интерфейсов и аннотаций."
+
+concepts:
+  bindings.introduction:
+    - value: explicit
+    - value: pattern
+      note: "let/const/var и деструктуризация; аннотация типа не обязательна для каждого объявления."
+  bindings.mutation:
+    - value: rebindable
+      applies_to: let и var
+    - value: immutable
+      applies_to: const
+      note: "const не замораживает объект; readonly — отдельное статическое ограничение, также не выполняющее Object.freeze."
+  bindings.assignment:
+    - value: single
+    - value: multiple
+  scope.resolution:
+    - value: lexical
+  scope.constructs:
+    - value: block
+    - value: subprogram
+    - value: module
+    - value: class
+  typing.checking:
+    - value: static
+      profile: ts5_strict
+      note: "Проверка выполняется компилятором; strict не делает систему типов полностью sound. Явный any и type assertions допускают обход части проверок."
+      sources:
+        - {url: "https://www.typescriptlang.org/tsconfig/strict.html", title: "TSConfig: strict"}
+        - {url: "https://www.typescriptlang.org/docs/handbook/type-compatibility.html", title: "Type Compatibility: A Note on Soundness"}
+    - value: dynamic
+      profile: javascript_runtime
+      note: "Во время выполнения действуют проверки операций JavaScript; статические типы TypeScript не становятся runtime-контрактами."
+  typing.annotations:
+    - value: optional
+      note: "Аннотации дополняют вывод типов; noImplicitAny требует устранить неявный any там, где тип вывести не удалось."
+  typing.inference:
+    - value: true
+      note: "Типы инициализаторов, контекстная типизация, вывод аргументов обобщённых функций и narrowing по потоку управления."
+  typing.conversions:
+    - value: explicit
+      profile: javascript_runtime
+      note: "Number/String/Boolean преобразуют значения. Type assertions через as и non-null assertion стираются: они не превращают строку в число и не проверяют значение."
+      sources:
+        - {url: "https://www.typescriptlang.org/docs/handbook/2/everyday-types.html#type-assertions", title: "Everyday Types: Type Assertions"}
+    - value: implicit
+      profile: javascript_runtime
+      note: "Остаются преобразования ECMAScript; компилятор может отклонить часть выражений, которые JavaScript допускает."
+  typing.compatibility:
+    - value: structural
+      note: "Совместимость объектов определяется членами. private/protected-члены классов и некоторые другие типы вводят дополнительные ограничения происхождения."
+      sources:
+        - {url: "https://www.typescriptlang.org/docs/handbook/type-compatibility.html", title: "TypeScript: Type Compatibility"}
+  typing.sum_types:
+    - value: union
+      note: "Объединения типов и discriminated unions проверяются статически; поле-дискриминант — обычное значение JavaScript, а не автоматически добавленная метка."
+      sources:
+        - {url: "https://www.typescriptlang.org/docs/handbook/2/narrowing.html#discriminated-unions", title: "Narrowing: Discriminated unions"}
+  typing.product_types:
+    - value: record
+      note: "Объектные типы с именованными свойствами."
+    - value: tuple
+      note: "Статически типизированные позиции и длина; runtime-представление — массив JavaScript."
+  typing.nullability:
+    - value: nullable_types
+      profile: ts5_strict
+      note: "При strictNullChecks null и undefined — отдельные типы; допустимость задаётся объединением. Утверждение ! не добавляет runtime-проверки."
+      sources:
+        - {url: "https://www.typescriptlang.org/tsconfig/strictNullChecks.html", title: "TSConfig: strictNullChecks"}
+  control.selection:
+    - value: statement
+    - value: expression
+      note: "if/else и ?:; анализ условий может сужать статический тип."
+  control.switch:
+    - value: true
+      note: "switch из JavaScript участвует в narrowing discriminated union."
+  control.pattern_matching:
+    - value: false
+      note: "Сужение типов и деструктуризация не вводят отдельную конструкцию match."
+  control.iteration:
+    - value: c_style
+    - value: foreach
+      note: "for-of и for-in сохраняют различие значений iterable и перечислимых ключей."
+  subprograms.overloading:
+    - value: true
+      note: "Несколько видимых сигнатур с одним телом реализации. Компилятор выбирает сигнатуру, но не генерирует runtime-диспетчеризацию по типам."
+      sources:
+        - {url: "https://www.typescriptlang.org/docs/handbook/2/functions.html#function-overloads", title: "More on Functions: Function Overloads"}
+  subprograms.parameter_passing:
+    - value: by_value
+      note: "Переприсваивание параметра не изменяет переменную вызывающего."
+    - value: by_sharing
+      applies_to: объекты JavaScript
+      note: "Мутация разделяемого объекта наблюдаема вызывающим; readonly ограничивает операции только статически."
+  subprograms.nesting:
+    - value: true
+  subprograms.closures:
+    - value: true
+  subprograms.lambda:
+    - value: true
+  subprograms.generics:
+    - value: true
+      note: "Параметры типов функций, интерфейсов и классов; ограничения extends проверяются статически."
+  subprograms.generic_mechanism:
+    - value: erasure
+      note: "Параметры типов и интерфейсы отсутствуют в JavaScript-результате. Это не означает стирания всех конструкций TS: например, обычные enum могут генерировать код."
+      sources:
+        - {url: "https://www.typescriptlang.org/docs/handbook/2/generics.html", title: "TypeScript: Generics"}
+        - {url: "https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types", title: "The Basics: Erased Types"}
+  abstraction.contracts:
+    - value: interfaces
+      note: "Структурные интерфейсы; implements проверяет класс, но не добавляет проверки во время выполнения."
+  abstraction.inheritance:
+    - value: single
+      note: "Класс имеет один базовый класс; интерфейсы могут расширять несколько интерфейсов без наследования реализации."
+  abstraction.modules:
+    - value: explicit_exports
+      note: "import/export; import type и export type стираются. Разрешение и загрузка исполняемых модулей зависят от настроек и хоста."
+  evaluation.strategy:
+    - value: strict
+      note: "Обычные аргументы вычисляются по правилам JavaScript перед вызовом."
+  memory.transfer:
+    - value: shared_reference
+      applies_to: объектные значения
+      note: "Статическая аннотация не меняет runtime-разделение объектов."
+  errors.model:
+    - value: exceptions
+      note: "throw/try/catch из JavaScript; при strict переменная catch по умолчанию имеет тип unknown."
+  errors.checked_exceptions:
+    - value: false
+      note: "Тип функции не задаёт обязательный список throws; обработка исключения не проверяется как в Java."
+  resources.cleanup:
+    - value: finally
+      profile: ts5_strict
+      note: "Базовый профиль 5.0 использует try/finally; explicit resource management из более поздних версий не включён."
+  resources.concurrency:
+    - value: async_await
+      note: "Статические типы `Promise<T>` описывают результаты; планирование и I/O остаются обязанностью JavaScript-хоста."
+  syntax.blocks:
+    - value: explicit
+  paradigm.supported:
+    - value: imperative
+    - value: object_oriented
+    - value: functional

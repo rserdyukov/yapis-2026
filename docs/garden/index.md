@@ -19,4 +19,4 @@ layout: landing
 </div>
 
 Отдельных заметок пока нет. Уже доступные материалы можно исследовать через
-[каталог языков](../languages/index.md) и [онтологию концепций](../languages/concepts.md).
+[каталог языков](../languages/index.md) и [онтологию](../concepts/index.md).

@@ -194,6 +194,7 @@ run_fixture() {
 {
   "\$schema": "https://opencode.ai/config.json",
   "model": "${MODEL}",
+  "small_model": "${MODEL}",
   "share": "disabled",
   "permission": { "*": "deny", "read": "allow", "glob": "allow", "grep": "allow", "list": "allow" }
 }

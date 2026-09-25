@@ -258,11 +258,17 @@ log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF
 # приоритет над любым opencode.json в проекте. Все разрешения, кроме
 # чтения/поиска, запрещены ЯВНО и по именам: "*" перекрывается ключами из
 # конфигурации проекта, отдельные ключи — нет.
+#
+# small_model задан явно: без него opencode для служебных вызовов (заголовок
+# сессии) сам выбирает самую свежую gemini-flash из каталога OpenRouter —
+# в логах OpenRouter это был лишний запрос к google/gemini-3.x-flash на
+# каждое ревью, мимо MODEL из config.env.
 AGENT_HOME="${WORK}/agent-home"
 mkdir -p "${AGENT_HOME}"
 AGENT_CONFIG="$(jq -cn --arg model "${MODEL}" '{
   "$schema": "https://opencode.ai/config.json",
   model: $model,
+  small_model: $model,
   share: "disabled",
   autoupdate: false,
   snapshot: false,

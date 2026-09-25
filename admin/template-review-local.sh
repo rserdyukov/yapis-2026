@@ -341,6 +341,7 @@ AGENT_CONFIG="$(cat <<EOF
 {
   "\$schema": "https://opencode.ai/config.json",
   "model": "${MODEL}",
+  "small_model": "${MODEL}",
   "share": "disabled",
   "permission": {
     "*": "deny",

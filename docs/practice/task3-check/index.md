@@ -15,9 +15,14 @@ search:
 Подсказки открываются по шагам: сначала — сколько ошибок, потом — где, потом —
 почему. Эталон элемента можно раскрыть отдельно.
 
-Грамматику и трассы пишите текстом. FIRST, FOLLOW и таблицу M удобнее заполнять
-на вкладке **«Таблицы»**: строки и столбцы строятся по вашей грамматике, а всё
-отмеченное сразу записывается в текст ответа — это одно и то же решение в двух видах.
+Редактор подсвечивает запись и подчёркивает ошибки прямо при наборе. Секции
+`first`, `follow`, `table` и трассы, как только они разобраны, показываются
+**таблицами внутри текста**: отметьте элементы множеств и правила в ячейках,
+поправьте строки трассы — текст секции перепишется сам. Кнопка «текст» над
+таблицей (или курсор, поставленный в секцию) возвращает её к тексту. Грамматику
+пишите текстом: по ней строятся строки и столбцы таблиц. Секция с комментариями
+остаётся текстом, чтобы таблица их не стёрла. Tab внутри редактора делает отступ;
+чтобы перейти к таблицам с клавиатуры, нажмите Esc, затем Tab.
 Соответствие грамматики **описанию языка** варианта пока не проверяется —
 только то, что по вашей грамматике всё построено верно.
 
@@ -33,13 +38,8 @@ search:
   </div>
   <div class="gl__cols">
     <div class="gl__pane">
-      <div class="gl__tabs" role="tablist" aria-label="Представление ответа">
-        <button role="tab" id="gl-tab-text" data-view="text" aria-selected="true" aria-controls="gl-view-text">Текст</button>
-        <button role="tab" id="gl-tab-grid" data-view="grid" aria-selected="false" aria-controls="gl-view-grid" disabled>Таблицы</button>
-        <span class="gl__hint">DSL v1</span>
-      </div>
-      <textarea id="gl-source" spellcheck="false" aria-label="Ответ" role="tabpanel" aria-labelledby="gl-tab-text"></textarea>
-      <div id="gl-grid" class="gl__grid" role="tabpanel" aria-labelledby="gl-tab-grid" hidden></div>
+      <div class="gl__head">Ответ <span class="gl__hint">DSL v1 · Ctrl+Space — подсказки · Esc, затем Tab — к таблицам</span></div>
+      <div id="gl-editor" class="gl__editor"></div>
     </div>
     <div class="gl__pane">
       <div class="gl__head">Результат</div>

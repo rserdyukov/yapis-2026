@@ -48,6 +48,21 @@ if (!existsSync(join(gl, "index.html"))) {
     JSON.stringify({ first: m.first, follow: m.follow, table: m.table })));
   const again = JSON.parse(checkJson(back.text));
   check("grammarlab: табличный редактор — туда и обратно", m.ok && back.ok && again.findings.length === 0);
+  // Текст секций, собранный в браузере (render.mjs), совпадает с Python (grid.apply_grid).
+  const { renderSet, renderTable } = await import("../../docs/practice/task3-check/render.mjs");
+  const layoutJson = pyodide.runPython("from grammarlab.web import layout_json; layout_json");
+  let same = true;
+  for (const ex of examples) {
+    const L = JSON.parse(layoutJson(ex.source));
+    const g = L.grid;
+    const py = JSON.parse(applyJson(ex.source, JSON.stringify({ first: g.first, follow: g.follow, table: g.table }))).text;
+    for (const [name, text] of [["first", renderSet("first", g.first, g)], ["follow", renderSet("follow", g.follow, g)],
+                                ["table", renderTable(g.table, g)]]) {
+      const block = py.split("\n" + name + ":\n")[1].split("\n\n")[0];
+      if (text !== name + ":\n" + block) { same = false; console.log(ex.id, name, JSON.stringify(text)); }
+    }
+  }
+  check("grammarlab: render.mjs совпадает с grid.py", same);
   const syn = JSON.parse(checkJson("grammar:\n  B -> b ;\n"));
   check("grammarlab: синтаксическая ошибка S007", !syn.ok && syn.parse[0].code === "S007");
 } else {

@@ -16,8 +16,8 @@ from grammarlab.answer import parse_answer  # noqa: E402
 from grammarlab.check import check  # noqa: E402
 from grammarlab.grammar import (END, EPS, Grammar, accepts, build_table, compute_sets,  # noqa: E402
                                 conflicts, first_witness, follow_witness, is_derivation, simulate)
-from grammarlab.grid import apply_grid, grid_model  # noqa: E402
-from grammarlab.web import apply_grid_json, check_json, grid_json  # noqa: E402
+from grammarlab.grid import apply_grid, grid_model, layout  # noqa: E402
+from grammarlab.web import apply_grid_json, check_json, grid_json, layout_json  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures"
 
@@ -360,6 +360,68 @@ class Grid(unittest.TestCase):
         out = json.loads(apply_grid_json(text, grid))
         self.assertTrue(out["ok"])
         self.assertEqual(check(parse_answer(out["text"])).findings, [])
+
+
+class Layout(unittest.TestCase):
+    """Разметка для редактора: секции, диагностика, трассы."""
+
+    def test_sections_and_traces(self):
+        text = fixture("v08-ok")
+        lay = layout(text)
+        self.assertTrue(lay["ok"])
+        names = [s["name"] for s in lay["sections"]]
+        self.assertEqual(names, ["grammar", "first", "follow", "table", "trace", "trace", "trace"])
+        lines = text.split("\n")
+        for sec in lay["sections"]:
+            self.assertTrue(lines[sec["start"] - 1].lstrip().startswith(sec["name"]))
+            self.assertTrue(lines[sec["end"] - 1].strip(), sec)   # без хвостовых пустых строк
+        tr = lay["traces"][1]
+        self.assertEqual(tr["line"], lay["sections"][5]["start"])
+        self.assertEqual(tr["rows"][-1]["action"], "error")
+        self.assertEqual(tr["rows"][2]["action"], "match h")
+        self.assertIn("';'", tr["rows"][-1]["stack"])
+        self.assertEqual(lay["grid"]["lossy_by_section"], {"first": [], "follow": [], "table": []})
+
+    def test_section_end_skips_trailing_comments(self):
+        lay = layout("grammar:\n  S -> a\n\nfirst:\n  S = { a }\n# заметка\n\n")
+        self.assertEqual(lay["sections"][1], {"name": "first", "start": 4, "end": 5, "comments": False})
+
+    def test_version_and_compact_trace_are_boundaries(self):
+        text = ("grammar:\n  S -> a\nfollow:\n  S = { $ }\nversion: 1\ntrace\"a\":\n"
+                "  S $ | a $ | S -> a\n  a $ | a $ | match a\n  $ | $ | accept\n")
+        lay = layout(text)
+        self.assertTrue(lay["ok"])
+        follow = next(s for s in lay["sections"] if s["name"] == "follow")
+        self.assertEqual((follow["start"], follow["end"]), (3, 4))
+        self.assertEqual([s["name"] for s in lay["sections"]], ["grammar", "follow", "trace"])
+        m = grid_model(text)
+        out = apply_grid(text, {"first": None, "follow": m["follow"], "table": None})["text"]
+        self.assertIn("version: 1", out)
+        self.assertIn('trace"a":', out)
+
+    def test_comments_inside_section_are_flagged(self):
+        lay = layout("grammar:\n  S -> a\nfirst:\n  # заметка\n  S = { a }   # проверено\n"
+                     "follow:\n  S = { $ }\n# после секции\n")
+        first, follow = lay["sections"][1], lay["sections"][2]
+        self.assertTrue(first["comments"])
+        self.assertFalse(follow["comments"])
+        self.assertEqual(follow["end"], 7)
+
+    def test_diagnostics_positions(self):
+        lay = layout("grammar:\n  B -> b ;\n")
+        self.assertFalse(lay["ok"])
+        self.assertEqual([(d["code"], d["line"], d["col"]) for d in lay["diagnostics"]], [("S007", 2, 10)])
+        self.assertEqual(lay["traces"], [])
+
+    def test_lossy_by_section(self):
+        lay = layout("grammar:\n  S -> a S | b\nfirst:\n  S = { a, b, c }\ntable:\n  M[S, a] = S -> a S\n")
+        self.assertEqual(len(lay["grid"]["lossy_by_section"]["first"]), 1)
+        self.assertEqual(lay["grid"]["lossy_by_section"]["table"], [])
+
+    def test_json(self):
+        data = json.loads(layout_json(fixture("v18-ok")))
+        self.assertIn("conflicts", [s["name"] for s in data["sections"]])
+        self.assertEqual(data["grid"]["rules"]["X"], ["X -> else O", "X -> eps"])
 
 
 class Interfaces(unittest.TestCase):

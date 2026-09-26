@@ -19,6 +19,7 @@ on:
       - 'examples/grammar-lab/**'
       - 'tools/playground_bundle.py'
       - 'tools/pyodide-smoke/**'
+      - 'tools/codemirror-bundle/**'
       - 'mkdocs.yml'
       - 'tools/build-docs.py'
       - 'tools/build-slides.py'
@@ -35,6 +36,7 @@ on:
       - 'examples/grammar-lab/**'
       - 'tools/playground_bundle.py'
       - 'tools/pyodide-smoke/**'
+      - 'tools/codemirror-bundle/**'
       - 'mkdocs.yml'
       - 'tools/build-docs.py'
       - 'tools/build-slides.py'
@@ -106,6 +108,13 @@ jobs:
       # Бандлы страниц на Pyodide (playground, самопроверка задачи 3) грузятся
       # в настоящий Pyodide той же версии: Python 3.14 там, 3.12 здесь.
       # Node уже есть на раннере; версии пакетов — в package-lock.json.
+      # CodeMirror для страницы самопроверки собран в один файл и закоммичен
+      # (docs/practice/task3-check/codemirror.mjs): проверяем, что он совпадает
+      # с пересборкой из закреплённых версий (tools/codemirror-bundle).
+      - name: Проверить бандл CodeMirror
+        run: cd tools/codemirror-bundle && npm ci --no-audit --no-fund && node build.mjs --check
+        shell: bash
+
       - name: Проверить бандлы в Pyodide
         run: cd tools/pyodide-smoke && npm ci --no-audit --no-fund && node smoke.mjs ../../site
         shell: bash

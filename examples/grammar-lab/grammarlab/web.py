@@ -6,7 +6,7 @@ import json
 
 from .answer import parse_answer
 from .check import check
-from .grid import apply_grid, grid_model
+from .grid import apply_grid, grid_model, layout
 
 
 def check_json(text: str) -> str:
@@ -41,3 +41,12 @@ def apply_grid_json(text: str, grid: str) -> str:
     except Exception as error:
         return json.dumps({"ok": False, "text": text,
                            "internal_error": f"{type(error).__name__}: {error}"}, ensure_ascii=False)
+
+
+def layout_json(text: str) -> str:
+    """Разметка для редактора: секции, диагностика, сетка, трассы (grid.layout)."""
+    try:
+        return json.dumps(layout(text), ensure_ascii=False)
+    except Exception as error:
+        return json.dumps({"ok": False, "internal_error": f"{type(error).__name__}: {error}",
+                           "diagnostics": [], "sections": [], "traces": []}, ensure_ascii=False)

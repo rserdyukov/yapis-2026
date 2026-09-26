@@ -19,8 +19,9 @@ from .answer import fmt_rule, fmt_set, parse_answer, q
 from .grammar import END, EPS
 
 _HEADER = re.compile(r"^\s*(grammar|first|follow|table|conflicts)\s*:\s*(#.*)?$")
-_TRACE = re.compile(r'^\s*trace\s+"[^"\n]*"\s*:\s*(#.*)?$')
-ORDER = ("grammar", "first", "follow", "table", "conflicts", "trace")
+_TRACE = re.compile(r'^\s*trace\s*"[^"\n]*"\s*:\s*(#.*)?$')
+_VERSION = re.compile(r"^\s*version\s*:\s*\d+\s*(#.*)?$")
+ORDER = ("version", "grammar", "first", "follow", "table", "conflicts", "trace")
 
 
 def cell_key(a: str, t: str) -> str:
@@ -39,6 +40,11 @@ def grid_model(text: str) -> dict:
     columns = terms + [END]
     alts = {a: g.alternatives(a) for a in nts}
     lossy: list[str] = []
+    lossy_by: dict[str, list[str]] = {"first": [], "follow": [], "table": []}
+
+    def lose(section: str, msg: str):
+        lossy.append(msg)
+        lossy_by[section].append(msg)
 
     def sets(given, allowed, name):
         if given is None:
@@ -46,11 +52,11 @@ def grid_model(text: str) -> dict:
         out = {}
         for a, vals in given.items():
             if a not in alts:
-                lossy.append(f"{name}({a}): {a} — не нетерминал")
+                lose(name.lower(), f"{name}({a}): {a} — не нетерминал")
                 continue
             bad = sorted(v for v in vals if v not in allowed)
             for v in bad:
-                lossy.append(f"{name}({a}): элемент {q(v)} не терминал грамматики")
+                lose(name.lower(), f"{name}({a}): элемент {q(v)} не терминал грамматики")
             out[a] = [v for v in allowed if v in vals]
         return out
 
@@ -59,14 +65,14 @@ def grid_model(text: str) -> dict:
         table = {}
         for (a, t), rules in ans.table.items():
             if a not in alts or t not in columns:
-                lossy.append(f"{cell_key(a, t)}: такой ячейки нет в таблице этой грамматики")
+                lose("table", f"{cell_key(a, t)}: такой ячейки нет в таблице этой грамматики")
                 continue
             idx = []
             for rule in rules:
                 if rule[0] == a and rule[1] in alts[a]:
                     idx.append(alts[a].index(rule[1]))
                 else:
-                    lossy.append(f"{cell_key(a, t)}: правила {fmt_rule(rule)} нет в грамматике")
+                    lose("table", f"{cell_key(a, t)}: правила {fmt_rule(rule)} нет в грамматике")
             if idx:
                 table.setdefault(a, {})[t] = sorted(set(idx))
     return {
@@ -80,7 +86,12 @@ def grid_model(text: str) -> dict:
         "follow": sets(ans.follow, terms + [END], "FOLLOW"),
         "table": table,
         "cell_keys": {a: {t: cell_key(a, t) for t in columns} for a in nts},
+        # Для сборки текста секции в браузере (render.mjs) без вызова Python:
+        # метки правил и порядок элементов множества — как в fmt_set/fmt_rule.
+        "rules": {a: [fmt_rule((a, b)) for b in alts[a]] for a in nts},
+        "set_order": sorted(terms + [EPS, END], key=lambda s: (s in (EPS, END), s)),
         "lossy": lossy,
+        "lossy_by_section": lossy_by,
     }
 
 
@@ -93,6 +104,8 @@ def _blocks(text: str) -> tuple[list[str], list[tuple[str, list[str]]]]:
     for line in text.split("\n"):
         m = _HEADER.match(line)
         name = m.group(1) if m else ("trace" if _TRACE.match(line) else None)
+        if _VERSION.match(line):
+            name = "version"
         if name:
             blocks.append((name, [line]))
         elif blocks:
@@ -153,3 +166,71 @@ def apply_grid(text: str, grid: dict) -> dict:
             blocks.insert(pos, (name, new))
     lines = pre + [line for _, block in blocks for line in block]
     return {"ok": True, "text": "\n".join(lines).rstrip("\n") + "\n"}
+
+
+# -------------------------------------------------------------- разметка текста
+
+def layout(text: str) -> dict:
+    """Всё, что нужно редактору: секции (строки 1…), диагностика разбора,
+    модель сетки и разобранные строки трасс.
+
+    Секция — заголовок и строки до следующего заголовка без хвостовых пустых
+    строк и комментариев: её диапазон заменяется таблицей в редакторе.
+    """
+    from .answer import parse_answer as _parse
+
+    ans = _parse(text)
+    lines = text.split("\n")
+    sections = []
+    cur = None
+    for i, line in enumerate(lines, 1):
+        m = _HEADER.match(line)
+        t = _TRACE.match(line)
+        if m or t:
+            cur = {"name": m.group(1) if m else "trace", "start": i, "end": i, "comments": False}
+            if t:
+                cur["word"] = re.search(r'"([^"\n]*)"', line).group(1)
+            sections.append(cur)
+        elif _VERSION.match(line):
+            cur = None
+        elif cur is not None and line.strip():
+            if line.lstrip().startswith("#"):
+                cur["_pending_comment"] = True
+                continue
+            if cur.pop("_pending_comment", False):
+                cur["comments"] = True     # комментарий внутри секции
+            if "#" in _strip_quoted(line):
+                cur["comments"] = True     # комментарий в конце строки
+            cur["end"] = i
+    for sec in sections:
+        sec.pop("_pending_comment", None)
+    grid = grid_model(text)
+    trace_rows = []
+    if ans.ok:
+        for tr in ans.traces:
+            trace_rows.append({
+                "line": tr.line,
+                "rows": [{"line": r.line, "stack": [q(s) for s in r.stack],
+                          "rest": [q(s) for s in r.rest], "action": _action(r)} for r in tr.rows],
+            })
+    return {
+        "ok": ans.ok,
+        "diagnostics": [d.to_dict() for d in ans.diagnostics],
+        "sections": sections,
+        "nonterminals": ans.grammar.nonterminals if ans.grammar else [],
+        "terminals": [q(t) for t in ans.grammar.terminals] if ans.grammar else [],
+        "grid": grid,
+        "traces": trace_rows,
+    }
+
+
+def _strip_quoted(line: str) -> str:
+    return re.sub(r"'[^'\s]+'|\"[^\"\n]*\"", "", line)
+
+
+def _action(r) -> str:
+    if r.action == "rule":
+        return fmt_rule(r.rule)
+    if r.action == "match":
+        return f"match {q(r.matched)}"
+    return r.action

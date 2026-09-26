@@ -1,0 +1,14 @@
+// Ошибка 5: арность и типы параметров события.
+// Строка 10: withdraw записан без аргумента — пропуск не проходит молча.
+// Строка 11: образец с типом string, а событие объявлено с money.
+// expect: E105
+machine Wallet
+context { balance: money = 100 }
+events { withdraw(amount: money), reset }
+states Ready
+initial Ready
+terminal Ready
+action take(sum: money) { balance = balance - sum }
+Ready -- withdraw [balance > 0] --> / take(1)
+Ready -- withdraw(s: string) else --> / take(balance)
+Ready -- reset ignore

@@ -1,0 +1,56 @@
+name: fsm-compiler
+
+# Тесты учебного компилятора examples/atm-lang (FSM → WebAssembly).
+#
+# Node и wat2wasm нужны, чтобы тесты не пропускались: дифференциальный
+# прогон против reference.py и сверка нашего кодировщика с wat2wasm.
+# Java — для проверки, что сгенерированный ANTLR-парсер соответствует Fsm.g4.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/atm-lang/**'
+      - '.github/workflows/fsm-compiler.yml'
+  pull_request:
+    paths:
+      - 'examples/atm-lang/**'
+      - '.github/workflows/fsm-compiler.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: examples/atm-lang
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: examples/atm-lang/requirements.txt
+
+      - name: Установить зависимости
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet -r requirements.txt
+          sudo apt-get update -qq && sudo apt-get install -y -qq wabt
+
+      # Node и Java уже есть на ubuntu-latest.
+      - name: Тесты
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Пример через compile.sh
+        run: |
+          ./compile.sh examples/atm.fsm scenarios/01_success.events
+          FSMC_FRONTEND=lark ./compile.sh examples/atm.fsm scenarios/02_three_wrong_pins.events

@@ -8,6 +8,7 @@ from mkdocs.exceptions import PluginError
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from publication import published  # noqa: E402
+import playground_bundle  # noqa: E402
 
 
 def on_files(files, config):
@@ -53,6 +54,17 @@ def on_config(config):
     if not hasattr(config, "_course_navigation"):
         config._course_navigation = deepcopy(config.nav or [])
     return config
+
+
+def on_post_build(config):
+    """Playground компилятора FSM: бандл компилятора, хост и примеры.
+    Собираются из examples/atm-lang/ при каждой сборке и в git не лежат."""
+    if not published(Path(config.docs_dir) / "playground" / "index.md"):
+        return
+    try:
+        playground_bundle.build(Path(config.site_dir) / "playground")
+    except (RuntimeError, OSError) as error:
+        raise PluginError(f"playground: {error}") from error
 
 
 def on_page_content(html, page, config, files):

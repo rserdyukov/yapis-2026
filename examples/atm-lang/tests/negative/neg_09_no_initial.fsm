@@ -1,0 +1,10 @@
+// Ошибка 12: начальное состояние не указано.
+// expect: E112
+machine Door
+events { open, close }
+states Closed, Opened
+terminal Closed
+Closed -- open  --> Opened
+Closed -- close ignore
+Opened -- close --> Closed
+Opened -- open  ignore

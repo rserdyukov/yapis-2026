@@ -1,0 +1,63 @@
+// neg_10_naive — точный перевод naive.py из карточки задачи (раздел 3).
+//
+// Каждая ветка `if` из naive.py — один переход. Все четыре ошибки сохранены:
+//   1. "Dispencing" вместо "Dispensing"            → E101 (и E102 для Dispensing)
+//   2. `attempts > MAX` вместо `>=`                → компилятор НЕ видит: остаётся тестом
+//   3. timeout не обработан нигде                  → W108 в каждом состоянии
+//   4. терминальное состояние не объявлено         → E112
+// Python промолчал про все четыре. Здесь сборка падает до запуска.
+//
+// expect: E101 E102 E112 W108
+
+machine NaiveATM
+
+const CORRECT_PIN: string = "4321"
+const MAX_ATTEMPTS: int = 3
+
+context {
+  attempts: int   = 0
+  balance:  money = 5000
+}
+
+events {
+  insert_card, pin(code: string), withdraw(amount: money),
+  cancel, cash_taken, card_taken, timeout, service
+}
+
+// Состояния в naive.py нигде не объявлены — это строки. Объявляем те,
+// что встречаются в `elif state == ...`; "Dispencing" там нет, он только
+// в присваивании `state = "Dispencing"`.
+states Idle, PinWait, Menu, Dispensing, Ejecting, Captured
+initial Idle
+
+action start_session { attempts = 0  say "Введите PIN" }
+action greet         { say "Здравствуйте! Выберите операцию" }
+action capture       { say "Карта изъята" }
+action wrong_pin {
+  say "Неверный PIN. Осталось попыток: ", MAX_ATTEMPTS - attempts
+}
+action count         { attempts = attempts + 1 }
+action refuse        { say "Недостаточно средств" }
+action give(sum: money) {
+  balance = balance - sum
+  say "Выдано ", sum, " руб. Остаток ", balance, " руб."
+}
+action eject         { say "Заберите карту" }
+action reset         { attempts = 0  say "Готов к работе" }
+
+Idle       -- insert_card ------------------------------> PinWait    / start_session
+
+PinWait    -- pin(c) [c == CORRECT_PIN] ----------------> Menu       / greet
+PinWait    -- pin(_) else [attempts + 1 > MAX_ATTEMPTS] -> Captured   / count, capture
+PinWait    -- pin(_) else ------------------------------>            / count, wrong_pin
+PinWait    -- cancel -----------------------------------> Ejecting   / eject
+
+Menu       -- withdraw(s) [s > balance] ---------------->            / refuse
+Menu       -- withdraw(s) else -------------------------> Dispencing / give(s)
+Menu       -- cancel -----------------------------------> Ejecting   / eject
+
+Dispensing -- cash_taken -------------------------------> Ejecting   / eject
+
+Ejecting   -- card_taken -------------------------------> Idle       / reset
+
+Captured   -- service ----------------------------------> Idle       / reset

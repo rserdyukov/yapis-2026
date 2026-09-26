@@ -26,6 +26,8 @@ nav:
           - "Задача 5. СУ-трансляция": practice/task5.md
       - Тесты: tests/index.md
       - "HOWTO: генерация кода": labs/codegen-howto.md
+      - "Пример компилятора: FSM → WASM": labs/fsm-compiler.md
+      - "Playground компилятора": playground/index.md
       - Решения прошлого года: labs/past-works.md
       - Связь с практикумом: languages/lab-mapping.md
   # Порядок языков — по году появления, как в каталоге (build-catalog.py);

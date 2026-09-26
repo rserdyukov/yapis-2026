@@ -38,6 +38,7 @@
 | [`.github/review/`](.github/review/) | Движок ИИ-ревью: промпты, проверки, лимиты |
 | [`.github/workflows/`](.github/workflows/) | `tests`, `guard-main` и `pages` |
 | [`tools/`](tools/) | Сборка производных документов, слайдов и каталога языков |
+| [`examples/atm-lang/`](examples/atm-lang/) | Учебный компилятор FSM → WebAssembly (ANTLR и Lark), исходник playground сайта |
 
 ## Быстрый старт
 

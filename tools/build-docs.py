@@ -180,7 +180,9 @@ def build_site_labs() -> str:
 Порядок работы с репозиторием, ветки, Pull Request и правила ИИ-ревью
 описаны в `GUIDE.md` вашего репозитория. Схемы трансляции для ЛР 5 —
 в [HOWTO: генерация целевого кода](codegen-howto.md), разбор типичных
-решений — в [решениях прошлого года](past-works.md)."""
+решений — в [решениях прошлого года](past-works.md). Законченный пример
+компилятора с двумя фронтендами (ANTLR и Lark) и генерацией WebAssembly —
+[FSM → WASM](fsm-compiler.md), его можно запустить в [playground](../playground/index.md)."""
 
     return page_frontmatter(ROOT / "docs/labs/index.md") + "\n\n".join([header, *body]) + "\n"
 

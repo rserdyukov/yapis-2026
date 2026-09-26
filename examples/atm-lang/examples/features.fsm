@@ -1,0 +1,53 @@
+// Все конструкции языка FSM в одной программе (ЛР 1, пример 2).
+// Запуск: ./compile.sh examples/features.fsm examples/features.events
+// Ожидаемый вывод — examples/features.expected (проверяется тестом).
+
+machine Features
+
+// Константа: литералы, скобки, арифметика; int неявно расширяется до money.
+const LIMIT: money = 10 * (2 + 1)
+
+// Контекст — изменяемые поля автомата, по одному на каждый тип.
+context {
+  n:    int    = -2
+  flag: bool   = true
+  word: string = "нет"
+}
+
+// Событие с параметрами и без; пустые скобки допустимы.
+events { hit(k: int, s: string), flip() }
+
+states A, B
+initial A
+terminal A
+
+// Действие с параметрами. if / else if / else, and / or / not,
+// сравнение строк, унарный минус, остаток от деления.
+action show(k: int, s: string) {
+  n = n + k
+  if n > LIMIT or s == "стоп" {
+    say "большое ", n, " ", flag
+  } else if n % 2 == 0 {
+    say "чётное ", n
+  } else {
+    say "нечётное ", -n
+  }
+  if s != word and not (k < 0) {
+    word = s
+    say "слово=", word
+  }
+}
+
+action toggle {
+  flag = not flag
+  say "flag=", flag
+}
+
+// Guard с коротким вычислением: при k == 0 деление не выполняется.
+A -- hit(k, s) [k != 0 and 100 / k > 0] ---> B / show(k, s)
+// else — явный порядок: проверяется, только если guard выше ложен.
+A -- hit(_, s) else -----------------------> / show(0, s)
+// Переход в себя: цели нет, только действие.
+A -- flip ---------------------------------> / toggle
+// Несколько событий одним переходом; `_` — параметр не нужен.
+B -- hit(_, _) | flip ---------------------> A / toggle

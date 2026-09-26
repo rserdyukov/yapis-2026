@@ -1,0 +1,16 @@
+// Ошибка 11: guard `[attempts]` — это int, а не bool.
+// expect: E111
+machine Lock
+const MAX: int = 3
+context { attempts: int = 0 }
+events { code(value: string), reset }
+states Open, Closed
+initial Closed
+terminal Closed
+action fail { attempts = attempts + 1 }
+Closed -- code(v) [v == "0000"] --> Open
+Closed -- code(_) else [attempts] --> / fail
+Closed -- code(_) else --> / fail
+Closed -- reset ignore
+Open   -- reset --> Closed
+Open   -- code(_) ignore

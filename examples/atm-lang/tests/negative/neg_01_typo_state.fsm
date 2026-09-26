@@ -1,0 +1,12 @@
+// Ошибка 1: опечатка в целевом состоянии.
+// Следствие: Opened тоже недостижимо — единственный вход в него сломан.
+// expect: E101 E102
+machine Door
+events { open, close }
+states Closed, Opened
+initial Closed
+terminal Closed
+Closed -- open  --> Opend
+Closed -- close ignore
+Opened -- close --> Closed
+Opened -- open  ignore

@@ -1,0 +1,7 @@
+# Сценарий для examples/features.fsm. Аргументы через пробел.
+hit 3 да
+flip
+flip
+hit 0 нет
+hit 40 стоп
+flip

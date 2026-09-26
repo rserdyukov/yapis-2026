@@ -1,0 +1,14 @@
+// Ошибка 3: из Jammed нет выхода — ловушка.
+// Все события в Jammed явно проигнорированы, поэтому W108 нет:
+// компилятор ловит именно ловушку, а не пропущенный переход.
+// expect: E103
+machine Door
+events { open, close }
+states Closed, Opened, Jammed
+initial Closed
+terminal Closed
+Closed -- open  --> Opened
+Closed -- close ignore
+Opened -- close --> Closed
+Opened -- open  --> Jammed
+Jammed -- open | close ignore

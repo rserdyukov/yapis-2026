@@ -115,6 +115,7 @@ layout: landing
   [12. Синтаксически управляемая трансляция](../lectures/html/12-sintaksicheski-upravlyaemaya-translyaciya.html)
 - **Лабораторная работа:** [ЛР 5 — генерация целевого кода и отчёт](../labs/index.md#lab-5) ·
   [HOWTO: генерация целевого кода](../labs/codegen-howto.md) ·
+  [пример компилятора FSM → WASM](../labs/fsm-compiler.md) и [playground](../playground/index.md) ·
   [решения прошлого года](../labs/past-works.md) ·
   [структура отчёта](../labs/index.md#otchet)
 - **Практические занятия:** [задача 5 — синтаксически управляемая трансляция](../practice/task5.md)

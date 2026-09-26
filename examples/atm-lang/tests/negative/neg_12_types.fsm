@@ -1,0 +1,15 @@
+// Ошибки типов: money * money, строка в числовое поле, not от числа.
+// expect: E115
+machine Shop
+context { total: money = 0, name: string = "" }
+events { buy(price: money), rename(n: string) }
+states Open
+initial Open
+terminal Open
+action add(p: money) {
+  total = total + p * p
+  name = p
+  if not total { say "пусто" }
+}
+Open -- buy(p) --> / add(p)
+Open -- rename(_) ignore

@@ -1,0 +1,8 @@
+// Синтаксическая ошибка: пропущена стрелка перед целевым состоянием.
+// expect: E002
+machine Door
+events { open }
+states Closed
+initial Closed
+terminal Closed
+Closed -- open Closed

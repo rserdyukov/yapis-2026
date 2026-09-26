@@ -1,0 +1,15 @@
+# Две сессии подряд: баланс сохраняется, счётчик попыток сбрасывается.
+insert_card
+pin 0000
+pin 4321
+withdraw 4000
+cash_taken
+card_taken
+insert_card
+pin 0000
+pin 0000
+pin 4321
+withdraw 1001
+withdraw 1000
+cash_taken
+card_taken

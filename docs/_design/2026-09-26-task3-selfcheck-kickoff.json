@@ -1,0 +1,1745 @@
+{
+  "title": "Самопроверка практической задачи 3 (LL(1)) с ответом на формальном языке",
+  "date": "2026-09-26",
+  "classification": "architectural",
+  "task_url": "",
+  "doc_path": "docs/_design/2026-09-26-task3-selfcheck-kickoff.md",
+  "skill_version": "task-kickoff @ SKILL.md 2026-09-20",
+  "summary": "Студент решает практическую задачу 3 (грамматика → свойства → преобразование → FIRST/FOLLOW → таблица LL(1) → разбор трёх строк) и записывает ответ на маленьком DSL прямо на странице сайта. Страница проверяет ответ в браузере (Python-ядро в Pyodide) и даёт ступенчатую диагностику: сколько ошибок, где, почему (свидетель-вывод или контрпример), а по запросу — эталон элемента. Режим — формирующая самопроверка; сдача практики остаётся на бумаге.",
+  "success_metric": "К занятию (< 2 недель) страница проверяет шаги 4–6 для любой введённой грамматики: исправленный пример варианта 8 даёт «ошибок нет», каждый мутант тестового набора находится и локализуется.",
+  "out_of_scope": [
+    "оценки, контрольные, лимит попыток, закрытые эталоны",
+    "сбор статистики ошибок",
+    "сдача практики через PR (ветки task<N> заняты ЛР)",
+    "варианты 3, 4, 19–23 (картинки) — перевод в текст отдельной задачей",
+    "реализация задач 2 и 4 — только задел в модели ядра"
+  ],
+  "architecture": {
+    "before": {
+      "nodes": [
+        {
+          "id": "task3",
+          "label": "task3.md: теория, варианты, пример",
+          "row": 0,
+          "column": 0,
+          "code_ref": "docs/practice/task3.md:110-175",
+          "detail": "Пример с ошибками: столбец ti, неверная трасса, 2+1 вместо 1+2"
+        },
+        {
+          "id": "paper",
+          "label": "Решение на бумаге",
+          "row": 1,
+          "column": 0,
+          "detail": "Проверяет преподаватель вручную"
+        },
+        {
+          "id": "tests",
+          "label": "tests/index.md — заглушка",
+          "row": 0,
+          "column": 2,
+          "code_ref": "docs/tests/index.md:15-33"
+        },
+        {
+          "id": "pg",
+          "label": "playground (Pyodide + fsmc)",
+          "row": 2,
+          "column": 2,
+          "code_ref": "docs/playground/playground.js:49-74",
+          "detail": "Не закоммичен"
+        },
+        {
+          "id": "hook",
+          "label": "site_hooks.on_post_build → playground_bundle",
+          "row": 3,
+          "column": 2,
+          "code_ref": "tools/site_hooks.py:59-67"
+        }
+      ],
+      "edges": [
+        {
+          "from": "task3",
+          "to": "paper",
+          "label": "студент решает"
+        },
+        {
+          "from": "hook",
+          "to": "pg",
+          "label": "бандл"
+        }
+      ]
+    },
+    "after": {
+      "nodes": [
+        {
+          "id": "task3",
+          "label": "task3.md: пример в DSL, исправлен",
+          "row": 0,
+          "column": 0,
+          "status": "changed",
+          "detail": "Столбцы t/i, трасса с колонками, 1+2, правило else, ссылка на проверку"
+        },
+        {
+          "id": "paper",
+          "label": "Решение на бумаге",
+          "row": 1,
+          "column": 0,
+          "detail": "Сдача не меняется"
+        },
+        {
+          "id": "check",
+          "label": "task3-check.md: ввод DSL, подсказки",
+          "row": 1,
+          "column": 1,
+          "status": "new",
+          "detail": "Pyodide, localStorage-черновик, уровни 1–3 + «показать эталон»"
+        },
+        {
+          "id": "core",
+          "label": "examples/grammar-lab (Python)",
+          "row": 2,
+          "column": 1,
+          "status": "new",
+          "detail": "grammar (FIRST/FOLLOW со свидетелями, LL(1), трассы), answer (Lark DSL), check, web.py, CLI"
+        },
+        {
+          "id": "tests",
+          "label": "tests/index.md → ссылка",
+          "row": 0,
+          "column": 2,
+          "status": "changed"
+        },
+        {
+          "id": "pg",
+          "label": "playground (Pyodide + fsmc)",
+          "row": 2,
+          "column": 2,
+          "detail": "Закоммичен на этапе 0, поведение прежнее"
+        },
+        {
+          "id": "hook",
+          "label": "обобщённый сборщик бандлов + smoke Pyodide в CI",
+          "row": 3,
+          "column": 2,
+          "status": "changed",
+          "code_ref": "tools/playground_bundle.py"
+        }
+      ],
+      "edges": [
+        {
+          "from": "task3",
+          "to": "paper",
+          "label": "решает"
+        },
+        {
+          "from": "task3",
+          "to": "check",
+          "label": "самопроверка"
+        },
+        {
+          "from": "tests",
+          "to": "check",
+          "label": "ссылка"
+        },
+        {
+          "from": "check",
+          "to": "core",
+          "label": "check_json"
+        },
+        {
+          "from": "hook",
+          "to": "core",
+          "label": "бандл"
+        },
+        {
+          "from": "hook",
+          "to": "pg",
+          "label": "бандл"
+        }
+      ]
+    },
+    "legend": "Зелёное — новое, жёлтое — изменённое, серое — без изменений."
+  },
+  "use_cases": [
+    {
+      "id": "UC-1",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Открывает «Практические занятия»",
+      "result_before": "5 карточек задач",
+      "result_after": "У задачи 3 есть ссылка «Самопроверка»",
+      "status": "changed",
+      "code_ref": "docs/practice/index.md:23-25"
+    },
+    {
+      "id": "UC-4",
+      "actor": "Студент",
+      "precondition": "Вариант 3, 4, 19–23",
+      "action": "Открывает вариант",
+      "result_before": "Только картинка",
+      "result_after": "Страница проверки явно сообщает: шаг 1 недоступен, шаги 4–6 — с собственной грамматикой",
+      "status": "unchanged",
+      "code_ref": "docs/practice/task3.md:81-82,97-101"
+    },
+    {
+      "id": "UC-5",
+      "actor": "Студент",
+      "precondition": "Вариант 2",
+      "action": "Читает <O> ::= 'o' …",
+      "result_before": "Выглядит обрезанным",
+      "result_after": "Нотация «X… = 0+» описана; вариант поддерживается",
+      "status": "changed",
+      "code_ref": "docs/practice/task3.md:80"
+    },
+    {
+      "id": "UC-7",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Читает теорию",
+      "result_before": "Опечатка в FIRST цепочки; про конфликты ничего",
+      "result_after": "Опечатка исправлена; правило «else — к ближайшему if»",
+      "status": "changed",
+      "code_ref": "docs/practice/task3.md:47,61-64"
+    },
+    {
+      "id": "UC-10",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Читает лекцию 05",
+      "result_before": "«факторизация решает висячее else»",
+      "result_after": "Уточнено: конфликт остаётся, разрешается соглашением",
+      "status": "changed",
+      "code_ref": "docs/lectures/slides/05-kontekstno-svobodnye-grammatiki.md:94"
+    },
+    {
+      "id": "UC-12",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Разбирает пример",
+      "result_before": "Слитная запись, ошибки в таблице и трассе",
+      "result_after": "Пример в записи DSL; проходит проверку без ошибок",
+      "status": "changed",
+      "code_ref": "docs/practice/task3.md:110-175"
+    },
+    {
+      "id": "UC-14",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Смотрит таблицу M",
+      "result_before": "Столбец «ti»",
+      "result_after": "Столбцы t и i",
+      "status": "changed",
+      "code_ref": "docs/practice/task3.md:148"
+    },
+    {
+      "id": "UC-16",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Сверяет трассу hbtib,b;$",
+      "result_before": "Трасса противоречит таблице (N→tiN при входе b)",
+      "result_after": "Стек/вход/действие; ошибка на M[M,t]",
+      "status": "changed",
+      "code_ref": "docs/practice/task3.md:171-175"
+    },
+    {
+      "id": "UC-17",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Считает примеры",
+      "result_before": "2 правильных + 1 неправильный",
+      "result_after": "1 правильный + 2 неправильных, как в условии",
+      "status": "changed",
+      "code_ref": "docs/practice/task3.md:73"
+    },
+    {
+      "id": "UC-18",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Открывает «Тесты»",
+      "result_before": "Заглушка «В плане»",
+      "result_after": "В теме 2 ссылка на самопроверку задачи 3",
+      "status": "changed",
+      "code_ref": "docs/tests/index.md:19-21"
+    },
+    {
+      "id": "UC-21",
+      "actor": "Студент",
+      "precondition": "—",
+      "action": "Открывает playground",
+      "result_before": "Компилятор FSM в Pyodide",
+      "result_after": "То же; сборщик общий, регрессия под smoke-тестом",
+      "status": "unchanged",
+      "code_ref": "docs/playground/playground.js:49-74"
+    },
+    {
+      "id": "UC-22",
+      "actor": "Студент",
+      "precondition": "ЛР",
+      "action": "Сдаёт ЛР через PR task<N>",
+      "result_before": "ИИ-ревью + преподаватель",
+      "result_after": "Без изменений",
+      "status": "unchanged",
+      "code_ref": "admin/template-GUIDE.md:104-155"
+    },
+    {
+      "id": "UC-N1",
+      "actor": "Студент",
+      "precondition": "Страница загружена",
+      "action": "Вводит DSL, «Проверить»",
+      "result_before": "—",
+      "result_after": "Сначала показано, как система поняла ответ (нормализованная интерпретация)",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N2",
+      "actor": "Студент",
+      "precondition": "Синтаксическая ошибка",
+      "action": "«Проверить»",
+      "result_before": "—",
+      "result_after": "Ошибка со строкой/колонкой на русском; попытка не считается",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N3",
+      "actor": "Студент",
+      "precondition": "Грамматика разобрана",
+      "action": "Проверка FIRST/FOLLOW",
+      "result_before": "—",
+      "result_after": "Уровни: сколько → где → вывод-свидетель (недостающее) / объяснение по правилам (лишнее)",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N4",
+      "actor": "Студент",
+      "precondition": "То же",
+      "action": "Проверка таблицы M",
+      "result_before": "—",
+      "result_after": "Ошибочные ячейки; свидетель — строка с расходящейся трассой; конфликт допустим только объявленный (18, 28, 29)",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N5",
+      "actor": "Студент",
+      "precondition": "То же",
+      "action": "Проверка трасс",
+      "result_before": "—",
+      "result_after": "Симуляция по таблице студента, первая неверная строка; членство — по языку студента (варианта в инкр. 3)",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N6",
+      "actor": "Студент",
+      "precondition": "≥ N попыток или кнопка",
+      "action": "«Показать эталон»",
+      "result_before": "—",
+      "result_after": "Эталон элемента с пояснением; защиту не обещаем",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N7",
+      "actor": "Студент",
+      "precondition": "Ответ введён",
+      "action": "Перезагрузка",
+      "result_before": "—",
+      "result_after": "Черновик и счётчик восстановлены из localStorage",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N8",
+      "actor": "Преподаватель",
+      "precondition": "Python 3.12+",
+      "action": "python -m grammarlab check answer.txt",
+      "result_before": "—",
+      "result_after": "Та же диагностика, код выхода 0/1",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N9",
+      "actor": "Студент",
+      "precondition": "CDN недоступен / медленная сеть",
+      "action": "Открывает страницу",
+      "result_before": "—",
+      "result_after": "Прогресс; при сбое — понятное сообщение и ссылка на CLI",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N10",
+      "actor": "Студент",
+      "precondition": "Инкремент 2",
+      "action": "Заполняет сетку FIRST/FOLLOW и M",
+      "result_before": "—",
+      "result_after": "Сетка сериализуется в тот же DSL",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N11",
+      "actor": "Студент",
+      "precondition": "Инкремент 3, текстовый вариант",
+      "action": "Проверка шагов 1 и 3",
+      "result_before": "—",
+      "result_after": "Перебор языков по длинам; «расхождений не найдено» или кратчайший свидетель",
+      "status": "new",
+      "code_ref": ""
+    },
+    {
+      "id": "UC-N12",
+      "actor": "Студент",
+      "precondition": "Инкремент 3",
+      "action": "Смотрит итог",
+      "result_before": "—",
+      "result_after": "«Задача решена» по условиям D6; до инкремента 3 — «алгоритм применён верно; язык не проверен»",
+      "status": "new",
+      "code_ref": ""
+    }
+  ],
+  "requirements": [
+    {
+      "id": "F1",
+      "group": "Функциональные",
+      "text": "DSL: символы через пробел, пунктуация в кавычках, eps/ε; секции grammar/first/follow/table/trace",
+      "use_cases": [
+        "UC-N1",
+        "UC-N2"
+      ]
+    },
+    {
+      "id": "F2",
+      "group": "Функциональные",
+      "text": "Синтаксическая ошибка не считается попыткой и блокирует проверки по существу",
+      "use_cases": [
+        "UC-N2"
+      ]
+    },
+    {
+      "id": "F3",
+      "group": "Функциональные",
+      "text": "Нормализованная интерпретация ответа показывается до проверки",
+      "use_cases": [
+        "UC-N1"
+      ]
+    },
+    {
+      "id": "F4",
+      "group": "Функциональные",
+      "text": "FIRST/FOLLOW с причинами, LL(1) с конфликтами, симуляция трасс",
+      "use_cases": [
+        "UC-N3",
+        "UC-N4",
+        "UC-N5"
+      ]
+    },
+    {
+      "id": "F5",
+      "group": "Функциональные",
+      "text": "Подсказки трёх уровней + «показать эталон»",
+      "use_cases": [
+        "UC-N3",
+        "UC-N4",
+        "UC-N5",
+        "UC-N6"
+      ]
+    },
+    {
+      "id": "F6",
+      "group": "Функциональные",
+      "text": "Проверка продуктивности и достижимости до остальных проверок",
+      "use_cases": [
+        "UC-N3"
+      ]
+    },
+    {
+      "id": "F7",
+      "group": "Функциональные",
+      "text": "Допустим только конфликт из allowed_conflicts варианта (M[X,else] для 18, 28, 29; выбор X→else O)",
+      "use_cases": [
+        "UC-N4",
+        "UC-N5"
+      ]
+    },
+    {
+      "id": "F8",
+      "group": "Функциональные",
+      "text": "Инкремент 3: сравнение языков по D11, итог по D6",
+      "use_cases": [
+        "UC-N11",
+        "UC-N12"
+      ]
+    },
+    {
+      "id": "D-1",
+      "group": "Данные",
+      "text": "DSL версионируется (version: 1); черновики в localStorage под ключом с версией",
+      "use_cases": [
+        "UC-N7"
+      ]
+    },
+    {
+      "id": "N-1",
+      "group": "Нефункциональные",
+      "text": "Данные не покидают браузер; проверка < 1 с после загрузки; сравнение языков ≤ ~3 с с честным прерыванием",
+      "use_cases": [
+        "UC-N1",
+        "UC-N11"
+      ]
+    }
+  ],
+  "variants": [
+    {
+      "id": "A",
+      "name": "Python-ядро examples/grammar-lab в Pyodide",
+      "recommended": true,
+      "chosen": true,
+      "summary": "Пакет на Python (grammar/answer/check/web), бандл через обобщённый playground_bundle, страница docs/practice/task3-check.md, CLI и unittest на том же коде.",
+      "components": [
+        "examples/grammar-lab/",
+        "docs/practice/task3-check.md",
+        "tools/playground_bundle.py",
+        "tools/site_hooks.py",
+        ".github/workflows/pages.yml",
+        "mkdocs.yml"
+      ],
+      "blast_radius": "5–7 изменённых файлов, 15–20 новых, ~2–3 тыс. строк с тестами; существующие тесты не ломаются",
+      "reversibility": "Высокая: добавление файлов; publish: true — выключатель",
+      "pros": [
+        "Один код для браузера, CLI, тестов и инкрементов 3–4",
+        "Готовый паттерн загрузки; кэш Pyodide общий с playground",
+        "Ядро и тесты на языке остального репо"
+      ],
+      "cons": [
+        "~6,2 МБ первой загрузки",
+        "Зависимость от jsDelivr",
+        "Фундамент (playground) ещё не закоммичен"
+      ],
+      "debt": "Два JS-хоста Pyodide; версия Pyodide в двух местах; Python 3.12 (CI) vs 3.14 (Pyodide)",
+      "size": "M",
+      "uc_diff": [
+        {
+          "uc": "UC-1",
+          "status": "changed",
+          "note": "ссылка"
+        },
+        {
+          "uc": "UC-12",
+          "status": "changed",
+          "note": "пример в DSL, исправлен"
+        },
+        {
+          "uc": "UC-21",
+          "status": "unchanged",
+          "note": "общий сборщик под smoke-тестом"
+        },
+        {
+          "uc": "UC-N1",
+          "status": "new",
+          "note": "MVP"
+        },
+        {
+          "uc": "UC-N11",
+          "status": "new",
+          "note": "инкремент 3"
+        }
+      ]
+    },
+    {
+      "id": "B",
+      "name": "Чистый JavaScript (ES-модули без сборщика)",
+      "recommended": false,
+      "chosen": false,
+      "summary": "Ядро и DSL на JS, тесты node --test, без CDN и без бандла.",
+      "components": [
+        "docs/practice/grammar-lab/*.mjs",
+        "docs/practice/task3-check.md",
+        ".github/workflows/grammar-lab.yml",
+        "mkdocs.yml (exclude_docs для тестов)"
+      ],
+      "blast_radius": "2–4 изменённых файла, 12–17 новых",
+      "reversibility": "Высокая",
+      "pros": [
+        "~20 КБ, мгновенная загрузка, без CDN",
+        "Node уже есть в CI и Dockerfile ревьюера",
+        "Прецедент общего JS-модуля (fsm-host.mjs)"
+      ],
+      "cons": [
+        "Ядро недоступно из Python (генератор, задачи 2/4, tools/)",
+        "Первый JS-workflow и JS-тесты",
+        "Кэш модулей без хэшей"
+      ],
+      "debt": "Второй язык инфраструктуры без линтера и типов в CI",
+      "size": "M",
+      "uc_diff": [
+        {
+          "uc": "UC-21",
+          "status": "unchanged",
+          "note": "общего кода нет"
+        },
+        {
+          "uc": "UC-N1",
+          "status": "new",
+          "note": "MVP"
+        }
+      ]
+    },
+    {
+      "id": "C",
+      "name": "PrairieLearn (серверный grade())",
+      "recommended": false,
+      "chosen": false,
+      "summary": "Вопросы как PrairieLearn questions, ядро на Python в grade(), сайт ссылается на курс.",
+      "components": [
+        "внешний репо курса PrairieLearn",
+        "ссылки в task3.md, practice/index.md, tests/index.md"
+      ],
+      "blast_radius": "Новая внешняя система, вторая учётка студента (Google/MS), данные в США",
+      "reversibility": "Технически высокая; лицензия на контент бессрочная (Terms §3)",
+      "pros": [
+        "parse() не тратит попытку",
+        "Закрытый эталон",
+        "«Grading without a fixed answer» из коробки"
+      ],
+      "cons": [
+        "Обязательный логин Google/MS",
+        "Бесплатно ≤ 20 студентов, дальше $8–16/студ. через Stripe",
+        "Ручное одобрение курса; ПД у оператора в США",
+        "Запуск за 2 недели нереален"
+      ],
+      "debt": "Две копии ядра и эталонов; ежегодное продление course instance",
+      "size": "M",
+      "uc_diff": [
+        {
+          "uc": "UC-18",
+          "status": "changed",
+          "note": "ссылка на внешний курс"
+        },
+        {
+          "uc": "UC-N1",
+          "status": "new",
+          "note": "через логин"
+        }
+      ]
+    }
+  ],
+  "decision": {
+    "chosen_variant": "A",
+    "rationale": "Самопроверка без ставок (D1) снимает главный плюс C — закрытый эталон. Против B решает переиспользование ядра из Python в инкрементах 3–4 (перечисление языков, генератор, задел задач 2/4) и единые тесты с репо. Цену A — первая загрузка и CDN — принимаем с митигацией R2.",
+    "rejected": [
+      {
+        "variant": "B",
+        "reason": "Ядро недоступно из Python-инфраструктуры, на которую опираются инкременты. Вернуться, если подтвердится массовое мобильное использование (A2)."
+      },
+      {
+        "variant": "C",
+        "reason": "Логин, оплата, передача ПД и срок согласований несовместимы с самопроверкой к занятию."
+      }
+    ],
+    "adr": "не требуется — откат удалением строки nav и вызова хука, критерий «трудно откатить» не выполнен"
+  },
+  "decision_log": [
+    {
+      "id": "D1",
+      "question": "Назначение системы",
+      "source": "checklist §1",
+      "options": [
+        "самопроверка",
+        "контрольная",
+        "оба"
+      ],
+      "chosen": "самопроверка",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/tests/index.md:12",
+          "note": "запрет только для контрольных"
+        },
+        {
+          "kind": "code",
+          "ref": "docs/practice/task3.md:110-175",
+          "note": "решение варианта 8 уже опубликовано"
+        },
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter"
+        }
+      ],
+      "refutation": {
+        "verdict": "HOLDS",
+        "note": "правила курса не нарушены; у курса есть приватный ревьюер, но он не нужен для самопроверки"
+      }
+    },
+    {
+      "id": "D2",
+      "question": "Шаги в формальном ответе",
+      "source": "checklist §2",
+      "options": [
+        "FIRST/FOLLOW+таблица",
+        "трассы",
+        "грамматика по описанию",
+        "свойства"
+      ],
+      "chosen": "все четыре",
+      "type": "user-explicit",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/practice/task3.md:68-73"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "выбор объёма"
+      }
+    },
+    {
+      "id": "D3",
+      "question": "Как практика сдаётся сейчас",
+      "source": "разведка use-cases: не описано",
+      "options": [
+        "бумага/устно",
+        "файл",
+        "не сдаётся"
+      ],
+      "chosen": "бумага/устно",
+      "type": "user-explicit",
+      "evidence": [
+        {
+          "kind": "user",
+          "ref": "ответ пользователя"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "факт со слов пользователя"
+      }
+    },
+    {
+      "id": "D4",
+      "question": "Источник заданий",
+      "source": "checklist §2",
+      "options": [
+        "30 + генерация",
+        "30",
+        "генерация"
+      ],
+      "chosen": "30 вариантов (23 текстовых) + опциональный генератор регулярных шаблонов после инкремента 3",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/practice/index.md:10"
+        },
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter D4"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "текстовых вариантов 23 (не 22); генератор бесполезен до инкремента 3 и ломает связь задач 2↔3 (таблицы вариантов идентичны); шаблоны генератора — только регулярные языки (гарантия LL(1)); генератор помечен опциональным"
+      }
+    },
+    {
+      "id": "D5",
+      "question": "Смысл X… и [X]",
+      "source": "разведка: нотация не определена",
+      "options": [
+        "0+",
+        "1+"
+      ],
+      "chosen": "X… = 0+, [X] = 0..1",
+      "type": "user-explicit",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/practice/task3.md:115,125"
+        },
+        {
+          "kind": "code",
+          "ref": "docs/practice/task2.md:241",
+          "note": "вариант 2 не обрезан"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "решение пользователя"
+      }
+    },
+    {
+      "id": "D6",
+      "question": "Относительно чьей грамматики шаги 4–6 и когда «решено»",
+      "source": "refuter Q6",
+      "options": [
+        "грамматика студента безусловно",
+        "эталон",
+        "только после 1–3"
+      ],
+      "chosen": "Всегда по грамматике студента; «решено» — язык не опровергнут И нет конфликтов (или только объявленный M[X,else] у 18/28/29); трассы симулируются по таблице студента",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter (скрипт: E+E|E*E, F->(T))"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "исходная безусловная версия REFUTED; уточнения внесены"
+      }
+    },
+    {
+      "id": "D7",
+      "question": "Сколько показывать при ошибке",
+      "source": "обзор §12 п.6",
+      "options": [
+        "ступени без ответа",
+        "ступени + показать",
+        "всё сразу"
+      ],
+      "chosen": "ступени 1–3 + «показать эталон» после N/по кнопке; защиту не обещаем",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/playground/playground.js:63-70",
+          "note": "код целиком в браузере"
+        },
+        {
+          "kind": "doc",
+          "ref": "docs/_design/2026-09-25-formal-answer-assessment-survey.md §12 п.2"
+        },
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter (witness.py, cells.py)"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "обоснование «защита» REFUTED; уровень 3: вывод для недостающего, правила для лишнего, расхождение трасс для ячейки"
+      }
+    },
+    {
+      "id": "D8",
+      "question": "Смежная работа",
+      "source": "checklist §1",
+      "options": [
+        "пример",
+        "картинки",
+        "задел 2/4",
+        "статистика"
+      ],
+      "chosen": "пример; задел 2/4",
+      "type": "user-explicit",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/practice/task3.md:47,73,148,171-175"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "картинки → D13, статистика → D9"
+      }
+    },
+    {
+      "id": "D9",
+      "question": "Статистика ошибок",
+      "source": "D8",
+      "options": [
+        "в репо студента",
+        "внешний сервис",
+        "PR+CI"
+      ],
+      "chosen": "не нужна",
+      "type": "user-override",
+      "evidence": [
+        {
+          "kind": "user",
+          "ref": "пользователь отозвал пункт"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "—"
+      }
+    },
+    {
+      "id": "D10",
+      "question": "Форма ввода",
+      "source": "checklist §2",
+      "options": [
+        "текстовый DSL",
+        "DSL + сетка"
+      ],
+      "chosen": "DSL + сетка (сетка — инкремент 2)",
+      "type": "user-override",
+      "evidence": [
+        {
+          "kind": "user",
+          "ref": "рекомендован только DSL"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "—"
+      }
+    },
+    {
+      "id": "D11",
+      "question": "Когда грамматика шага 1 «принята»",
+      "source": "разведка: неразрешимость",
+      "options": [
+        "перебор до N",
+        "+ доказательство LL(1)"
+      ],
+      "chosen": "перебор по длинам до N_v (≥10), лимит max(4·|Lv(n)|,1000), 500–2000 случайных до 2N, вердикт «расхождений не найдено»",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter (cmp.py, strat.py)",
+          "note": "мутанты ловятся при N ≤ 10; N_v: 8→20, 18→20, 1→16, 12→16, 24→14"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "параметры уточнены; слово только на длине > N не ловится — принято"
+      }
+    },
+    {
+      "id": "D12",
+      "question": "Срок и состав первой поставки",
+      "source": "checklist §7",
+      "options": [
+        "к занятию",
+        "семестр",
+        "год"
+      ],
+      "chosen": "к занятию < 2 недель: шаги 4–6 в текстовом DSL",
+      "type": "user-explicit",
+      "evidence": [
+        {
+          "kind": "user",
+          "ref": "ответ пользователя"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "—"
+      }
+    },
+    {
+      "id": "D13",
+      "question": "Варианты-картинки",
+      "source": "разведка",
+      "options": [
+        "диктовка",
+        "без них в v1",
+        "другая сессия"
+      ],
+      "chosen": "без них в v1",
+      "type": "user-override",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/practice/task3.md:81-82,97-101"
+        }
+      ],
+      "refutation": {
+        "verdict": "not-checked",
+        "note": "—"
+      }
+    },
+    {
+      "id": "D14",
+      "question": "Где живёт код",
+      "source": "checklist §4",
+      "options": [
+        "examples/grammar-lab",
+        "отдельный репо",
+        "tools"
+      ],
+      "chosen": "examples/grammar-lab + docs/practice/task3-check.md",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "tools/tests/test_site_structure.py:79,96"
+        },
+        {
+          "kind": "code",
+          "ref": ".github/workflows/pages.yml:18,32"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "нужны пути CI, свой workflow, картинки не в practice/img, строка README"
+      }
+    },
+    {
+      "id": "D15",
+      "question": "Не-LL(1) варианты",
+      "source": "refuter + скрипты",
+      "options": [
+        "конфликт + правило",
+        "исключить",
+        "переписать"
+      ],
+      "chosen": "неустранимый M[X,else] только у 18, 29, 28 (после S≡O); 24–27 — обычные LL(1) после факторизации; вариант 2 — обычный",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter (d18.py, yrule.py)",
+          "note": "18: 0 отказов из 2320 слов при X→else O"
+        },
+        {
+          "kind": "code",
+          "ref": "docs/lectures/slides/05-kontekstno-svobodnye-grammatiki.md:94"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "список 24–26 изначально ошибочен (REFUTED), исправлен"
+      }
+    },
+    {
+      "id": "D16",
+      "question": "Технология ядра",
+      "source": "этап 3",
+      "options": [
+        "A Pyodide",
+        "B JS",
+        "C PrairieLearn"
+      ],
+      "chosen": "A",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "subagent",
+          "ref": "variant-assessor ×3"
+        },
+        {
+          "kind": "url",
+          "ref": "https://www.prairielearn.com/pricing",
+          "status": "fetched"
+        },
+        {
+          "kind": "url",
+          "ref": "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/",
+          "status": "fetched",
+          "note": "размеры через curl -I"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "«всё на Python» неверно (fsm-host.mjs); условия: этап 0, smoke Pyodide, сообщение при недоступности CDN"
+      }
+    },
+    {
+      "id": "D17",
+      "question": "Предусловие playground",
+      "source": "refuter D16",
+      "options": [
+        "сначала закоммитить",
+        "независимо"
+      ],
+      "chosen": "этап 0 — отдельный коммит (включая fsm-compiler.yml, labs/fsm-compiler.md; без _design)",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter: tools/tests 39 OK в venv, run-tests.sh 208"
+        }
+      ],
+      "refutation": {
+        "verdict": "HOLDS",
+        "note": "состав коммита уточнён"
+      }
+    },
+    {
+      "id": "D18",
+      "question": "Парсер DSL",
+      "source": "этап 3",
+      "options": [
+        "Lark",
+        "рукописный"
+      ],
+      "chosen": "Lark с именованными токенами и кавычками",
+      "type": "user-override",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "examples/atm-lang/fsmc/frontend_lark/__init__.py:39-71"
+        },
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter (lark_dsl.py)"
+        }
+      ],
+      "refutation": {
+        "verdict": "WEAKENED",
+        "note": "после пересмотра рекомендован рукописный; пользователь сохранил Lark → риск R1 с точкой решения"
+      }
+    },
+    {
+      "id": "D19",
+      "question": "Запись символов в DSL",
+      "source": "refuter D18",
+      "options": [
+        "пробел + кавычки",
+        "всё в кавычках",
+        "слитно + tokens"
+      ],
+      "chosen": "пробел + кавычки для пунктуации; eps/ε",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "subagent",
+          "ref": "decision-refuter: tiN читается как один символ"
+        }
+      ],
+      "refutation": {
+        "verdict": "HOLDS",
+        "note": "проверено скриптом Lark"
+      }
+    },
+    {
+      "id": "D20",
+      "question": "Правка лекции 05:94",
+      "source": "refuter D15",
+      "options": [
+        "да",
+        "отдельно"
+      ],
+      "chosen": "да, вместе с примером task3",
+      "type": "accepted-recommendation",
+      "evidence": [
+        {
+          "kind": "code",
+          "ref": "docs/lectures/slides/05-kontekstno-svobodnye-grammatiki.md:94"
+        },
+        {
+          "kind": "code",
+          "ref": "docs/lectures/slides/06-postroenie-sintaksicheskogo-analizatora.md:29"
+        }
+      ],
+      "refutation": {
+        "verdict": "HOLDS",
+        "note": "текст слайдов перечитан основным агентом"
+      }
+    }
+  ],
+  "assumptions": [
+    {
+      "id": "A1",
+      "text": "Практика сдаётся на бумаге/устно",
+      "origin": "ответ пользователя",
+      "status": "confirmed",
+      "check": "—"
+    },
+    {
+      "id": "A2",
+      "text": "Страницу открывают в основном с ноутбуков / нормальной сети",
+      "origin": "общее знание",
+      "status": "open",
+      "check": "T-18 на телефоне 4G; спросить на занятии"
+    },
+    {
+      "id": "A3",
+      "text": "Кнопкой «показать эталон» не злоупотребляют до собственной попытки",
+      "origin": "педагогическое допущение",
+      "status": "open",
+      "check": "наблюдение на занятии (статистики нет)"
+    },
+    {
+      "id": "A4",
+      "text": "Pyodide 314 (Py 3.14) и CPython 3.12 одинаково исполняют ядро",
+      "origin": "проверено для fsmc",
+      "status": "open",
+      "check": "T-17"
+    },
+    {
+      "id": "A5",
+      "text": "Правило X→else O для 18/28/29 совпадает с ожиданием преподавателя",
+      "origin": "лекция 05:94,212",
+      "status": "open",
+      "check": "преподаватель на этапе 6"
+    },
+    {
+      "id": "A6",
+      "text": "Pyodide укладывается в бюджет времени",
+      "origin": "оценка",
+      "status": "open",
+      "check": "замер на этапе 5"
+    },
+    {
+      "id": "A7",
+      "text": "Вариант 2 не обрезан",
+      "origin": "совпадение с task2.md:241",
+      "status": "open",
+      "check": "преподаватель"
+    }
+  ],
+  "risks": [
+    {
+      "id": "R1",
+      "text": "Проектирование DSL и русских сообщений Lark затягивает MVP",
+      "use_cases": [
+        "UC-N1",
+        "UC-N2"
+      ],
+      "probability": "M",
+      "impact": "H",
+      "signal": "к концу дня 2 нет замороженной спецификации; к дню 4 T-3/T-4 не проходят",
+      "mitigation": "заморозить DSL и фикстуры на этапе 1; на день 4 переключиться на рукописный разбор (Diagnostic тот же)",
+      "owner": "исполнитель"
+    },
+    {
+      "id": "R3",
+      "text": "Проверка противоречит примеру на сайте",
+      "use_cases": [
+        "UC-12",
+        "UC-14",
+        "UC-16",
+        "UC-17"
+      ],
+      "probability": "H",
+      "impact": "H",
+      "signal": "T-5 красный",
+      "mitigation": "исправить пример в том же изменении; пример — фикстура тестов",
+      "owner": "исполнитель"
+    },
+    {
+      "id": "R4",
+      "text": "Неверный вердикт на не-LL(1)/неоднозначных вариантах",
+      "use_cases": [
+        "UC-N4",
+        "UC-N5",
+        "UC-N12"
+      ],
+      "probability": "M",
+      "impact": "H",
+      "signal": "эталонные решения 23 вариантов не дают «ошибок нет»; T-10, T-11",
+      "mitigation": "allowed_conflicts в метаданных; эталоны всех вариантов в тестах; подтверждение A5",
+      "owner": "исполнитель + преподаватель"
+    },
+    {
+      "id": "R2",
+      "text": "Первая загрузка Pyodide неприемлема на занятии/с телефона",
+      "use_cases": [
+        "UC-N9"
+      ],
+      "probability": "M",
+      "impact": "M",
+      "signal": "T-18 > 15 с на 4G; жалобы",
+      "mitigation": "прогресс, предзагрузка во время ввода, CLI; при подтверждении A2 — JS-ядро шагов 4–6 для страницы",
+      "owner": "исполнитель"
+    },
+    {
+      "id": "R5",
+      "text": "Фундамент playground откатывается/меняется",
+      "use_cases": [
+        "UC-21"
+      ],
+      "probability": "L",
+      "impact": "M",
+      "signal": "PR этапа 0 не принят за 2 дня",
+      "mitigation": "этап 0 первым; иначе свой сборщик в grammar-lab (~100 строк)",
+      "owner": "преподаватель"
+    },
+    {
+      "id": "R6",
+      "text": "Ограниченная проверка языков пропускает неверную грамматику",
+      "use_cases": [
+        "UC-N11"
+      ],
+      "probability": "L",
+      "impact": "M",
+      "signal": "мутационные тесты T-14",
+      "mitigation": "честный вердикт; N_v по вариантам; случайные слова до 2N",
+      "owner": "исполнитель"
+    }
+  ],
+  "plan": [
+    {
+      "step": 0,
+      "result": "Playground и компилятор FSM закоммичены отдельно; CI зелёный",
+      "deps": "—",
+      "rollout": "main"
+    },
+    {
+      "step": 1,
+      "result": "Спецификация DSL v1 + фикстуры (вариант 8 исправленный, 18, 12) утверждены",
+      "deps": "0",
+      "rollout": "—"
+    },
+    {
+      "step": 2,
+      "result": "Ядро grammar: FIRST/FOLLOW со свидетелями, LL(1), трассы; T-5..T-11 зелёные",
+      "deps": "1",
+      "rollout": "—"
+    },
+    {
+      "step": 3,
+      "result": "answer: Lark DSL, Diagnostic, русские сообщения; T-1..T-4 зелёные (точка решения R1, день 4)",
+      "deps": "1",
+      "rollout": "—"
+    },
+    {
+      "step": 4,
+      "result": "check + web.py + CLI; T-12, T-13",
+      "deps": "2, 3",
+      "rollout": "—"
+    },
+    {
+      "step": 5,
+      "result": "Страница, обобщённый сборщик, хук, nav, CI-пути, smoke Pyodide; T-15, T-17..T-20",
+      "deps": "4, 0",
+      "rollout": "publish: true — выключатель"
+    },
+    {
+      "step": 6,
+      "result": "Правки task3.md, practice/index, tests/index, слайд 05:94; T-5, T-21 — MVP к занятию",
+      "deps": "2",
+      "rollout": "вместе с этапом 5"
+    },
+    {
+      "step": 7,
+      "result": "Инкремент 2: табличный редактор; T-22",
+      "deps": "MVP",
+      "rollout": "—"
+    },
+    {
+      "step": 8,
+      "result": "Инкремент 3: variants.yaml (23), разбор EBNF, перебор языков, свойства, итог D6; T-14, T-23, T-24",
+      "deps": "MVP",
+      "rollout": "—"
+    },
+    {
+      "step": 9,
+      "result": "Инкремент 4 (опционально): генератор регулярных шаблонов по seed (гарантия LL(1)); интерфейсы под задачи 2 и 4",
+      "deps": "8",
+      "rollout": "—"
+    }
+  ],
+  "tests": [
+    {
+      "id": "T-1",
+      "use_case": "UC-N1",
+      "precondition": "Ответ варианта 8 в DSL",
+      "action": "Разбор",
+      "expected": "Интерпретация совпадает с фикстурой; N -> t i N — три символа",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-2",
+      "use_case": "UC-N2",
+      "precondition": "N -> tiN слитно",
+      "action": "Разбор",
+      "expected": "tiN показан одним символом + предупреждение о неопределённом символе",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-3",
+      "use_case": "UC-N2",
+      "precondition": "Незакрытая кавычка в строке 3",
+      "action": "Разбор",
+      "expected": "Код, строка 3, колонка, русский текст без __ANON; попытка не засчитана",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-4",
+      "use_case": "UC-N2",
+      "precondition": "Секция follow: после first:",
+      "action": "Разбор",
+      "expected": "Заголовок распознан как секция",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-5",
+      "use_case": "UC-12",
+      "precondition": "Исправленный пример task3 в DSL",
+      "action": "Полная проверка",
+      "expected": "Ошибок нет; h b t i b , b ; обрывается на M[M,t]",
+      "method": "unit, фикстура",
+      "status": "todo"
+    },
+    {
+      "id": "T-6",
+      "use_case": "UC-N3",
+      "precondition": "В FOLLOW(N) пропущен b",
+      "action": "Проверка до уровня 3",
+      "expected": "1 ошибка → FOLLOW(N) недостаёт b → вывод P ⇒ HG ⇒ HBG ⇒ HbM;G ⇒ hNbM;G, валидный",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-7",
+      "use_case": "UC-N3",
+      "precondition": "В FIRST(M) лишний ;",
+      "action": "Уровень 3",
+      "expected": "Объяснение по правилам, без вывода",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-8",
+      "use_case": "UC-N4",
+      "precondition": "В M[M,t] лишнее M -> eps",
+      "action": "Уровень 3",
+      "expected": "Ячейка + строка-свидетель с расходящейся трассой и первый различный шаг",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-9",
+      "use_case": "UC-N5",
+      "precondition": "Ошибка в 5-й строке трассы",
+      "action": "Проверка",
+      "expected": "Указана строка 5; ожидаемое — только по «показать»",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-10",
+      "use_case": "UC-N4",
+      "precondition": "Вариант 18, объявлен конфликт M[X,else]",
+      "action": "Проверка",
+      "expected": "Таблица верна; if i then if i then o else o принята по X→else O",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-11",
+      "use_case": "UC-N4",
+      "precondition": "Вариант 1 без преобразования",
+      "action": "Проверка",
+      "expected": "Шаги 4–5 сверены; итог не «решено»: конфликты и левая рекурсия отмечены",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-12",
+      "use_case": "UC-N6",
+      "precondition": "3 неверные попытки",
+      "action": "«Показать эталон»",
+      "expected": "FOLLOW(N) с пояснением; счётчик увеличен",
+      "method": "unit + ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-13",
+      "use_case": "UC-N8",
+      "precondition": "answer.txt из T-6",
+      "action": "python -m grammarlab check",
+      "expected": "Та же диагностика, код 1; на T-5 — код 0",
+      "method": "unit (subprocess)",
+      "status": "todo"
+    },
+    {
+      "id": "T-14",
+      "use_case": "UC-N11",
+      "precondition": "Мутанты вариантов 8, 12, 18, 1, 24",
+      "action": "Сравнение языков",
+      "expected": "Каждый опровергнут свидетелем; эквивалентная E2 -> + E | * E не опровергнута",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-15",
+      "use_case": "UC-N1",
+      "precondition": "Сайт собран",
+      "action": "Ввести пример, «Проверить»",
+      "expected": "Как T-5, в браузере",
+      "method": "ручной, Chrome/Firefox, 1440/390 px",
+      "status": "todo"
+    },
+    {
+      "id": "T-16",
+      "use_case": "UC-N7",
+      "precondition": "Ответ введён",
+      "action": "Перезагрузка",
+      "expected": "Черновик и счётчик восстановлены",
+      "method": "ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-17",
+      "use_case": "UC-21",
+      "precondition": "CI после mkdocs build",
+      "action": "Node + pyodide@314.0.7 грузит оба бандла",
+      "expected": "check_json и compile_json возвращают ok (Uint8Array)",
+      "method": "CI pages.yml",
+      "status": "todo"
+    },
+    {
+      "id": "T-18",
+      "use_case": "UC-N9",
+      "precondition": "Телефон, 4G, пустой кэш",
+      "action": "Открыть страницу",
+      "expected": "Прогресс; время до готовности записано",
+      "method": "ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-19",
+      "use_case": "UC-N9",
+      "precondition": "cdn.jsdelivr.net заблокирован",
+      "action": "Открыть страницу",
+      "expected": "Понятное сообщение и ссылка на CLI; без зависания",
+      "method": "ручной (devtools)",
+      "status": "todo"
+    },
+    {
+      "id": "T-20",
+      "use_case": "UC-21",
+      "precondition": "Сборщик обобщён",
+      "action": "Компиляция примера в playground",
+      "expected": "Поведение не изменилось",
+      "method": "ручной + T-17",
+      "status": "todo"
+    },
+    {
+      "id": "T-21",
+      "use_case": "UC-18",
+      "precondition": "Сайт собран",
+      "action": "mkdocs build --strict; tools/tests",
+      "expected": "Зелёные; ссылки на task3-check есть в practice/index, tests/index, task3",
+      "method": "CI",
+      "status": "todo"
+    },
+    {
+      "id": "T-22",
+      "use_case": "UC-N10",
+      "precondition": "Инкремент 2",
+      "action": "Заполнить сетку",
+      "expected": "Сериализация = ручному DSL",
+      "method": "unit + ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-23",
+      "use_case": "UC-N12",
+      "precondition": "Вариант 8 верно",
+      "action": "Проверка",
+      "expected": "«Задача решена: расхождений не найдено до 20 и K случайных до 40»",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-24",
+      "use_case": "UC-N12",
+      "precondition": "Вариант 18, конфликт не объявлен",
+      "action": "Проверка",
+      "expected": "Не «решено»; подсказка: M[X,else] и свидетель с двумя деревьями",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-25",
+      "use_case": "UC-22",
+      "precondition": "После изменений",
+      "action": "run-tests.sh; PR task3 ЛР",
+      "expected": "Ревью ЛР3 работает как раньше",
+      "method": "CI",
+      "status": "todo"
+    },
+    {
+      "id": "T-26",
+      "use_case": "UC-14",
+      "precondition": "task3.md после этапа 6",
+      "action": "Открыть таблицу M примера",
+      "expected": "Столбцы t и i вместо ti; тест-фикстура таблицы совпадает с вычисленной",
+      "method": "unit (фикстура из task3.md) + ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-27",
+      "use_case": "UC-16",
+      "precondition": "task3.md после этапа 6",
+      "action": "Сверить неправильную трассу h b t i b , b ;",
+      "expected": "Колонки стек/вход/действие; ошибка на M[M,t] после M;G$",
+      "method": "unit (фикстура) + ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-28",
+      "use_case": "UC-17",
+      "precondition": "task3.md после этапа 6",
+      "action": "Посчитать примеры проверки",
+      "expected": "1 правильный + 2 неправильных; обе неправильные строки не принадлежат языку (Earley)",
+      "method": "unit",
+      "status": "todo"
+    },
+    {
+      "id": "T-29",
+      "use_case": "UC-7",
+      "precondition": "task3.md после этапа 6",
+      "action": "Прочитать FIRST цепочки и алгоритм таблицы",
+      "expected": "В стр. 47 добавляется ε; есть абзац про конфликт else и правило ближайшего if",
+      "method": "ручной (ревью преподавателя)",
+      "status": "todo"
+    },
+    {
+      "id": "T-30",
+      "use_case": "UC-10",
+      "precondition": "Слайды пересобраны",
+      "action": "Открыть лекцию 05, слайд про висячее else",
+      "expected": "Нет утверждения «факторизация решает»; указано соглашение",
+      "method": "ручной; build-slides в CI",
+      "status": "todo"
+    },
+    {
+      "id": "T-31",
+      "use_case": "UC-5",
+      "precondition": "Страница проверки",
+      "action": "Открыть описание нотации",
+      "expected": "X… = 0+, [X] = 0..1; вариант 2 читается как повторение o",
+      "method": "ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-32",
+      "use_case": "UC-4",
+      "precondition": "Страница проверки",
+      "action": "Посмотреть описание для вариантов 3, 4, 19–23",
+      "expected": "Явно сказано: шаг 1 недоступен, шаги 4–6 — с собственной грамматикой",
+      "method": "ручной",
+      "status": "todo"
+    },
+    {
+      "id": "T-33",
+      "use_case": "UC-1",
+      "precondition": "Сайт собран",
+      "action": "Открыть practice/index.md",
+      "expected": "В карточке задачи 3 ссылка на task3-check работает",
+      "method": "CI strict + ручной",
+      "status": "todo"
+    }
+  ],
+  "dependencies": [
+    {
+      "from": "Преподаватель",
+      "what": "Принять коммит этапа 0",
+      "status": "не начато",
+      "due": "до этапа 1"
+    },
+    {
+      "from": "Преподаватель",
+      "what": "Утвердить DSL v1 и исправленный пример",
+      "status": "не начато",
+      "due": "конец этапа 1"
+    },
+    {
+      "from": "Преподаватель",
+      "what": "Подтвердить A5, A7",
+      "status": "не начато",
+      "due": "до инкремента 3"
+    },
+    {
+      "from": "Человек",
+      "what": "Перевести варианты 3, 4, 19–23 в текст",
+      "status": "вне плана",
+      "due": "—"
+    },
+    {
+      "from": "jsDelivr",
+      "what": "Доступность CDN Pyodide",
+      "status": "внешняя",
+      "due": "постоянно"
+    }
+  ],
+  "done_criteria": [
+    {
+      "text": "Этап 0 в main, CI зелёный",
+      "tests": [
+        "T-21",
+        "T-25"
+      ]
+    },
+    {
+      "text": "Исправленный пример проходит без ошибок в CLI и браузере",
+      "tests": [
+        "T-5",
+        "T-13",
+        "T-15"
+      ]
+    },
+    {
+      "text": "Мутанты T-6..T-11 находятся; подсказки 1–3 как ожидается",
+      "tests": [
+        "T-6",
+        "T-7",
+        "T-8",
+        "T-9",
+        "T-10",
+        "T-11",
+        "T-12"
+      ]
+    },
+    {
+      "text": "Синтаксические ошибки DSL локализованы и не считаются попыткой",
+      "tests": [
+        "T-2",
+        "T-3",
+        "T-4"
+      ]
+    },
+    {
+      "text": "Smoke Pyodide в CI зелёный, playground не сломан",
+      "tests": [
+        "T-17",
+        "T-20"
+      ]
+    },
+    {
+      "text": "Страница опубликована и доступна из task3, practice/index, tests/index",
+      "tests": [
+        "T-21"
+      ]
+    },
+    {
+      "text": "Ручная проверка 1440/390 px, без CDN, на мобильной сети",
+      "tests": [
+        "T-15",
+        "T-16",
+        "T-18",
+        "T-19"
+      ]
+    }
+  ],
+  "open_questions": [
+    {
+      "text": "N попыток до «показать эталон» (предложение: кнопка сразу, счётчик информативный, 3 на элемент)",
+      "owner": "преподаватель",
+      "needed_by": "этап 4"
+    },
+    {
+      "text": "Исключать ли страницу из поиска сайта",
+      "owner": "преподаватель",
+      "needed_by": "этап 5"
+    },
+    {
+      "text": "Подтверждение A5 (правило else) и A7 (вариант 2)",
+      "owner": "преподаватель",
+      "needed_by": "инкремент 3"
+    },
+    {
+      "text": "Какие свойства обязательны в шаге 2 (слайд 06 — три, пример — два)",
+      "owner": "преподаватель",
+      "needed_by": "инкремент 3"
+    }
+  ]
+}

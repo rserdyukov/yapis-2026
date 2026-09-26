@@ -147,6 +147,29 @@ class PublicationTests(unittest.TestCase):
         self.assertEqual(list(slides.HTML_OUT.iterdir()), [])
         self.assertEqual(slides.decks(), [])
 
+    def test_slide_diagrams_are_replaced_with_svg_before_marp(self):
+        slides = load_slides()
+        self.assertEqual(slides.diagram_type("digraph G { a -> b }"), "graphviz")
+        self.assertEqual(slides.diagram_type("\nstrict graph { a -- b }"), "graphviz")
+        self.assertEqual(slides.diagram_type("@startebnf\na = b;\n@endebnf"), "plantuml")
+        seen = []
+
+        def fake_render(source):
+            seen.append(source)
+            return "<svg>ok</svg>"
+
+        text = "# T\n```plantuml\ndigraph G { a -> b }\n```\nafter\n```python\nx = 1\n```\n"
+        out = slides.render_diagrams(text, render=fake_render)
+        self.assertEqual(seen, ["digraph G { a -> b }\n"])
+        self.assertIn('<img class="diagram"', out)
+        self.assertIn("data:image/svg+xml;base64,PHN2Zz5vazwvc3ZnPg==", out)
+        self.assertNotIn("```plantuml", out)
+        self.assertIn("```python\nx = 1\n```", out)  # чужие блоки не трогаем
+        # Блок в комментарии — исходник готовой картинки, не рендерится.
+        commented = "<!--\n```plantuml\ndigraph X {}\n```\n-->\n"
+        self.assertEqual(slides.render_diagrams(commented, render=fake_render), commented)
+        self.assertEqual(len(seen), 1)
+
     def test_catalog_draft_leaves_no_links_in_public_matrix(self):
         data = self.root / "data"
         shutil.copytree(ROOT / "docs/languages/_data", data)

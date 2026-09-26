@@ -5,3 +5,7 @@ mkdocs-material==9.5.49
 # Читает данные каталога языков в tools/build-catalog.py. MkDocs тянет его
 # транзитивно, но генератор запускается и без MkDocs (тесты), поэтому явно.
 pyyaml==6.0.3
+# Диаграммы (PlantUML, в т. ч. railroad через @startebnf) в блоках
+# ```kroki-plantuml. Рендер — на сервере Kroki во время сборки, SVG
+# кладётся в site/; Java и PlantUML локально не нужны.
+mkdocs-kroki-plugin==1.7.0

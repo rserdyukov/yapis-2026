@@ -122,6 +122,23 @@ theme:
 plugins:
   - search:
       lang: ru
+  # Диаграммы в блоках ```kroki-plantuml (railroad — через @startebnf).
+  # POST: SVG скачивается и кладётся рядом со страницей, сайт не ходит
+  # на kroki.io из браузера студента. fail_fast: ошибка в диаграмме или
+  # недоступный сервер валит сборку, а не публикует пустое место —
+  # в духе strict: true. Свой сервер: KROKI_SERVER_URL.
+  - kroki:
+      server_url: !ENV [KROKI_SERVER_URL, "https://kroki.io"]
+      http_method: POST
+      fail_fast: true
+      enable_block_diag: false
+      enable_bpmn: false
+      enable_excalidraw: false
+      enable_mermaid: false
+      # PlantUML рисует на прозрачном фоне тёмными линиями: в тёмной
+      # теме нужна светлая подложка.
+      diagram_background_color_light: white
+      diagram_background_color_dark: white
 
 markdown_extensions:
   - admonition

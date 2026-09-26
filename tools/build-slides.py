@@ -21,12 +21,15 @@
 """
 
 import argparse
+import base64
 import os
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from publication import page_frontmatter, published
@@ -38,6 +41,11 @@ THEME = ROOT / "docs" / "lectures" / "theme" / "custom_academic.css"
 INDEX = ROOT / "docs" / "lectures" / "index.md"
 
 MARP_IMAGE = "marpteam/marp-cli:v4.2.3"
+
+# Marp сам диаграммы не рисует: блоки ```plantuml перед сборкой заменяются
+# на SVG, отрисованный Kroki (тот же сервер, что у плагина kroki в mkdocs.yml).
+KROKI_URL = os.environ.get("KROKI_SERVER_URL", "https://kroki.io").rstrip("/")
+DIAGRAM_BLOCK = re.compile(r"^```plantuml[ \t]*\n(.*?)^```[ \t]*$", re.M | re.S)
 
 GENERATED_NOTICE = (
     "<!-- ВНИМАНИЕ. Файл собирается автоматически: tools/build-slides.py\n"
@@ -117,6 +125,58 @@ def marp_command(prefer_npx: bool = False) -> list[str] | None:
     return None
 
 
+def diagram_type(source: str) -> str:
+    """Тип диаграммы для Kroki.
+
+    Исторически в колодах под меткой plantuml лежит голый Graphviz DOT
+    (`digraph {...}`): PlantUML такой текст без @startdot не примет,
+    поэтому он уходит в graphviz. Остальное — PlantUML (@startuml,
+    @startebnf и т. п.).
+    """
+    if re.match(r"\s*(strict\s+)?(di)?graph\b", source):
+        return "graphviz"
+    return "plantuml"
+
+
+def render_diagram(source: str) -> str:
+    """SVG диаграммы от Kroki. Ошибка сервера — исключение с его текстом."""
+    kind = diagram_type(source)
+    request = urllib.request.Request(
+        f"{KROKI_URL}/{kind}/svg",
+        data=source.encode("utf-8"),
+        headers={"Content-Type": "text/plain", "User-Agent": "yapis-build-slides"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return response.read().decode("utf-8")
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode("utf-8", "replace").strip()
+        raise RuntimeError(f"Kroki ({kind}): {error.code} {detail}") from error
+
+
+def render_diagrams(markdown: str, render=render_diagram) -> str:
+    """Заменить блоки ```plantuml на <img> с встроенным SVG.
+
+    data-URI, а не inline <svg>: id внутри SVG разных диаграмм не
+    конфликтуют, а стили Marp-темы не перекрашивают диаграмму.
+    """
+    def replace(match: re.Match) -> str:
+        svg = render(match[1])
+        data = base64.b64encode(svg.encode("utf-8")).decode("ascii")
+        return (
+            f'<img class="diagram" alt="диаграмма" '
+            f'src="data:image/svg+xml;base64,{data}">'
+        )
+
+    # Внутри <!-- --> блок — исходник уже нарисованной картинки или заметка
+    # докладчика (Marp делает из комментариев notes): не рендерим.
+    parts = re.split(r"(<!--.*?-->)", markdown, flags=re.S)
+    return "".join(
+        part if part.startswith("<!--") else DIAGRAM_BLOCK.sub(replace, part)
+        for part in parts
+    )
+
+
 def add_course_navigation(path: Path) -> None:
     """Standalone Marp не использует шаблон MkDocs: добавляем выход в курс.
 
@@ -187,7 +247,13 @@ def build_html(prefer_npx: bool = False) -> int:
     with tempfile.TemporaryDirectory(prefix=".marp-input-", dir=ROOT) as directory:
         source_dir = Path(directory)
         for _, _, path in selected:
-            shutil.copy2(path, source_dir / path.name)
+            text = path.read_text(encoding="utf-8")
+            try:
+                text = render_diagrams(text)
+            except (RuntimeError, OSError) as error:
+                print(f"{path.name}: диаграмма не отрисована: {error}", file=sys.stderr)
+                return 1
+            (source_dir / path.name).write_text(text, encoding="utf-8")
         args = cmd + [
             "--html", "--theme", str(rel_theme),
             "--input-dir", str(source_dir.relative_to(ROOT)),

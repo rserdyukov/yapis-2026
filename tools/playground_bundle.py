@@ -1,6 +1,7 @@
-"""Сборка файлов playground компилятора FSM (docs/playground/).
+"""Сборка Python-бандлов для страниц сайта, которые работают в Pyodide.
 
-Хук MkDocs (site_hooks.on_post_build) кладёт в site/playground/:
+Playground компилятора FSM (docs/playground/). Хук MkDocs
+(site_hooks.on_post_build) кладёт в site/playground/:
 
 * ``fsmc-bundle.zip`` — компилятор ``examples/atm-lang/fsmc`` и чистые
   Python-пакеты ``antlr4`` и ``lark`` из текущего окружения. Pyodide
@@ -9,9 +10,15 @@
 * ``fsm-host.mjs`` — JS-хост, общий с ``runtime/run.mjs``;
 * ``examples.json`` — примеры, сценарии и негативные тесты для меню.
 
+Самопроверка задачи 3 (docs/practice/task3-check/): в
+site/practice/task3-check/ кладутся ``grammarlab-bundle.zip`` (пакет
+``examples/grammar-lab/grammarlab`` и ``lark``) и ``examples.json`` —
+эталонные ответы из ``tests/fixtures``.
+
 Исходники для сборки уже в git, поэтому ничего из этого не коммитится.
 
     python3 tools/playground_bundle.py site/playground   # собрать вручную
+    python3 tools/playground_bundle.py --grammarlab site/practice/task3-check
 """
 
 from __future__ import annotations
@@ -27,14 +34,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LANG = ROOT / "examples" / "atm-lang"
+GRAMMARLAB = ROOT / "examples" / "grammar-lab"
 # Версии обязаны совпадать с examples/atm-lang/requirements.txt: сборка
 # с другой версией ANTLR runtime не прочтёт сгенерированный парсер.
 PACKAGES = {"antlr4": "antlr4-python3-runtime", "lark": "lark"}
 
 
-def pinned_versions() -> dict[str, str]:
+def pinned_versions(project: Path = LANG) -> dict[str, str]:
     pins = {}
-    for line in (LANG / "requirements.txt").read_text(encoding="utf-8").splitlines():
+    for line in (project / "requirements.txt").read_text(encoding="utf-8").splitlines():
         m = re.match(r"^([A-Za-z0-9_.-]+)==(\S+)", line.strip())
         if m:
             pins[m.group(1)] = m.group(2)
@@ -44,7 +52,7 @@ def pinned_versions() -> dict[str, str]:
 def _package_dir(module: str) -> Path:
     spec = importlib.util.find_spec(module)
     if spec is None or not spec.submodule_search_locations:
-        raise RuntimeError(f"для playground нужен пакет {PACKAGES[module]}: "
+        raise RuntimeError(f"для сборки сайта нужен пакет {PACKAGES[module]}: "
                            "pip install -r docs/requirements.txt")
     return Path(next(iter(spec.submodule_search_locations)))
 
@@ -59,19 +67,30 @@ def _add_tree(zf: zipfile.ZipFile, src: Path, arcroot: str, suffixes: tuple[str,
         zf.writestr(info, path.read_bytes())
 
 
-def build_bundle(out: Path) -> None:
-    pins = pinned_versions()
-    for module, dist in PACKAGES.items():
+def bundle(out: Path, project: Path, package: str, modules: tuple[str, ...]) -> None:
+    """Zip: пакет проекта и чистые Python-зависимости из текущего окружения.
+
+    Версии зависимостей сверяются с requirements.txt проекта.
+    """
+    pins = pinned_versions(project)
+    for module in modules:
+        dist = PACKAGES[module]
         have = importlib.metadata.version(dist)
+        if dist not in pins:
+            raise RuntimeError(f"{dist}: нет пина в {project.relative_to(ROOT)}/requirements.txt")
         if have != pins[dist]:
-            raise RuntimeError(f"{dist}: установлена {have}, а компилятор рассчитан на "
-                               f"{pins[dist]} (examples/atm-lang/requirements.txt)")
+            raise RuntimeError(f"{dist}: установлена {have}, а {project.name} рассчитан на "
+                               f"{pins[dist]} ({project.relative_to(ROOT)}/requirements.txt)")
     # Архив детерминирован (фиксированные даты, сортировка): повторная
     # сборка даёт тот же файл, браузер не качает его заново без причины.
     with zipfile.ZipFile(out, "w") as zf:
-        _add_tree(zf, LANG / "fsmc", "fsmc", (".py", ".lark"))
-        for module in PACKAGES:
+        _add_tree(zf, project / package, package, (".py", ".lark"))
+        for module in modules:
             _add_tree(zf, _package_dir(module), module, (".py", ".lark"))
+
+
+def build_bundle(out: Path) -> None:
+    bundle(out, LANG, "fsmc", ("antlr4", "lark"))
 
 
 def _title(source: str, fallback: str) -> str:
@@ -112,5 +131,27 @@ def build(out_dir: Path) -> None:
         json.dumps(build_examples(), ensure_ascii=False, indent=1), encoding="utf-8")
 
 
+def grammarlab_examples() -> list[dict]:
+    """Эталонные ответы из tests/fixtures — примеры в меню страницы.
+    Заголовок — первая строка-комментарий файла."""
+    items = []
+    for path in sorted((GRAMMARLAB / "tests" / "fixtures").glob("*.txt")):
+        source = path.read_text(encoding="utf-8")
+        title = source.splitlines()[0].lstrip("# ").split(":")[0] if source.startswith("#") else path.stem
+        items.append({"id": path.stem, "title": title, "source": source})
+    return items
+
+
+def build_grammarlab(out_dir: Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    bundle(out_dir / "grammarlab-bundle.zip", GRAMMARLAB, "grammarlab", ("lark",))
+    (out_dir / "examples.json").write_text(
+        json.dumps(grammarlab_examples(), ensure_ascii=False, indent=1), encoding="utf-8")
+
+
 if __name__ == "__main__":
-    build(Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "site" / "playground")
+    args = sys.argv[1:]
+    if args[:1] == ["--grammarlab"]:
+        build_grammarlab(Path(args[1]) if len(args) > 1 else ROOT / "site" / "practice" / "task3-check")
+    else:
+        build(Path(args[0]) if args else ROOT / "site" / "playground")

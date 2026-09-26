@@ -1,0 +1,54 @@
+/* Самопроверка задачи 3. Цвета — переменные темы курса (course.css), как у playground. */
+.gl { --gl-h: 36rem; margin: 1.5rem 0 2rem; font-size: .75rem; line-height: 1.5; }
+.gl button, .gl select {
+  font: inherit; color: var(--md-default-fg-color); background: var(--course-paper);
+  border: 1px solid var(--course-line); border-radius: 6px; padding: .2rem .6rem; cursor: pointer;
+}
+.gl button:hover:not(:disabled) { border-color: var(--course-accent); color: var(--course-accent); }
+.gl button:disabled { opacity: .5; cursor: wait; }
+.gl kbd { font-size: .6rem; opacity: .7; }
+.gl__bar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-bottom: .8rem; }
+.gl__bar label { display: flex; align-items: center; gap: .4rem; color: var(--course-muted); min-width: 0; max-width: 100%; }
+.gl__bar select { max-width: 22rem; min-width: 0; flex: 1; }
+.gl #gl-check { background: var(--course-accent); border-color: var(--course-accent); color: var(--md-default-bg-color); }
+.gl #gl-check:hover:not(:disabled) { color: var(--md-default-bg-color); filter: brightness(1.1); }
+.gl__status { margin-left: auto; color: var(--course-muted); }
+.gl__status[data-kind="ok"] { color: #2e7d32; }
+.gl__status[data-kind="error"] { color: #c0392b; }
+
+.gl__cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+.gl__pane {
+  display: flex; flex-direction: column; min-width: 0; height: var(--gl-h);
+  border: 1px solid var(--course-line); border-radius: 10px; background: var(--course-paper); overflow: hidden;
+}
+.gl__head { padding: .4rem .8rem; border-bottom: 1px solid var(--course-line); color: var(--course-muted); }
+.gl__hint { font-family: var(--md-code-font); opacity: .7; }
+.gl textarea {
+  flex: 1; font-family: var(--md-code-font); font-size: .72rem; line-height: 1.55; tab-size: 2;
+  color: var(--md-default-fg-color); background: var(--md-code-bg-color);
+  border: 0; resize: none; padding: .7rem .9rem; outline: none; white-space: pre; overflow: auto;
+}
+.gl__result { flex: 1; overflow: auto; padding: .6rem .9rem; }
+.gl__result h4 { margin: .8rem 0 .3rem; font-size: .78rem; }
+.gl__result h4 span { font-weight: normal; margin-left: .4rem; }
+.gl__list { margin: .2rem 0 .4rem; padding-left: 1.1rem; }
+.gl__list li { margin: .35rem 0; }
+.gl__list button { margin-left: .3rem; padding: 0 .45rem; font-size: .68rem; }
+.gl__why, .gl__reveal {
+  margin: .3rem 0 .2rem; padding: .35rem .6rem; border-left: 3px solid var(--course-line);
+  font-family: var(--md-code-font); font-size: .7rem; color: var(--md-default-fg-color); white-space: normal;
+}
+.gl__reveal { border-left-color: var(--course-accent); }
+.gl__verdict { font-weight: 600; margin: .2rem 0 .6rem; }
+.gl__interp pre { font-size: .7rem; margin: .3rem 0; white-space: pre-wrap; }
+.gl__good { color: #2e7d32; }
+.gl__bad { color: #c0392b; }
+.gl__warn { color: #b26a00; }
+.gl__muted { color: var(--course-muted); }
+.gl__step { border-top: 1px solid var(--course-line); }
+
+@media (max-width: 720px) {
+  .gl__cols { grid-template-columns: 1fr; }
+  .gl__pane { height: auto; min-height: 18rem; }
+  .gl__status { margin-left: 0; width: 100%; }
+}

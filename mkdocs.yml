@@ -22,6 +22,7 @@ nav:
           - "Задача 1. Конечный автомат": practice/task1.md
           - "Задача 2. КС-грамматика": practice/task2.md
           - "Задача 3. Предиктивный анализатор": practice/task3.md
+          - "Самопроверка задачи 3": practice/task3-check/index.md
           - "Задача 4. SLR-анализатор": practice/task4.md
           - "Задача 5. СУ-трансляция": practice/task5.md
       - Тесты: tests/index.md

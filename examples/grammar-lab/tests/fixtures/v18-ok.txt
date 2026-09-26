@@ -1,0 +1,89 @@
+# Вариант 18: эталонный ответ. Язык не LL(1) (висячий else):
+# конфликт M[X, else] объявлен и разрешён в пользу X -> else O.
+# <S> ::= 'if' <E> 'then' <O> [ 'else' <O> ]  <E> ::= 'i' | 'i' '<>' <E>  <O> ::= 'o' <O> | <S> | 'o'
+version: 1
+
+grammar:
+  S -> if E then O X
+  X -> else O | eps
+  E -> i E1
+  E1 -> '<>' E | eps
+  O -> o O1 | S
+  O1 -> O | eps
+
+first:
+  S = { if }
+  X = { else, eps }
+  E = { i }
+  E1 = { '<>', eps }
+  O = { if, o }
+  O1 = { if, o, eps }
+
+follow:
+  S = { else, $ }
+  X = { else, $ }
+  E = { then }
+  E1 = { then }
+  O = { else, $ }
+  O1 = { else, $ }
+
+table:
+  M[S, if] = S -> if E then O X
+  M[X, else] = X -> else O ;; X -> eps
+  M[X, $] = X -> eps
+  M[E, i] = E -> i E1
+  M[E1, '<>'] = E1 -> '<>' E
+  M[E1, then] = E1 -> eps
+  M[O, o] = O -> o O1
+  M[O, if] = O -> S
+  M[O1, if] = O1 -> O
+  M[O1, o] = O1 -> O
+  M[O1, else] = O1 -> eps
+  M[O1, $] = O1 -> eps
+
+conflicts:
+  M[X, else]: if i then if i then o else o
+  choose M[X, else] = X -> else O
+
+trace "if i then if i then o else o":
+  S $               | if i then if i then o else o $ | S -> if E then O X
+  if E then O X $   | if i then if i then o else o $ | match if
+  E then O X $      | i then if i then o else o $    | E -> i E1
+  i E1 then O X $   | i then if i then o else o $    | match i
+  E1 then O X $     | then if i then o else o $      | E1 -> eps
+  then O X $        | then if i then o else o $      | match then
+  O X $             | if i then o else o $           | O -> S
+  S X $             | if i then o else o $           | S -> if E then O X
+  if E then O X X $ | if i then o else o $           | match if
+  E then O X X $    | i then o else o $              | E -> i E1
+  i E1 then O X X $ | i then o else o $              | match i
+  E1 then O X X $   | then o else o $                | E1 -> eps
+  then O X X $      | then o else o $                | match then
+  O X X $           | o else o $                     | O -> o O1
+  o O1 X X $        | o else o $                     | match o
+  O1 X X $          | else o $                       | O1 -> eps
+  X X $             | else o $                       | X -> else O
+  else O X $        | else o $                       | match else
+  O X $             | o $                            | O -> o O1
+  o O1 X $          | o $                            | match o
+  O1 X $            | $                              | O1 -> eps
+  X $               | $                              | X -> eps
+  $                 | $                              | accept
+
+trace "if i then else o":
+  S $             | if i then else o $ | S -> if E then O X
+  if E then O X $ | if i then else o $ | match if
+  E then O X $    | i then else o $    | E -> i E1
+  i E1 then O X $ | i then else o $    | match i
+  E1 then O X $   | then else o $      | E1 -> eps
+  then O X $      | then else o $      | match then
+  O X $           | else o $           | error
+
+trace "if i <> then o":
+  S $               | if i '<>' then o $ | S -> if E then O X
+  if E then O X $   | if i '<>' then o $ | match if
+  E then O X $      | i '<>' then o $    | E -> i E1
+  i E1 then O X $   | i '<>' then o $    | match i
+  E1 then O X $     | '<>' then o $      | E1 -> '<>' E
+  '<>' E then O X $ | '<>' then o $      | match '<>'
+  E then O X $      | then o $           | error

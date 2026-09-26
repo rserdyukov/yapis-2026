@@ -29,3 +29,6 @@ Icon
 site/
 docs/lectures/html/
 __pycache__/
+
+### Smoke-тест Pyodide (tools/pyodide-smoke)
+node_modules/

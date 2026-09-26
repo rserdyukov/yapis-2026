@@ -1,0 +1,88 @@
+// DSL ответа к задаче 3, версия 1. Спецификация — README.md, раздел 1.
+//
+// Язык строчный: одна конструкция занимает одну строку, перевод строки —
+// значимый токен _NL. Разбор LALR(1) с контекстным лексером.
+//
+// Заголовки секций (grammar:, first: …) и `version` — обычные имена (NAME):
+// что это за слово, проверяет answer.py. Поэтому нетерминал может называться
+// и `first`, и `M`. Настоящие ключевые слова — `eps`/`ε`, `choose` в начале
+// строки, а также `match`, `accept`, `error` в колонке действия трассы.
+
+start: _NL* (item _NL+)* item?
+
+?item: header
+     | production
+     | set_line
+     | cell
+     | conflict_witness
+     | conflict_choice
+     | trace_row
+
+header: name COLON                         -> section
+      | name COLON INT                     -> version
+      | name STRING COLON                  -> trace_header
+
+// grammar:
+production: name ARROW alternative (VBAR alternative)*
+alternative: symbol+                       -> alt
+           | EPSILON                       -> alt_eps
+
+// first: / follow:
+set_line: name EQUAL LBRACE [element (COMMA element)*] RBRACE
+?element: symbol
+        | EPSILON                          -> eps
+        | DOLLAR                           -> end
+
+// table:
+cell: index EQUAL rule (DSEMI rule)*
+index: name LSQB name COMMA column RSQB
+?column: symbol
+       | DOLLAR                            -> end
+rule: name ARROW alternative
+
+// conflicts:
+conflict_witness: index COLON word
+conflict_choice: CHOOSE_KW index EQUAL rule
+word: symbol+
+
+// trace "...":  стек | вход | действие
+trace_row: tokens VBAR tokens VBAR action
+tokens: token+
+?token: symbol
+      | DOLLAR                             -> end
+?action: rule
+       | MATCH_KW token                    -> act_match
+       | ACCEPT_KW                         -> act_accept
+       | ERROR_KW                          -> act_error
+
+name: NAME
+?symbol: NAME                              -> sym_name
+       | QUOTED                            -> sym_quoted
+
+CHOOSE_KW.2: /choose(?![A-Za-zА-Яа-яЁё0-9_'])/
+MATCH_KW.2: /match(?![A-Za-zА-Яа-яЁё0-9_'])/
+ACCEPT_KW.2: /accept(?![A-Za-zА-Яа-яЁё0-9_'])/
+ERROR_KW.2: /error(?![A-Za-zА-Яа-яЁё0-9_'])/
+EPSILON.3: /(eps|ε)(?![A-Za-z0-9_'])/
+
+ARROW: "->" | "→"
+DSEMI: ";;"
+VBAR: "|"
+COLON: ":"
+EQUAL: "="
+LBRACE: "{"
+RBRACE: "}"
+LSQB: "["
+RSQB: "]"
+COMMA: ","
+DOLLAR: "$"
+
+NAME: /[A-Za-zА-Яа-яЁё_][A-Za-zА-Яа-яЁё0-9_']*/
+QUOTED: /'[^'\s]+'/
+STRING: /"[^"\n]*"/
+INT: /[0-9]+/
+
+COMMENT: /#[^\n]*/
+_NL: /(\r?\n[ \t]*)+/
+%ignore COMMENT
+%ignore /[ \t]+/

@@ -57,9 +57,19 @@ def on_config(config):
 
 
 def on_post_build(config):
-    """Playground компилятора FSM: бандл компилятора, хост и примеры.
-    Собираются из examples/atm-lang/ при каждой сборке и в git не лежат."""
-    if not published(Path(config.docs_dir) / "playground" / "index.md"):
+    """Python-бандлы страниц, работающих в Pyodide. Собираются при каждой
+    сборке из examples/ и в git не лежат (tools/playground_bundle.py).
+
+    * playground компилятора FSM — бандл компилятора, хост и примеры;
+    * самопроверка задачи 3 — пакет grammarlab.
+    """
+    docs, site = Path(config.docs_dir), Path(config.site_dir)
+    if published(docs / "practice" / "task3-check" / "index.md"):
+        try:
+            playground_bundle.build_grammarlab(site / "practice" / "task3-check")
+        except (RuntimeError, OSError) as error:
+            raise PluginError(f"task3-check: {error}") from error
+    if not published(docs / "playground" / "index.md"):
         return
     try:
         playground_bundle.build(Path(config.site_dir) / "playground")

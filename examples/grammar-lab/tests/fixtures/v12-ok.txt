@@ -1,0 +1,82 @@
+# Вариант 12: эталонный ответ после преобразования.
+# <P> ::= <H>… [ <B> ]  <H> ::= ['h'] ('t' 'i')…  <B> ::= 'b' ( [','] 'b' )… [';']
+# <H>… при обнуляемом <H> бесконечно неоднозначна; язык (h | t i)* [ b ([,] b)* [;] ].
+version: 1
+
+grammar:
+  P -> H B1
+  H -> h H | t i H | eps
+  B1 -> b M K | eps
+  M -> ',' b M | b M | eps
+  K -> ';' | eps
+
+first:
+  P = { b, h, t, eps }
+  H = { h, t, eps }
+  B1 = { b, eps }
+  M = { ',', b, eps }
+  K = { ';', eps }
+
+follow:
+  P = { $ }
+  H = { b, $ }
+  B1 = { $ }
+  M = { ';', $ }
+  K = { $ }
+
+table:
+  M[P, t] = P -> H B1
+  M[P, h] = P -> H B1
+  M[P, $] = P -> H B1
+  M[P, b] = P -> H B1
+  M[H, h] = H -> h H
+  M[H, t] = H -> t i H
+  M[H, b] = H -> eps
+  M[H, $] = H -> eps
+  M[B1, b] = B1 -> b M K
+  M[B1, $] = B1 -> eps
+  M[M, ','] = M -> ',' b M
+  M[M, b] = M -> b M
+  M[M, ';'] = M -> eps
+  M[M, $] = M -> eps
+  M[K, ';'] = K -> ';'
+  M[K, $] = K -> eps
+
+trace "h t i h b , b b ;":
+  P $         | h t i h b ',' b b ';' $ | P -> H B1
+  H B1 $      | h t i h b ',' b b ';' $ | H -> h H
+  h H B1 $    | h t i h b ',' b b ';' $ | match h
+  H B1 $      | t i h b ',' b b ';' $   | H -> t i H
+  t i H B1 $  | t i h b ',' b b ';' $   | match t
+  i H B1 $    | i h b ',' b b ';' $     | match i
+  H B1 $      | h b ',' b b ';' $       | H -> h H
+  h H B1 $    | h b ',' b b ';' $       | match h
+  H B1 $      | b ',' b b ';' $         | H -> eps
+  B1 $        | b ',' b b ';' $         | B1 -> b M K
+  b M K $     | b ',' b b ';' $         | match b
+  M K $       | ',' b b ';' $           | M -> ',' b M
+  ',' b M K $ | ',' b b ';' $           | match ','
+  b M K $     | b b ';' $               | match b
+  M K $       | b ';' $                 | M -> b M
+  b M K $     | b ';' $                 | match b
+  M K $       | ';' $                   | M -> eps
+  K $         | ';' $                   | K -> ';'
+  ';' $       | ';' $                   | match ';'
+  $           | $                       | accept
+
+trace "t b":
+  P $        | t b $ | P -> H B1
+  H B1 $     | t b $ | H -> t i H
+  t i H B1 $ | t b $ | match t
+  i H B1 $   | b $   | error
+
+trace "h b , ;":
+  P $         | h b ',' ';' $ | P -> H B1
+  H B1 $      | h b ',' ';' $ | H -> h H
+  h H B1 $    | h b ',' ';' $ | match h
+  H B1 $      | b ',' ';' $   | H -> eps
+  B1 $        | b ',' ';' $   | B1 -> b M K
+  b M K $     | b ',' ';' $   | match b
+  M K $       | ',' ';' $     | M -> ',' b M
+  ',' b M K $ | ',' ';' $     | match ','
+  b M K $     | ';' $         | error

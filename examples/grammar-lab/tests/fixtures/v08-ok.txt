@@ -1,0 +1,87 @@
+# Вариант 8 (пример из task3.md, исправленный): эталонный ответ.
+# <P> ::= <H> (<B>)…   <H> ::= 'h' ('t' 'i')…   <B> ::= 'b' (',' 'b')… ';'
+# Проверка должна вернуть «ошибок нет».
+version: 1
+
+grammar:
+  P -> H G
+  G -> B G | eps
+  H -> h N
+  N -> t i N | eps
+  B -> b M ';'
+  M -> ',' b M | eps
+
+first:
+  P = { h }
+  G = { b, eps }
+  H = { h }
+  N = { t, eps }
+  B = { b }
+  M = { ',', eps }
+
+follow:
+  P = { $ }
+  G = { $ }
+  H = { b, $ }
+  N = { b, $ }
+  B = { b, $ }
+  M = { ';' }
+
+table:
+  M[P, h] = P -> H G
+  M[G, b] = G -> B G
+  M[G, $] = G -> eps
+  M[H, h] = H -> h N
+  M[N, t] = N -> t i N
+  M[N, b] = N -> eps
+  M[N, $] = N -> eps
+  M[B, b] = B -> b M ';'
+  M[M, ','] = M -> ',' b M
+  M[M, ';'] = M -> eps
+
+trace "h t i t i b , b ;":
+  P $             | h t i t i b ',' b ';' $ | P -> H G
+  H G $           | h t i t i b ',' b ';' $ | H -> h N
+  h N G $         | h t i t i b ',' b ';' $ | match h
+  N G $           | t i t i b ',' b ';' $   | N -> t i N
+  t i N G $       | t i t i b ',' b ';' $   | match t
+  i N G $         | i t i b ',' b ';' $     | match i
+  N G $           | t i b ',' b ';' $       | N -> t i N
+  t i N G $       | t i b ',' b ';' $       | match t
+  i N G $         | i b ',' b ';' $         | match i
+  N G $           | b ',' b ';' $           | N -> eps
+  G $             | b ',' b ';' $           | G -> B G
+  B G $           | b ',' b ';' $           | B -> b M ';'
+  b M ';' G $     | b ',' b ';' $           | match b
+  M ';' G $       | ',' b ';' $             | M -> ',' b M
+  ',' b M ';' G $ | ',' b ';' $             | match ','
+  b M ';' G $     | b ';' $                 | match b
+  M ';' G $       | ';' $                   | M -> eps
+  ';' G $         | ';' $                   | match ';'
+  G $             | $                       | G -> eps
+  $               | $                       | accept
+
+trace "h b t i b , b ;":
+  P $         | h b t i b ',' b ';' $ | P -> H G
+  H G $       | h b t i b ',' b ';' $ | H -> h N
+  h N G $     | h b t i b ',' b ';' $ | match h
+  N G $       | b t i b ',' b ';' $   | N -> eps
+  G $         | b t i b ',' b ';' $   | G -> B G
+  B G $       | b t i b ',' b ';' $   | B -> b M ';'
+  b M ';' G $ | b t i b ',' b ';' $   | match b
+  M ';' G $   | t i b ',' b ';' $     | error
+
+trace "h t i b , ;":
+  P $             | h t i b ',' ';' $ | P -> H G
+  H G $           | h t i b ',' ';' $ | H -> h N
+  h N G $         | h t i b ',' ';' $ | match h
+  N G $           | t i b ',' ';' $   | N -> t i N
+  t i N G $       | t i b ',' ';' $   | match t
+  i N G $         | i b ',' ';' $     | match i
+  N G $           | b ',' ';' $       | N -> eps
+  G $             | b ',' ';' $       | G -> B G
+  B G $           | b ',' ';' $       | B -> b M ';'
+  b M ';' G $     | b ',' ';' $       | match b
+  M ';' G $       | ',' ';' $         | M -> ',' b M
+  ',' b M ';' G $ | ',' ';' $         | match ','
+  b M ';' G $     | ';' $             | error

@@ -9,7 +9,8 @@ title: "Задача 3. Предиктивный анализатор"
 # Задача 3. Построение таблицы предиктивного анализатора
 
 *[Практические занятия](index.md#tema-2) · слайды: [06. Построение синтаксического анализатора](../lectures/html/06-postroenie-sintaksicheskogo-analizatora.html) ·
-[условие](#uslovie) · [варианты](#varianty) · [пример решения](#primer)*
+[условие](#uslovie) · [варианты](#varianty) · [пример решения](#primer) ·
+[самопроверка](task3-check/index.md)*
 
 ## Теоретические сведения { #teoriya }
 
@@ -44,7 +45,7 @@ title: "Задача 3. Предиктивный анализатор"
 1. Если имеется продукция <strong>Х → ε</strong>, добавим <strong>ε</strong> к <strong>FIRST(X)</strong>.
 1. Если <strong>Х</strong> – нетерминал и имеется продукция <strong>Х → Y<sub>1</sub>Y<sub>2</sub>…Y<sub>k</sub></strong>, то поместим <strong>а</strong> в <strong>FIRST(X)</strong>, если для некоторого <strong>i a € FIRST(Y<sub>i</sub>)</strong> и <strong>ε</strong> входит во все множества <strong>FIRST(Y<sub>1</sub>), …, FIRST(Y<sub>i-1</sub>)</strong>, т е <strong>Y<sub>1</sub> … Y<sub>i-1</sub> =&gt;ε</strong>. Если ε имеется во всех <strong>FIRST(Y<sub>i</sub>), i=1..k</strong>, то добавляем <strong>ε</strong> к <strong>FIRST(X)</strong>.
 
-Теперь можно вычислить <strong>FIRST</strong> для любой строки <strong>Х<sub>1</sub>Х<sub>2</sub>… Х<sub>n</sub></strong> следующим образом. Добавим к <strong>FIRST(Х<sub>1</sub>Х<sub>2</sub>… Х<sub>n</sub>)</strong> все <strong>не-ε</strong> символы из <strong>FIRST(Х<sub>1</sub>)</strong>. Добавим также все <strong>не-ε</strong> символы из <strong>FIRST(Х<sub>2</sub>)</strong>, если <strong>ε € FIRST(Х<sub>1</sub>)</strong>, все <strong>не-ε</strong> символы из <strong>FIRST(Х<sub>3</sub>)</strong>, если ε имеется как в <strong>FIRST(Х<sub>1</sub>)</strong>, так и в <strong>FIRST(Х<sub>2</sub>)</strong> и т д. Добавим <strong>FIRST(Х<sub>1</sub>Х<sub>2</sub>… Х<sub>n</sub>)</strong>, если для всех <strong>i FIRST(Х<sub>i</sub>)</strong> содержит <strong>ε</strong>.
+Теперь можно вычислить <strong>FIRST</strong> для любой строки <strong>Х<sub>1</sub>Х<sub>2</sub>… Х<sub>n</sub></strong> следующим образом. Добавим к <strong>FIRST(Х<sub>1</sub>Х<sub>2</sub>… Х<sub>n</sub>)</strong> все <strong>не-ε</strong> символы из <strong>FIRST(Х<sub>1</sub>)</strong>. Добавим также все <strong>не-ε</strong> символы из <strong>FIRST(Х<sub>2</sub>)</strong>, если <strong>ε € FIRST(Х<sub>1</sub>)</strong>, все <strong>не-ε</strong> символы из <strong>FIRST(Х<sub>3</sub>)</strong>, если ε имеется как в <strong>FIRST(Х<sub>1</sub>)</strong>, так и в <strong>FIRST(Х<sub>2</sub>)</strong> и т д. Добавим <strong>ε</strong> к <strong>FIRST(Х<sub>1</sub>Х<sub>2</sub>… Х<sub>n</sub>)</strong>, если для всех <strong>i FIRST(Х<sub>i</sub>)</strong> содержит <strong>ε</strong>.
 
 <strong>Алгоритм «Построение таблицы предиктивного анализатора»</strong>
 
@@ -63,6 +64,16 @@ title: "Задача 3. Предиктивный анализатор"
 1. Если в <strong>FIRST(α)</strong> входит <strong>ε</strong>, для каждого терминала <strong>b</strong> из <strong>FOLLOW(А)</strong> добавим <strong>А → α</strong> в ячейку <strong>М\[A,b\]</strong>. Если <strong>ε</strong> входит в <strong>FIRST(α)</strong>, а <strong>$</strong> - в <strong>FOLLOW(А)</strong>, добавим <strong>А → α</strong> в ячейку <strong>М\[A,$\]</strong>.
 1. Сделаем каждую неопределенную ячейку таблицы <strong>М</strong> указывающей на ошибку.
 
+Если в какую-то ячейку попали два правила, грамматика **не LL(1)**. Обычно это
+значит, что преобразование не доделано: осталась левая рекурсия или общий
+префикс альтернатив. Но бывают конфликты, которые не устраняются никакой
+заменой грамматики. Классический пример — «висячий else» (варианты 18, 28, 29):
+в правиле `X → else O | ε` символ `else` входит и в FIRST первой альтернативы,
+и в FOLLOW(X). Язык здесь неоднозначен: у строки `if i then if i then o else o`
+два дерева разбора. Анализатор разрешает такой конфликт соглашением «`else`
+относится к ближайшему `if`» — в ячейку `M[X, else]` ставится `X → else O`.
+Это нужно явно указать в ответе (п. 2 условия).
+
 ## Условие { #uslovie }
 
 1. По описанию языка построить <strong>КС</strong>-грамматику.
@@ -73,6 +84,9 @@ title: "Задача 3. Предиктивный анализатор"
 1. Проверить правильность построения на трех примерах (один правильный, два неправильных).
 
 ## Варианты { #varianty }
+
+Обозначения: `‘x’` — терминал, `<X>` — нетерминал, `[ … ]` — необязательная часть
+(ноль или один раз), `( … )…` и `X…` — повторение **ноль или более** раз.
 
 | № | Формулировка варианта задания |
 |---|---|
@@ -118,13 +132,13 @@ title: "Задача 3. Предиктивный анализатор"
 ```
 
 <ol start="2" markdown>
-<li markdown="span">По описанию языка построили КС-грамматику:</li>
+<li markdown="span">По описанию языка построили КС-грамматику. Символы разделены пробелами: <code>t</code> и <code>i</code> — два разных терминала.</li>
 </ol>
 
 ```text
-P -> HG            G -> BG                G -> ε
-H -> hN            N -> tiN          N -> ε
-B -> bM;         M -> ,bM                 M -> ε
+P -> H G           G -> B G | eps
+H -> h N           N -> t i N | eps
+B -> b M ;         M -> , b M | eps
 ```
 
 <ol start="3" markdown>
@@ -145,31 +159,82 @@ B -> bM;         M -> ,bM                 M -> ε
 <li markdown="span">Построим таблицу предиктивного анализатора.</li>
 </ol>
 
-|  | <strong>h</strong> | <strong>ti</strong> | <strong>b</strong> | <strong>,</strong> | <strong>;</strong> | <strong>$</strong> |
-|---|---|---|---|---|---|---|
-| <strong>P</strong> | P → HG |  |  |  |  |  |
-| <strong>H</strong> | H → hN |  |  |  |  |  |
-| <strong>N</strong> |  | N → tiN | N → ε |  |  | N → ε |
-| <strong>G</strong> |  |  | G → BG |  |  | G → ε |
-| <strong>B</strong> |  |  | B → bM; |  |  |  |
-| <strong>M</strong> |  |  |  | M → ,bM | M → ε |  |
+|  | <strong>h</strong> | <strong>t</strong> | <strong>i</strong> | <strong>b</strong> | <strong>,</strong> | <strong>;</strong> | <strong>$</strong> |
+|---|---|---|---|---|---|---|---|
+| <strong>P</strong> | P → HG |  |  |  |  |  |  |
+| <strong>H</strong> | H → hN |  |  |  |  |  |  |
+| <strong>N</strong> |  | N → tiN |  | N → ε |  |  | N → ε |
+| <strong>G</strong> |  |  |  | G → BG |  |  | G → ε |
+| <strong>B</strong> |  |  |  | B → bM; |  |  |  |
+| <strong>M</strong> |  |  |  |  | M → ,bM | M → ε |  |
+
+Конфликтов нет: в каждой ячейке не больше одного правила, значит грамматика LL(1).
 
 <ol start="6" markdown>
 <li markdown="span">Проверим правильность построения на трех примерах.</li>
 </ol>
 
-<strong>Правильные примеры:</strong>
+Трасса записывается в три колонки: стек (вершина слева), остаток входа и действие.
+Нужны одна правильная и две неправильные строки.
 
-| Разбор <strong>htib;$</strong> | Разбор <strong>htitib,b;$</strong> |
-|---|---|
-| P$<br>HG$<br>hNG$<br>NG$<br>tiNG$<br>NG$<br>G$<br>BG$<br>bM;G$<br>M;G$<br>;G$<br>G$<br>$ | P$<br>HG$<br>hNG$<br>NG$<br>tiNG$<br>NG$<br>tiNG$<br>NG$<br>G$<br>BG$<br>bM;G$<br>M;G$<br>,bM;G$<br>M;G$<br>;G$<br>G$<br>$ |
+<strong>Правильная строка</strong> <code>htitib,b;</code>:
 
-Строки разложены.
+| Стек | Вход | Действие |
+|---|---|---|
+| P$ | htitib,b;$ | P → HG |
+| HG$ | htitib,b;$ | H → hN |
+| hNG$ | htitib,b;$ | сдвиг h |
+| NG$ | titib,b;$ | N → tiN |
+| tiNG$ | titib,b;$ | сдвиг t |
+| iNG$ | itib,b;$ | сдвиг i |
+| NG$ | tib,b;$ | N → tiN |
+| tiNG$ | tib,b;$ | сдвиг t |
+| iNG$ | ib,b;$ | сдвиг i |
+| NG$ | b,b;$ | N → ε |
+| G$ | b,b;$ | G → BG |
+| BG$ | b,b;$ | B → bM; |
+| bM;G$ | b,b;$ | сдвиг b |
+| M;G$ | ,b;$ | M → ,bM |
+| ,bM;G$ | ,b;$ | сдвиг , |
+| bM;G$ | b;$ | сдвиг b |
+| M;G$ | ;$ | M → ε |
+| ;G$ | ;$ | сдвиг ; |
+| G$ | $ | G → ε |
+| $ | $ | строка принята |
 
-<strong>Неправильный пример:</strong>
+<strong>Неправильная строка</strong> <code>hbtib,b;</code>:
 
-<strong>hbtib,b;$</strong>
+| Стек | Вход | Действие |
+|---|---|---|
+| P$ | hbtib,b;$ | P → HG |
+| HG$ | hbtib,b;$ | H → hN |
+| hNG$ | hbtib,b;$ | сдвиг h |
+| NG$ | btib,b;$ | N → ε |
+| G$ | btib,b;$ | G → BG |
+| BG$ | btib,b;$ | B → bM; |
+| bM;G$ | btib,b;$ | сдвиг b |
+| M;G$ | tib,b;$ | ошибка: ячейка M[M, t] пуста |
 
-| Разбор | Результат |
-|---|---|
-| P$<br>HG$<br>hNG$<br>NG$<br>tiNG$ | ошибка: в строке есть лишний терминал b |
+После блока <code>b</code> ожидались <code>,</code> или <code>;</code>, а пришло <code>t</code>:
+группа <code>ti</code> может стоять только до первого <code>b</code>.
+
+<strong>Неправильная строка</strong> <code>htib,;</code>:
+
+| Стек | Вход | Действие |
+|---|---|---|
+| P$ | htib,;$ | P → HG |
+| HG$ | htib,;$ | H → hN |
+| hNG$ | htib,;$ | сдвиг h |
+| NG$ | tib,;$ | N → tiN |
+| tiNG$ | tib,;$ | сдвиг t |
+| iNG$ | ib,;$ | сдвиг i |
+| NG$ | b,;$ | N → ε |
+| G$ | b,;$ | G → BG |
+| BG$ | b,;$ | B → bM; |
+| bM;G$ | b,;$ | сдвиг b |
+| M;G$ | ,;$ | M → ,bM |
+| ,bM;G$ | ,;$ | сдвиг , |
+| bM;G$ | ;$ | ошибка: на вершине b, на входе ; |
+
+Этот пример целиком, в записи для самопроверки, загружается на странице
+[самопроверки](task3-check/index.md) (пункт «Вариант 8»).

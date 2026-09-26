@@ -1,0 +1,49 @@
+name: grammar-lab
+
+# Тесты самопроверки практической задачи 3 (examples/grammar-lab).
+# Работу бандла в Pyodide проверяет pages.yml (tools/pyodide-smoke).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/grammar-lab/**'
+      - '.github/workflows/grammar-lab.yml'
+  pull_request:
+    paths:
+      - 'examples/grammar-lab/**'
+      - '.github/workflows/grammar-lab.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: examples/grammar-lab
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: examples/grammar-lab/requirements.txt
+
+      - name: Установить зависимости
+        run: python3 -m pip install --quiet -r requirements.txt
+
+      - name: Тесты
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Эталонные ответы через CLI
+        run: |
+          set -euo pipefail
+          for f in tests/fixtures/*.txt; do python3 -m grammarlab check "$f"; done

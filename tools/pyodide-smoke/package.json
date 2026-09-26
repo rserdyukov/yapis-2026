@@ -1,0 +1,9 @@
+{
+  "name": "pyodide-smoke",
+  "private": true,
+  "description": "Smoke-тест Python-бандлов сайта в Pyodide (tools/pyodide-smoke/smoke.mjs)",
+  "type": "module",
+  "dependencies": {
+    "pyodide": "314.0.7"
+  }
+}

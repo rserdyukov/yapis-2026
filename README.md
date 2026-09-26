@@ -39,6 +39,7 @@
 | [`.github/workflows/`](.github/workflows/) | `tests`, `guard-main` и `pages` |
 | [`tools/`](tools/) | Сборка производных документов, слайдов и каталога языков |
 | [`examples/atm-lang/`](examples/atm-lang/) | Учебный компилятор FSM → WebAssembly (ANTLR и Lark), исходник playground сайта |
+| [`examples/grammar-lab/`](examples/grammar-lab/) | Самопроверка практической задачи 3: язык ответа, проверка FIRST/FOLLOW/LL(1)/трасс, исходник страницы `practice/task3-check` |
 
 ## Быстрый старт
 

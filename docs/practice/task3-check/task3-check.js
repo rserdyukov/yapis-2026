@@ -10,10 +10,13 @@ const REVEAL_AFTER = 3;  // попыток на элемент до кнопки
 const $ = (id) => document.getElementById(id);
 const ui = {
   example: $("gl-example"), check: $("gl-check"), status: $("gl-status"),
-  source: $("gl-source"), result: $("gl-result"),
+  source: $("gl-source"), result: $("gl-result"), grid: $("gl-grid"),
+  tabText: $("gl-tab-text"), tabGrid: $("gl-tab-grid"),
 };
 
 let checkFn = null;
+let gridFn = null;       // grammarlab.web.grid_json
+let applyFn = null;      // grammarlab.web.apply_grid_json
 const attempts = loadAttempts();
 const opened = new Set();   // раскрытые уровни: "<key>|2", "<key>|3", "<key>|r"
 
@@ -32,7 +35,7 @@ async function boot() {
   }
   ui.example.addEventListener("change", () => {
     const ex = examples.find((e) => e.id === ui.example.value);
-    if (ex) { ui.source.value = ex.source; saveDraft(); opened.clear(); lastText = null; }
+    if (ex) { ui.source.value = ex.source; saveDraft(); opened.clear(); lastText = null; refreshGrid(); }
   });
   ui.source.value = localStorage.getItem(DRAFT_KEY) ?? (examples[0]?.source || "grammar:\n");
   ui.source.addEventListener("input", debounce(saveDraft, 300));
@@ -40,6 +43,8 @@ async function boot() {
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); run(); }
   });
   ui.check.addEventListener("click", run);
+  ui.tabText.addEventListener("click", () => setView("text"));
+  ui.tabGrid.addEventListener("click", () => setView("grid"));
 
   try {
     status("Загрузка Pyodide (около 6 МБ при первом открытии)…");
@@ -51,10 +56,13 @@ async function boot() {
     pyodide.runPython(`
 import sys
 sys.path.insert(0, "/home/pyodide/grammarlab-lib")
-from grammarlab.web import check_json
+from grammarlab.web import check_json, grid_json, apply_grid_json
 `);
     checkFn = pyodide.globals.get("check_json");
+    gridFn = pyodide.globals.get("grid_json");
+    applyFn = pyodide.globals.get("apply_grid_json");
     ui.check.disabled = false;
+    ui.tabGrid.disabled = false;
     status("Готово", "ok");
   } catch (e) {
     status("Не удалось загрузить проверку: " + e.message +
@@ -83,6 +91,7 @@ function run() {
   }
   lastText = text;
   render(last);
+  if (view === "grid") refreshGrid();
   status(`Проверено за ${Math.round(performance.now() - t0)} мс`, "ok");
 }
 
@@ -164,6 +173,134 @@ ui.result.addEventListener("click", (e) => {
   opened.add(key);
   if (last) render(last);
 });
+
+// ---------------------------------------------------------- табличный редактор
+//
+// Текст ответа — источник правды. Сетка строится из текста (grid_json), а
+// каждое изменение в сетке сразу записывается в текст (apply_grid_json):
+// сериализация в DSL живёт в Python, в одном месте с разбором.
+
+let view = "text";
+let model = null;        // последняя модель сетки
+let gridState = null;    // {first, follow, table} в формате apply_grid
+
+function setView(v) {
+  view = v;
+  ui.tabText.setAttribute("aria-selected", String(v === "text"));
+  ui.tabGrid.setAttribute("aria-selected", String(v === "grid"));
+  ui.source.hidden = v !== "text";
+  ui.grid.hidden = v !== "grid";
+  if (v === "grid") refreshGrid();
+}
+
+function refreshGrid() {
+  if (!gridFn || view !== "grid") return;
+  model = JSON.parse(gridFn(ui.source.value));
+  if (!model.ok) {
+    gridState = null;
+    const errs = model.internal_error ? [{ message: model.internal_error }] : (model.errors || []);
+    ui.grid.innerHTML = `<p class="gl__bad">Таблицы строятся по грамматике, а она пока не разобрана:</p>
+      <ul class="gl__list">${errs.map((d) => `<li class="gl__bad">${d.line ? `строка ${d.line} — ` : ""}${esc(d.message)}</li>`).join("")}</ul>
+      <p class="gl__muted">Исправьте секцию grammar на вкладке «Текст».</p>`;
+    return;
+  }
+  gridState = { first: model.first, follow: model.follow, table: model.table };
+  renderGrid();
+}
+
+// Ошибки последней проверки по ключам элементов: подсветка в сетке.
+function wrongKeys() {
+  const keys = new Set();
+  for (const f of last?.findings || []) if (f.severity === "error") keys.add(f.key);
+  return keys;
+}
+
+function renderGrid() {
+  const m = model, st = gridState, wrong = wrongKeys();
+  const lab = (s) => esc(m.labels[s] ?? s);
+  const out = [];
+  if (m.lossy.length) {
+    out.push(`<details class="gl__lossy" open><summary class="gl__warn">В тексте есть записи, которых нет в таблицах (${m.lossy.length})</summary>
+      <ul class="gl__list">${m.lossy.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <p class="gl__muted">Изменение в таблице перезапишет секцию целиком — эти записи пропадут.</p></details>`);
+  }
+  for (const [name, title, cols] of [["first", "FIRST", m.terminals.concat(["ε"])],
+                                     ["follow", "FOLLOW", m.columns]]) {
+    out.push(`<h4>${title} ${st[name] ? "" : `<span class="gl__muted">— секции нет в тексте; первая отметка её создаст</span>`}</h4>`);
+    out.push(`<div class="gl__scroll"><table class="gl__tbl"><thead><tr><th scope="col"></th>` +
+             cols.map((c) => `<th scope="col">${lab(c)}</th>`).join("") + `</tr></thead><tbody>`);
+    for (const a of m.nonterminals) {
+      const row = st[name]?.[a] || [];
+      const bad = wrong.has(`${title}(${a})`) ? " gl__cell--bad" : "";
+      out.push(`<tr><th scope="row" class="${bad}">${esc(a)}</th>` + cols.map((c) =>
+        `<td><input type="checkbox" data-set="${name}" data-nt="${attr(a)}" data-sym="${attr(c)}"` +
+        `${row.includes(c) ? " checked" : ""} aria-label="${attr(`${title}(${a}) ∋ ${m.labels[c] ?? c}`)}"></td>`).join("") + `</tr>`);
+    }
+    out.push(`</tbody></table></div>`);
+  }
+  out.push(`<h4>Таблица M ${st.table ? "" : `<span class="gl__muted">— секции нет в тексте; первое правило её создаст</span>`}</h4>`);
+  out.push(`<div class="gl__scroll"><table class="gl__tbl gl__tbl--m"><thead><tr><th scope="col"></th>` +
+           m.columns.map((c) => `<th scope="col">${lab(c)}</th>`).join("") + `</tr></thead><tbody>`);
+  for (const a of m.nonterminals) {
+    out.push(`<tr><th scope="row">${esc(a)}</th>`);
+    for (const c of m.columns) {
+      const chosen = st.table?.[a]?.[c] || [];
+      const bad = wrong.has(m.cell_keys[a][c]) ? " gl__cell--bad" : "";
+      out.push(`<td class="${bad}">` + m.alternatives[a].map((alt, i) =>
+        `<label class="gl__rule"><input type="checkbox" data-cell="1" data-nt="${attr(a)}" data-sym="${attr(c)}" data-alt="${i}"` +
+        `${chosen.includes(i) ? " checked" : ""}> ${esc(a)}&nbsp;→&nbsp;${esc(alt)}</label>`).join("") + `</td>`);
+    }
+    out.push(`</tr>`);
+  }
+  out.push(`</tbody></table></div>
+    <p class="gl__muted">Отметьте в ячейке правило, которое туда попадает. Два отмеченных правила — конфликт.
+    Красным выделены элементы с ошибками по последней проверке.</p>`);
+  ui.grid.innerHTML = out.join("");
+}
+
+ui.grid.addEventListener("change", (e) => {
+  const el = e.target;
+  if (!gridState || el.type !== "checkbox") return;
+  const a = el.dataset.nt, c = el.dataset.sym;
+  if (el.dataset.set) {
+    const name = el.dataset.set;
+    gridState[name] ||= {};
+    const row = new Set(gridState[name][a] || []);
+    el.checked ? row.add(c) : row.delete(c);
+    const order = name === "first" ? model.terminals.concat(["ε"]) : model.columns;
+    gridState[name][a] = order.filter((x) => row.has(x));
+    writeGrid({ [name]: gridState[name] });
+  } else if (el.dataset.cell) {
+    gridState.table ||= {};
+    const row = (gridState.table[a] ||= {});
+    const idx = new Set(row[c] || []);
+    const i = Number(el.dataset.alt);
+    el.checked ? idx.add(i) : idx.delete(i);
+    row[c] = [...idx].sort((x, y) => x - y);
+    writeGrid({ table: gridState.table });
+  }
+});
+
+function writeGrid(part) {
+  lastText = null;  // ответ изменился — следующая проверка считается попыткой
+  const grid = { first: null, follow: null, table: null, ...part };
+  const r = JSON.parse(applyFn(ui.source.value, JSON.stringify(grid)));
+  if (!r.ok) { status("Не удалось записать таблицу в текст", "error"); return; }
+  ui.source.value = r.text;
+  saveDraft();
+  // Модель пересобирается из текста: lossy-записи исчезли, секции появились.
+  model = JSON.parse(gridFn(r.text));
+  gridState = { first: model.first, follow: model.follow, table: model.table };
+  if (model.lossy.length === 0) {
+    const d = ui.grid.querySelector(".gl__lossy");
+    if (d) d.remove();
+  }
+  for (const h of ui.grid.querySelectorAll("h4 .gl__muted")) {
+    const t = h.parentElement.textContent;
+    if ((t.startsWith("FIRST") && gridState.first) || (t.startsWith("FOLLOW") && gridState.follow) ||
+        (t.startsWith("Таблица") && gridState.table)) h.remove();
+  }
+}
 
 // ---------------------------------------------------------------- утилиты
 

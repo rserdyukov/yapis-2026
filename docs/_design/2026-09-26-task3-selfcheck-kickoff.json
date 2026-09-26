@@ -1313,7 +1313,7 @@
     },
     {
       "step": 7,
-      "result": "Инкремент 2: табличный редактор; T-22",
+      "result": "Инкремент 2: табличный редактор; T-22 — сделано (grammarlab/grid.py, вкладка «Таблицы»)",
       "deps": "MVP",
       "rollout": "—"
     },
@@ -1526,8 +1526,8 @@
       "precondition": "Инкремент 2",
       "action": "Заполнить сетку",
       "expected": "Сериализация = ручному DSL",
-      "method": "unit + ручной",
-      "status": "todo"
+      "method": "unit (Grid, 7 тестов) + smoke Pyodide + браузер 1440/390",
+      "status": "pass"
     },
     {
       "id": "T-23",

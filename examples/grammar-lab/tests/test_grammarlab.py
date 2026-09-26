@@ -16,7 +16,8 @@ from grammarlab.answer import parse_answer  # noqa: E402
 from grammarlab.check import check  # noqa: E402
 from grammarlab.grammar import (END, EPS, Grammar, accepts, build_table, compute_sets,  # noqa: E402
                                 conflicts, first_witness, follow_witness, is_derivation, simulate)
-from grammarlab.web import check_json  # noqa: E402
+from grammarlab.grid import apply_grid, grid_model  # noqa: E402
+from grammarlab.web import apply_grid_json, check_json, grid_json  # noqa: E402
 
 FIX = ROOT / "tests" / "fixtures"
 
@@ -282,6 +283,83 @@ class ReviewRegressions(unittest.TestCase):
         ans = parse_answer("grammar:\n  S -> a\ntrace \"a $\":\n  S $ | a $ | S -> a\n")
         self.assertEqual(ans.traces[0].word, ["a"])
         self.assertIn("W103", [d.code for d in ans.diagnostics])
+
+
+class Grid(unittest.TestCase):
+    """T-22: табличный редактор — то же самое, что ручной ввод DSL."""
+
+    def test_roundtrip_on_fixtures(self):
+        for name in ("v08-ok", "v12-ok", "v18-ok"):
+            text = fixture(name)
+            m = grid_model(text)
+            self.assertTrue(m["ok"])
+            self.assertEqual(m["lossy"], [], name)
+            out = apply_grid(text, {k: m[k] for k in ("first", "follow", "table")})
+            a, b = parse_answer(text), parse_answer(out["text"])
+            self.assertEqual((a.first, a.follow, a.table), (b.first, b.follow, b.table), name)
+            self.assertEqual(len(a.traces), len(b.traces))
+            self.assertEqual(a.conflict_choices, b.conflict_choices)
+            self.assertEqual(check(b).findings, [], name)
+            # повторное применение ничего не меняет
+            m2 = grid_model(out["text"])
+            again = apply_grid(out["text"], {k: m2[k] for k in ("first", "follow", "table")})
+            self.assertEqual(again["text"], out["text"])
+
+    def test_model_shape(self):
+        m = grid_model(fixture("v18-ok"))
+        self.assertEqual(m["columns"][-1], "$")
+        self.assertIn("'<>'", m["labels"].values())
+        self.assertEqual(m["alternatives"]["X"], ["else O", "eps"])
+        self.assertEqual(m["table"]["X"]["else"], [0, 1])       # конфликт — два правила
+        self.assertEqual(m["cell_keys"]["X"]["else"], "M[X, else]")
+
+    def test_sections_are_inserted_in_order(self):
+        base = fixture("v08-ok")
+        text = base.split("first:")[0] + base[base.index('trace "'):]
+        m = grid_model(text)
+        self.assertIsNone(m["first"])
+        self.assertIsNone(m["table"])
+        out = apply_grid(text, {"first": {"N": ["t", EPS]}, "follow": None,
+                                "table": {"N": {"t": [0], "$": [1]}}})["text"]
+        self.assertLess(out.index("grammar:"), out.index("first:"))
+        self.assertLess(out.index("first:"), out.index("table:"))
+        self.assertLess(out.index("table:"), out.index('trace "'))
+        self.assertNotIn("follow:", out)
+        ans = parse_answer(out)
+        self.assertEqual(ans.first, {"N": {"t", EPS}})
+        self.assertEqual(ans.table, {("N", "t"): [("N", ("t", "i", "N"))], ("N", END): [("N", ())]})
+
+    def test_untouched_text_is_preserved(self):
+        text = "# мой вариант 8\nversion: 1\n\n" + fixture("v08-ok").split("version: 1\n")[1]
+        m = grid_model(text)
+        grid = {k: m[k] for k in ("first", "follow", "table")}
+        grid["follow"]["N"] = ["$"]
+        out = apply_grid(text, grid)["text"]
+        self.assertTrue(out.startswith("# мой вариант 8\nversion: 1\n"))
+        self.assertEqual(out.split("follow:")[0], text.split("follow:")[0])
+        self.assertIn("  N = { $ }", out)
+        self.assertEqual(out[out.index('trace "'):], text[text.index('trace "'):])
+
+    def test_lossy_entries_reported(self):
+        text = ("grammar:\n  S -> a S | b\nfirst:\n  S = { a, b, c }\n  Q = { a }\n"
+                "table:\n  M[S, a] = S -> a S\n  M[S, b] = S -> b b\n  M[Q, a] = S -> b\n")
+        m = grid_model(text)
+        self.assertEqual(m["first"], {"S": ["a", "b"]})
+        self.assertEqual(m["table"], {"S": {"a": [0]}})
+        self.assertEqual(len(m["lossy"]), 4, m["lossy"])
+
+    def test_unparsed_text(self):
+        self.assertFalse(grid_model("grammar:\n  B -> b ;\n")["ok"])
+        r = apply_grid("grammar:\n  B -> b ;\n", {"first": {}})
+        self.assertFalse(r["ok"])
+
+    def test_json_bridge(self):
+        text = fixture("v08-ok")
+        m = json.loads(grid_json(text))
+        grid = json.dumps({"first": m["first"], "follow": m["follow"], "table": m["table"]})
+        out = json.loads(apply_grid_json(text, grid))
+        self.assertTrue(out["ok"])
+        self.assertEqual(check(parse_answer(out["text"])).findings, [])
 
 
 class Interfaces(unittest.TestCase):

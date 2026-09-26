@@ -41,6 +41,13 @@ if (!existsSync(join(gl, "index.html"))) {
   const bad = JSON.parse(checkJson(examples[0].source.replace("N = { b, $ }", "N = { $ }")));
   check("grammarlab: мутант FOLLOW(N) найден",
         bad.findings.length === 1 && bad.findings[0].key === "FOLLOW(N)" && bad.findings[0].why.includes("⇒"));
+  const gridJson = pyodide.runPython("from grammarlab.web import grid_json; grid_json");
+  const applyJson = pyodide.runPython("from grammarlab.web import apply_grid_json; apply_grid_json");
+  const m = JSON.parse(gridJson(examples[0].source));
+  const back = JSON.parse(applyJson(examples[0].source,
+    JSON.stringify({ first: m.first, follow: m.follow, table: m.table })));
+  const again = JSON.parse(checkJson(back.text));
+  check("grammarlab: табличный редактор — туда и обратно", m.ok && back.ok && again.findings.length === 0);
   const syn = JSON.parse(checkJson("grammar:\n  B -> b ;\n"));
   check("grammarlab: синтаксическая ошибка S007", !syn.ok && syn.parse[0].code === "S007");
 } else {

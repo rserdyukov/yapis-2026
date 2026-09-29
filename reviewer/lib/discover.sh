@@ -5,10 +5,13 @@
 # Для каждого открытого PR:
 #   1. Пропускает служебные ветки (ci/*), draft-PR и PR без изменений.
 #   2. Смотрит комментарии бота: если для текущего head SHA уже есть
-#      комментарий (ревью или отказ) — PR уже обработан, пропускаем.
+#      комментарий (ревью, отказ или сообщение о сбое) — PR уже обработан,
+#      пропускаем. Исключение — ручной запуск (--only): сообщение о сбое
+#      тогда не мешает повторить ревью.
 #   3. Применяет лимиты из config.env. Лимиты считаются по ФАКТИЧЕСКИ
-#      опубликованным ревью (маркер MARKER_REVIEW без MARKER_SKIPPED), а не
-#      по запускам workflow — отказы бюджет не расходуют.
+#      опубликованным ревью (маркер MARKER_REVIEW без MARKER_SKIPPED и
+#      MARKER_FAILED), а не по запускам workflow — отказы и сбои бюджет не
+#      расходуют.
 #        - MAX_REVIEWS_PER_PR        на один PR за всё время;
 #        - MAX_REVIEWS_PER_DAY       на репозиторий за последние 24 часа;
 #        - MAX_REVIEWS_PER_DAY_TOTAL на все репозитории за последние 24 часа;
@@ -44,11 +47,10 @@
 #              MAX_REVIEWS_PER_RUN.
 #   --dry-run  не публиковать комментарии-отказы, только напечатать решение.
 #   --force    проверить PR повторно, даже если для этого коммита уже есть
-#              комментарий и даже если исчерпан лимит ревью на PR. Нужен
-#              после починки инфраструктуры: при технической ошибке SHA
-#              помечается обработанным, чтобы сбой не повторялся каждые
-#              10 минут. Требует --only — иначе повтор всех PR разом сожжёт
-#              дневной лимит курса.
+#              комментарий (ревью или отказ) и даже если исчерпан лимит
+#              ревью на PR. После технической ошибки --force НЕ нужен:
+#              достаточно --only. Требует --only — иначе повтор всех PR
+#              разом сожжёт дневной лимит курса.
 #
 # Переменные окружения:
 #   REVIEW_ROOT  каталог .github/review с config.env и messages.env
@@ -178,10 +180,12 @@ while IFS= read -r repo; do
   # PR за 24 часа. (Закрытые PR игнорируем осознанно — их ревью не мешают
   # студенту продолжать работу, а запросов к API становится вдвое меньше.)
   repo_today="$(printf '%s' "${prs_json}" | jq \
-    --arg m "${MARKER_REVIEW}" --arg s "${MARKER_SKIPPED}" --arg since "${SINCE}" '
+    --arg m "${MARKER_REVIEW}" --arg s "${MARKER_SKIPPED}" --arg f "${MARKER_FAILED}" \
+    --arg since "${SINCE}" '
     [ .[].comments[]
       | select(.body | contains($m))
       | select(.body | contains($s) | not)
+      | select(.body | contains($f) | not)
       | select(.createdAt >= $since)
     ] | length')"
   GLOBAL_TODAY=$((GLOBAL_TODAY + repo_today))
@@ -202,21 +206,32 @@ while IFS= read -r repo; do
     fi
 
     # Уже есть комментарий бота для этого коммита? Маркер ставится и при
-    # технической ошибке — иначе сбой повторялся бы каждые 10 минут. Чтобы
-    # перепроверить такой PR после починки, нужен явный --force.
+    # технической ошибке — иначе запуск по расписанию повторял бы сбой
+    # каждые 10 минут. Но РУЧНОЙ запуск (--only) — это и есть «перезапуск
+    # после починки», о котором говорит сообщение о сбое, поэтому для него
+    # комментарии о сбое коммит обработанным не делают. Повторить коммит с
+    # настоящим ревью или отказом можно только через --force.
     sha_marker="${MARKER_SHA_PREFIX}${head_sha}"
-    seen="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" --arg mk "${sha_marker}" '
-      [ .[] | select(.number == $n) | .comments[] | select(.body | contains($mk)) ] | length')"
+    ignore_failed=false
+    [ -n "${ONLY}" ] && ignore_failed=true
+    seen="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" --arg mk "${sha_marker}" \
+      --arg f "${MARKER_FAILED}" --argjson ign "${ignore_failed}" '
+      [ .[] | select(.number == $n) | .comments[]
+        | select(.body | contains($mk))
+        | select(($ign and (.body | contains($f))) | not)
+      ] | length')"
     if [ "${seen}" -gt 0 ] && [ "${FORCE}" -eq 0 ]; then
       log "${repo}#${number}: коммит ${head_sha:0:7} уже обработан."; continue
     fi
 
-    # Сколько ревью уже опубликовано в этом PR.
+    # Сколько ревью уже опубликовано в этом PR. Отказы и технические сбои
+    # не считаются: сбой инфраструктуры не должен съедать лимит студента.
     published="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" \
-      --arg m "${MARKER_REVIEW}" --arg s "${MARKER_SKIPPED}" '
+      --arg m "${MARKER_REVIEW}" --arg s "${MARKER_SKIPPED}" --arg f "${MARKER_FAILED}" '
       [ .[] | select(.number == $n) | .comments[]
         | select(.body | contains($m))
         | select(.body | contains($s) | not)
+        | select(.body | contains($f) | not)
       ] | length')"
 
     if [ "${published}" -ge "${MAX_REVIEWS_PER_PR}" ] && [ "${FORCE}" -eq 0 ]; then

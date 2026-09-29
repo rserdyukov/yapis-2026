@@ -1273,6 +1273,33 @@ test_actions_pinned_by_sha() {
   return 0
 }
 
+# Образ проверок нужен студентам в двух архитектурах: amd64 под эмуляцией
+# на Apple Silicon роняет dotnet (core dump в QEMU).
+test_check_image_is_multiarch() {
+  local wf="${REPO_ROOT}/reviewer/workflow/build-check-image.yml"
+  grep -q 'linux/amd64,linux/arm64' "${wf}" \
+    || { fail "образ проверок должен собираться для amd64 и arm64"; return 1; }
+  return 0
+}
+
+# review-local.sh --docker: тот же run-check.sh в контейнерном режиме, что в
+# PR, с образом, который студент может скачать без авторизации.
+test_review_local_docker_mode() {
+  local sc="${REPO_ROOT}/admin/template-review-local.sh"
+  grep -q -- '--docker)' "${sc}" || { fail "нет флага --docker"; return 1; }
+  grep -q 'ghcr.io/rserdyukov/yapis-check' "${sc}" || { fail "нет образа по умолчанию"; return 1; }
+  grep -q 'CHECK_SANDBOX_DIR="${CACHE_DIR}/sandbox"' "${sc}" \
+    || { fail "sandbox должен быть в \$HOME: Docker Desktop не монтирует /var/folders"; return 1; }
+  # В docker-режиме CHECK_RUNNER=direct выставляться не должен.
+  local docker_branch
+  docker_branch="$(awk '/USE_DOCKER" -eq 1 \]; then/,/^else/' "${sc}")"
+  case "${docker_branch}" in
+    *CHECK_RUNNER=direct*) fail "--docker не должен запускать compile.sh напрямую"; return 1 ;;
+  esac
+  bash -n "${sc}" || { fail "синтаксическая ошибка в review-local.sh"; return 1; }
+  return 0
+}
+
 # Версия opencode зафиксирована: иначе в раннер с ключом модели и токеном
 # приложения будет приезжать произвольная свежая сборка.
 test_opencode_version_pinned() {

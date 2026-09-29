@@ -9,6 +9,8 @@
 # ИСПОЛЬЗОВАНИЕ
 #
 #   ./review-local.sh                 проверить текущую работу
+#   ./review-local.sh --docker        проверить compile.sh в том же контейнере,
+#                                     что у бота в PR (нужен Docker)
 #   ./review-local.sh --task 3        явно указать номер лабораторной
 #   ./review-local.sh --model M       использовать свою модель
 #   ./review-local.sh --prompt-only   только показать промпт, без запроса к модели
@@ -53,9 +55,24 @@
 #
 # Скрипт ничего не отправляет на GitHub и не изменяет ваши файлы.
 #
-# ВНИМАНИЕ: структурная проверка ЗАПУСКАЕТ ваш compile.sh прямо на этой
-# машине (в PR он выполняется в изолированном контейнере). Это ваш
-# собственный код, но помните об этом, если копируете чужие примеры.
+# ГДЕ ЗАПУСКАЕТСЯ compile.sh
+#
+#   По умолчанию — прямо на этой машине, вашими Java/Python/.NET и с
+#   интернетом. Это быстро, но результат может отличаться от PR: там
+#   compile.sh выполняется в контейнере с другими версиями инструментов и
+#   БЕЗ СЕТИ (зависимости ставятся отдельным шагом по манифестам).
+#
+#   С --docker — в том же контейнере, что у бота: образ
+#   ghcr.io/rserdyukov/yapis-check (около 2 ГБ, скачивается один раз), те
+#   же два шага (зависимости с сетью, затем compile.sh без сети), те же
+#   лимиты. Если compile.sh проходит с --docker, он пройдёт и в PR.
+#   Нужен Docker (Docker Desktop на macOS/Windows). Если образ скачать не
+#   удалось, он собирается локально из Dockerfile курса (5–10 минут).
+#   Образ можно подменить: YAPIS_CHECK_IMAGE=<образ> ./review-local.sh --docker
+#
+# ВНИМАНИЕ: без --docker структурная проверка ЗАПУСКАЕТ ваш compile.sh прямо
+# на этой машине. Это ваш собственный код, но помните об этом, если
+# копируете чужие примеры.
 
 set -uo pipefail
 
@@ -71,6 +88,8 @@ TASK_NUM=""
 PROMPT_ONLY=0
 UPDATE_ONLY=0
 MODEL_OVERRIDE=""
+USE_DOCKER=0
+CHECK_IMAGE_DEFAULT="ghcr.io/rserdyukov/yapis-check:latest"
 
 usage() {
   awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}"
@@ -82,6 +101,7 @@ while [ $# -gt 0 ]; do
     --dir)         WORK_DIR="${2:?Укажите директорию, например --dir .}"; shift 2 ;;
     --model)       MODEL_OVERRIDE="${2:?Укажите модель, например --model anthropic/claude-sonnet-4}"; shift 2 ;;
     --prompt-only) PROMPT_ONLY=1; shift ;;
+    --docker)      USE_DOCKER=1; shift ;;
     --update)      UPDATE_ONLY=1; shift ;;
     -h|--help)     usage; exit 0 ;;
     *)             echo "Неизвестный аргумент: ${1}" >&2; usage; exit 1 ;;
@@ -236,11 +256,66 @@ fi
 say "1. Структурные проверки"
 echo
 
-# Локально проверки запускаются напрямую: это ваш собственный код на вашей
-# машине. В PR тот же check.sh выполняется в контейнере без сети.
-CHECK_RUNNER=direct REVIEW_ROOT="${REVIEW_ROOT}" \
-  bash "${REVIEWER_LIB}/run-check.sh" "${TASK_DIR}" "${REPO_ROOT}" "${WORK_DIR}" "${CHECK_FILE}"
-CHECK_EXIT=$?
+# Готовит образ для --docker: скачивает опубликованный, при неудаче —
+# собирает из Dockerfile курса. Печатает имя образа в stdout.
+prepare_check_image() {
+  local image="${YAPIS_CHECK_IMAGE:-${CHECK_IMAGE_DEFAULT}}" local_tag="yapis-check:local"
+  if docker image inspect "${image}" >/dev/null 2>&1; then
+    # Уже скачан — тихо обновляем (раз в сутки вместе с проверками курса
+    # было бы точнее, но pull неизменного образа — секунды).
+    docker pull -q "${image}" >/dev/null 2>&1 || true
+    echo "${image}"; return 0
+  fi
+  echo "  Скачиваю образ проверки ${image} (около 2 ГБ, один раз)..." >&2
+  if docker pull -q "${image}" >/dev/null 2>&1; then
+    echo "${image}"; return 0
+  fi
+  if docker image inspect "${local_tag}" >/dev/null 2>&1; then
+    echo "  Скачать не удалось — использую ранее собранный ${local_tag}." >&2
+    echo "${local_tag}"; return 0
+  fi
+  echo "  Скачать не удалось — собираю образ из ${CACHE_DIR}/reviewer/Dockerfile (5–10 минут)..." >&2
+  if docker build -q -t "${local_tag}" "${CACHE_DIR}/reviewer" >/dev/null; then
+    echo "${local_tag}"; return 0
+  fi
+  return 1
+}
+
+CHECK_EXIT=0
+if [ "${USE_DOCKER}" -eq 1 ]; then
+  if ! command -v docker >/dev/null 2>&1 || ! docker info >/dev/null 2>&1; then
+    err "Docker не найден или не запущен — --docker недоступен."
+    echo "     Установите Docker Desktop (macOS/Windows) или docker (Linux) и запустите его,"
+    echo "     либо проверьте без контейнера: $0"
+    exit 1
+  fi
+  if ! command -v timeout >/dev/null 2>&1; then
+    err "Для --docker нужна утилита timeout (GNU coreutils)."
+    echo "     macOS: brew install coreutils"
+    exit 1
+  fi
+  if ! IMAGE="$(prepare_check_image)"; then
+    err "Не удалось ни скачать, ни собрать образ проверки."
+    exit 1
+  fi
+  echo "  Контейнер: ${IMAGE} — как у бота в PR: зависимости с сетью, затем compile.sh без сети."
+  echo
+  # Тот же run-check.sh и те же лимиты, что в PR (config.env). Sandbox —
+  # в кэше в $HOME: Docker Desktop на macOS не монтирует /var/folders.
+  mkdir -p "${CACHE_DIR}/sandbox"
+  CHECK_IMAGE="${IMAGE}" CHECK_SANDBOX_DIR="${CACHE_DIR}/sandbox" REVIEW_ROOT="${REVIEW_ROOT}" \
+  CHECK_TIMEOUT_SECONDS="${CHECK_TIMEOUT_SECONDS:-300}" DEPS_TIMEOUT_SECONDS="${DEPS_TIMEOUT_SECONDS:-300}" \
+  CHECK_MEMORY_LIMIT="${CHECK_MEMORY_LIMIT:-1g}" CHECK_CPU_LIMIT="${CHECK_CPU_LIMIT:-1.0}" \
+    bash "${REVIEWER_LIB}/run-check.sh" "${TASK_DIR}" "${REPO_ROOT}" "${WORK_DIR}" "${CHECK_FILE}" || CHECK_EXIT=$?
+else
+  # Без --docker проверки запускаются напрямую: это ваш собственный код на
+  # вашей машине. В PR тот же check.sh выполняется в контейнере без сети.
+  echo "  compile.sh запускается на этой машине, вашими инструментами. В PR он идёт в"
+  echo "  контейнере без сети — чтобы проверить ровно так же: $0 --docker"
+  echo
+  CHECK_RUNNER=direct REVIEW_ROOT="${REVIEW_ROOT}" \
+    bash "${REVIEWER_LIB}/run-check.sh" "${TASK_DIR}" "${REPO_ROOT}" "${WORK_DIR}" "${CHECK_FILE}" || CHECK_EXIT=$?
+fi
 
 sed 's/^/  /' "${CHECK_FILE}"
 echo

@@ -40,15 +40,30 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
         shell: bash
 
+      # Образ multi-arch: amd64 — для раннера ревьюера, arm64 — для студентов
+      # на Mac с Apple Silicon (./review-local.sh --docker). Под эмуляцией
+      # amd64 на arm64 dotnet падает с core dump в QEMU, поэтому студенту
+      # нужен нативный вариант. arm64 собирается здесь через QEMU: при сборке
+      # выполняются только apt/curl/pip, dotnet не запускается.
+      - name: QEMU для сборки arm64
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+        with:
+          platforms: arm64
+
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Пакет должен быть ПУБЛИЧНЫМ (Package settings → Change visibility):
+      # его скачивает review-local.sh студентов без авторизации. Секретов в
+      # образе нет — только toolchain'ы из публичного Dockerfile.
       - name: Собрать и опубликовать образ
         env:
           IMAGE: ghcr.io/${{ github.repository_owner }}/yapis-check
         run: |
           set -euo pipefail
-          docker build -t "${IMAGE}:latest" -t "${IMAGE}:${GITHUB_SHA::7}" reviewer
-          docker push "${IMAGE}:latest"
-          docker push "${IMAGE}:${GITHUB_SHA::7}"
-          echo "Опубликован ${IMAGE}:latest" >> "$GITHUB_STEP_SUMMARY"
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t "${IMAGE}:latest" -t "${IMAGE}:${GITHUB_SHA::7}" --push reviewer
+          echo "Опубликован ${IMAGE}:latest (linux/amd64, linux/arm64)" >> "$GITHUB_STEP_SUMMARY"
         shell: bash
 
       - name: Проверить, что образ пригоден для проверок

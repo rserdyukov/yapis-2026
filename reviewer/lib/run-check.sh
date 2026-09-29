@@ -207,7 +207,9 @@ fi
 
 # --- Фаза 2: проверка (без сети) --------------------------------------------
 CONTAINER_NAME="yapis-check-$$-$(date +%s)"
-# Переменные окружения, указывающие на .deps/ внутри /work.
+# Переменные окружения, указывающие на .deps/ внутри /work. Для ЛР1–2 массив
+# пуст, а "${arr[@]}" пустого массива под set -u в bash 3.2 (macOS) — это
+# unbound variable, поэтому ниже раскрытие через ${arr[@]+...}.
 DEPS_ENV_ARGS=()
 if [ "${DEPS_PHASE}" = "1" ]; then
   # shellcheck source=/dev/null
@@ -224,7 +226,7 @@ timeout --kill-after=10 "$((CHECK_TIMEOUT_SECONDS + 30))" \
     --name "${CONTAINER_NAME}" \
     --network none \
     -e CHECK_TIMEOUT_SECONDS="${CHECK_TIMEOUT_SECONDS}" \
-    "${DEPS_ENV_ARGS[@]}" \
+    ${DEPS_ENV_ARGS[@]+"${DEPS_ENV_ARGS[@]}"} \
     "${CHECK_IMAGE}" \
     bash -c 'timeout "${CHECK_TIMEOUT_SECONDS}" bash "/review/tasks/$1/check.sh" "$2"' _ "${TASK_DIR}" "${WORK_DIR}" \
   >> "${OUT_FILE}" 2>&1

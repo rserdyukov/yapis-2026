@@ -30,9 +30,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 python3-pip python3-venv \
       openjdk-21-jdk-headless \
       nodejs npm \
-      dotnet-sdk-8.0 \
+      dotnet-sdk-10.0 dotnet-runtime-8.0 \
       llvm clang \
     && rm -rf /var/lib/apt/lists/*
+
+# .NET: SDK 10 (LTS, поддержка до 11.2028) из noble-updates. Это линейка
+# SDK 1xx (10.0.1xx): Ubuntu собирает SDK из исходников и 2xx–4xx не
+# выпускает. rollForward в global.json разрешает только версии ВЫШЕ
+# указанной, поэтому работа с "version": "10.0.401" здесь не соберётся ни
+# при каком rollForward (проверено: latestPatch/latestFeature/latestMajor —
+# "A compatible .NET SDK was not found"). Студенту нужно удалить
+# global.json или указать "version": "10.0.100", "rollForward": "latestFeature".
+#
+# Runtime 8.0 — на переходный период, для работ с TargetFramework=net8.0:
+# SDK 10 их собирает, но запустить собранную .dll без runtime 8.0 нельзя.
+# Поддержка .NET 8 заканчивается 10.11.2026 — тогда runtime можно убрать.
 
 # ANTLR — основной инструмент курса (ЛР2-ЛР5). Кладём и jar, и обёртки
 # antlr4/grun, и Python/JS-рантаймы: без сети студент их не поставит.

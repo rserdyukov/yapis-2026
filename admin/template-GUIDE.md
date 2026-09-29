@@ -73,8 +73,13 @@ Windows и не имеет бита исполнения.
 
 Автоматическая проверка запускает `compile.sh` **в контейнере**, а не на
 вашей машине. В нём уже есть: Ubuntu 24.04, JDK 21, Maven 3.9, Python 3
-с `antlr4-python3-runtime 4.13.2`, Node.js, .NET SDK 8, LLVM/clang,
-ANTLR 4.13.2 (`antlr4`, `grun`, jar в `$ANTLR_JAR`).
+с `antlr4-python3-runtime 4.13.2`, Node.js, .NET SDK 10 (линейка 10.0.1xx;
+собирает и запускает также проекты на `net8.0`), LLVM/clang,
+ANTLR 4.13.2 (`antlr4`, `grun`, jar в `$ANTLR_JAR`). `global.json` лучше
+не заводить. Если он нужен — укажите в нём
+`"version": "10.0.100", "rollForward": "latestFeature"`: SDK подбирается
+только версии не ниже указанной, и с `"version": "10.0.401"` (как
+создаёт свежий SDK на вашей машине) сборка в контейнере не найдёт SDK.
 
 Проверка идёт в два шага:
 

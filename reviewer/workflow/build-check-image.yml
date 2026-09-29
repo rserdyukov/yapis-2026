@@ -65,6 +65,9 @@ jobs:
             javac --version
             node --version
             dotnet --version
+            # SDK 10 и runtime 8.0 (для работ на net8.0) — см. Dockerfile.
+            dotnet --list-sdks | grep -q "^10\." || { echo "нет .NET SDK 10" >&2; exit 1; }
+            dotnet --list-runtimes | grep -q "Microsoft.NETCore.App 8\." || { echo "нет .NET runtime 8.0" >&2; exit 1; }
             antlr4 2>&1 | head -1
             python3 -c "import antlr4; print(\"antlr4 python runtime ok\")"
           '

@@ -11,19 +11,27 @@
 #
 # КАК РАБОТАЕТ
 #   1. Находит все *.g4 (кроме каталогов сборки). Комбинированные грамматики
-#      (`grammar X;`) собираются по одной; пары `lexer grammar XLexer;` +
-#      `parser grammar XParser;` из одного каталога — вместе.
+#      (`grammar X;`) собираются по одной; пара `lexer grammar A;` +
+#      `parser grammar B;` из одного каталога — вместе. Имена A и B могут
+#      быть любыми: ANTLR этого не требует.
 #   2. Генерирует Java-таргет во временный каталог. Всегда Java — независимо
 #      от того, на чём студент пишет компилятор: Java-рантайм есть в образе,
 #      а сама грамматика от таргета не зависит. Исключение — грамматики с
-#      embedded-кодом (@header/@members/{...} на Python и т.п.): они не
-#      скомпилируются javac, и это честно сообщается как ограничение
-#      проверки, а не как ошибка студента.
+#      кодом под конкретный таргет (@header/@members на Python и т.п.,
+#      options { superClass = ... } — базовый класс живёт вне .g4): в Java
+#      они не соберутся, и это честно сообщается как ограничение проверки,
+#      а не как ошибка студента.
 #   3. Компилирует javac, стартовое правило — ПЕРВОЕ правило парсера в файле
 #      (так же поступает lab.antlr.org, когда правило не указано).
-#   4. Прогоняет каждый пример из examples/ через org.antlr.v4.gui.TestRig:
-#      корректные примеры (без префикса error-) должны разбираться без
-#      сообщений «line N:M ...»; error-примеры (если есть) — с ними.
+#   4. Прогоняет каждый пример из examples/ через собственный драйвер
+#      (YapisParseDriver ниже). Раньше использовался org.antlr.v4.gui.TestRig,
+#      но он принимает одно базовое имя X и ищет классы XLexer/XParser —
+#      пара lang_lexer + lang_parser для него «не согласована», хотя для
+#      ANTLR совершенно законна (yapis-2026-321701-perminova#7: модель
+#      выдала это студенту как существенное замечание). Драйвер получает
+#      имена классов лексера и парсера явно. Корректные примеры (без
+#      префикса error-) должны разбираться без сообщений «line N:M ...»;
+#      error-примеры (если есть) — с ними.
 #
 # Результат печатается в stdout и попадает в промпт как ДАННЫЕ.
 #
@@ -98,12 +106,30 @@ _antlr_first_parser_rule() {
     | head -n 1
 }
 
-# Есть ли в грамматике embedded-код, специфичный для не-Java таргета.
-# Признаки: @header/@members с python/import/def/self, либо
-# options { language = Python/JavaScript/CSharp... }.
+# Базовый класс из options { superClass = X; }, если задан. Печатает X.
+# Такой класс живёт вне .g4 (код студента или библиотека вроде Dentlr для
+# C#), поэтому сгенерированный Java-код без него не скомпилируется.
+_antlr_super_class() {
+  local sc
+  sc="$(perl -0777 -ne 's{/\*.*?\*/}{}gs; s{//[^\n]*}{}g; print "$1\n" if /\bsuperClass\s*=\s*([A-Za-z_][\w.]*)/' "$1")"
+  [ -n "${sc}" ] || return 1
+  echo "${sc}"
+}
+
+# Имя словаря токенов из options { tokenVocab = X; } — по нему парсер
+# связывается со своим лексером, если их в каталоге несколько.
+_antlr_token_vocab() {
+  perl -0777 -ne 's{/\*.*?\*/}{}gs; s{//[^\n]*}{}g; print "$1\n" if /\btokenVocab\s*=\s*([A-Za-z_]\w*)/' "$1"
+}
+
+# Есть ли в грамматике код, специфичный для не-Java таргета.
+# Признаки: @header/@members с python/import/def/self,
+# options { language = Python/JavaScript/CSharp... } или
+# options { superClass = ... }.
 _antlr_has_foreign_actions() {
   local f="$1"
   grep -qiE 'language\s*=\s*(Python|JavaScript|TypeScript|CSharp|Go|Cpp|Swift|Dart|PHP)' "${f}" && return 0
+  _antlr_super_class "${f}" >/dev/null && return 0
   if grep -qE '@(header|members|lexer::header|lexer::members|parser::header|parser::members)' "${f}"; then
     grep -qE '^\s*(import\s+\w+|from\s+\w+\s+import|def\s+\w+\(|self\.|using\s+System|const\s+\w+\s*=|require\()' "${f}" && return 0
   fi
@@ -112,16 +138,45 @@ _antlr_has_foreign_actions() {
 
 # --- Прогон одного примера --------------------------------------------------
 
+# Драйвер разбора: как TestRig без -tree, но классы лексера и парсера
+# передаются явно, а не выводятся из общего базового имени.
+#   java YapisParseDriver <LexerClass> <ParserClass> <rule> <file>
+# Ошибки лексера и парсера печатает стандартный ConsoleErrorListener в том
+# же формате `line N:M message`, что и TestRig. Код выхода 0 и при
+# синтаксических ошибках — их считает вызывающий по строкам вывода.
+_antlr_write_driver() {
+  cat > "$1/YapisParseDriver.java" <<'JAVA'
+import java.lang.reflect.InvocationTargetException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
+import org.antlr.v4.runtime.*;
+
+public class YapisParseDriver {
+    public static void main(String[] args) throws Exception {
+        CharStream input = CharStreams.fromPath(Paths.get(args[3]), StandardCharsets.UTF_8);
+        Lexer lexer = (Lexer) Class.forName(args[0]).getConstructor(CharStream.class).newInstance(input);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        Parser parser = (Parser) Class.forName(args[1]).getConstructor(TokenStream.class).newInstance(tokens);
+        try {
+            parser.getClass().getMethod(args[2]).invoke(parser);
+        } catch (InvocationTargetException e) {
+            throw (e.getCause() instanceof Exception) ? (Exception) e.getCause() : e;
+        }
+    }
+}
+JAVA
+}
+
 # Печатает отчёт по примеру, возвращает 0 при ожидаемом поведении.
 _antlr_run_example() {
-  local classdir="$1" jar="$2" grammar="$3" rule="$4" example="$5" expect="$6" timeout_s="$7" rel="$8"
+  local classdir="$1" jar="$2" lexer_class="$3" parser_class="$4" rule="$5" example="$6" expect="$7" timeout_s="$8" rel="$9"
   local out rc errors
 
   out="$(cd "${classdir}" && timeout "${timeout_s}" \
-    java -cp "${jar}:." org.antlr.v4.gui.TestRig "${grammar}" "${rule}" "${example}" 2>&1)"
+    java -cp "${jar}:." YapisParseDriver "${lexer_class}" "${parser_class}" "${rule}" "${example}" 2>&1)"
   rc=$?
 
-  # TestRig печатает ошибки в формате `line N:M message`; сам процесс при
+  # Ошибки печатаются в формате `line N:M message`; процесс при
   # синтаксических ошибках всё равно завершается кодом 0, поэтому считаем
   # именно строки с ошибками.
   errors="$(printf '%s\n' "${out}" | grep -cE '^line [0-9]+:[0-9]+ ' || true)"
@@ -167,35 +222,58 @@ _antlr_build() {
   local files=("$@") f out rc
   local parser_name="" rule="" kind name
 
+  local sc
   for f in "${files[@]}"; do
+    if sc="$(_antlr_super_class "${f}")"; then
+      echo "    $(basename "${f}"): options { superClass = ${sc}; } — базовый класс определён вне .g4"
+      echo "    (в коде студента или библиотеке под его язык, например Dentlr для отступов в C#)."
+      echo "    Собрать такую грамматику в Java для проверки нельзя — прогон примеров ПРОПУЩЕН."
+      echo "    Это ограничение автоматической проверки, а НЕ ошибка студента: superClass — штатный механизм ANTLR,"
+      echo "    не замечание. Грамматику нужно проверить по тексту."
+      echo "SKIP super-class"
+      return 0
+    fi
     if _antlr_has_foreign_actions "${f}"; then
-      echo "    Грамматика содержит встроенный код (@header/@members/options language) для не-Java таргета."
-      echo "    Сборка в Java невозможна — проверка на примерах ПРОПУЩЕНА. Это ограничение проверки, а не ошибка студента;"
-      echo "    но по требованиям курса грамматика должна быть переносимой: код лучше выносить из .g4 в отдельные классы."
+      echo "    $(basename "${f}"): встроенный код (@header/@members/options language) для не-Java таргета."
+      echo "    Собрать такую грамматику в Java для проверки нельзя — прогон примеров ПРОПУЩЕН."
+      echo "    Это ограничение автоматической проверки, а НЕ ошибка студента. Грамматику нужно проверить по тексту."
+      echo "    Рекомендация (не существенное замечание): код лучше выносить из .g4 в отдельные классы."
       echo "SKIP foreign-actions"
       return 0
     fi
   done
 
-  # TestRig принимает БАЗОВОЕ имя грамматики и сам добавляет Lexer/Parser:
-  # для `grammar X;` это X, для пары `lexer grammar XLexer; parser grammar
-  # XParser;` — тоже X. Если студент назвал файлы иначе (MyLex + MyPar),
-  # TestRig их не свяжет — сообщаем об этом ниже, а не падаем с ClassCast.
-  local lexer_name=""
+  # Имена классов. Для `grammar X;` ANTLR генерирует XLexer и XParser; для
+  # раздельных `lexer grammar A;` и `parser grammar B;` — классы A и B,
+  # и имена могут быть любыми. Лексер для парсера выбирается по tokenVocab,
+  # а если он не указан — единственный лексер каталога.
+  local lexer_class="" parser_class="" vocab="" lexer_names=()
   for f in "${files[@]}"; do
     kind="$(_antlr_grammar_kind "${f}")"
     name="$(_antlr_grammar_name "${f}")"
     case "${kind}" in
-      combined) parser_name="${name}"; rule="$(_antlr_first_parser_rule "${f}")" ;;
-      parser)   parser_name="${name%Parser}"; rule="$(_antlr_first_parser_rule "${f}")" ;;
-      lexer)    lexer_name="${name%Lexer}" ;;
+      combined) parser_name="${name}"; parser_class="${name}Parser"; lexer_class="${name}Lexer"
+                rule="$(_antlr_first_parser_rule "${f}")" ;;
+      parser)   parser_name="${name}"; parser_class="${name}"; vocab="$(_antlr_token_vocab "${f}")"
+                rule="$(_antlr_first_parser_rule "${f}")" ;;
+      lexer)    lexer_names+=("${name}") ;;
     esac
   done
-  if [ -n "${lexer_name}" ] && [ -n "${parser_name}" ] && [ "${lexer_name}" != "${parser_name}" ]; then
-    echo "    Имена лексера (${lexer_name}Lexer) и парсера (${parser_name}Parser) не согласованы:"
-    echo "    ANTLR TestRig (и lab.antlr.org) ожидают пару <Имя>Lexer / <Имя>Parser. Прогон примеров пропущен."
-    echo "SKIP name-mismatch"
-    return 0
+  if [ -z "${lexer_class}" ] && [ "${#lexer_names[@]}" -gt 0 ]; then
+    local ln
+    for ln in "${lexer_names[@]}"; do
+      [ "${ln}" = "${vocab}" ] && lexer_class="${ln}"
+    done
+    if [ -z "${lexer_class}" ] && [ "${#lexer_names[@]}" -eq 1 ]; then
+      lexer_class="${lexer_names[0]}"
+    fi
+    if [ -z "${lexer_class}" ]; then
+      echo "    В каталоге несколько lexer grammar (${lexer_names[*]}), а parser grammar ${parser_name} не указывает"
+      echo "    свой лексер через options { tokenVocab = ...; }. Какой лексер использовать, определить нельзя —"
+      echo "    прогон примеров пропущен. Это ограничение проверки; tokenVocab в парсере решит вопрос."
+      echo "SKIP ambiguous-lexer"
+      return 0
+    fi
   fi
 
   if [ -z "${parser_name}" ]; then
@@ -232,22 +310,24 @@ _antlr_build() {
     echo "    ЗАМЕЧАНИЕ: antlr4 выдал предупреждения — см. выше."
   fi
 
-  out="$(cd "${outdir}" && timeout 120 javac -cp "${jar}" ./*.java 2>&1)"
+  _antlr_write_driver "${outdir}"
+  out="$(cd "${outdir}" && timeout 120 javac -encoding UTF-8 -cp "${jar}" ./*.java 2>&1)"
   rc=$?
   if [ "${rc}" -ne 0 ]; then
     echo "    Вывод javac:"
     printf '%s\n' "${out}" | head -n 15 | cut -c1-300 | sed 's/^/      /'
-    echo "    РЕЗУЛЬТАТ: сгенерированный парсер не компилируется (код ${rc}). Обычно это встроенный код в .g4, не совместимый с Java-таргетом."
+    echo "    РЕЗУЛЬТАТ: сгенерированный Java-код не компилируется (код ${rc}). Обычно это встроенный в .g4 код под другой"
+    echo "    язык. Прогон примеров ПРОПУЩЕН — это ограничение автоматической проверки, а НЕ ошибка студента."
     echo "SKIP javac-failed"
     return 0
   fi
 
   for b in "${basenames[@]}"; do
-    [ -f "${outdir}/${b}" ] && [ "${b}" != "${parser_name}Parser.java" ] && rm -f "${outdir}/${b}"
+    rm -f "${outdir:?}/${b}"
   done
 
-  echo "    Сборка: успешно. Стартовое правило: ${rule}"
-  echo "OK ${parser_name} ${rule}"
+  echo "    Сборка: успешно. Лексер: ${lexer_class}, парсер: ${parser_class}, стартовое правило: ${rule}"
+  echo "OK ${lexer_class} ${parser_class} ${rule}"
   return 0
 }
 
@@ -312,7 +392,7 @@ run_antlr_checks() {
   # shellcheck disable=SC2064
   trap "rm -rf '${tmp_root}'" RETURN
 
-  local failed=0 built=0 g kind dir lexers=() group=() name outdir status parser rule example rel n=0
+  local failed=0 built=0 g kind dir lexers=() group=() name outdir status lexer_class parser rule example rel n=0
 
   for g in "${grammars[@]}"; do
     kind="$(_antlr_grammar_kind "${g}")"
@@ -364,8 +444,9 @@ run_antlr_checks() {
       SKIP*) echo; continue ;;
       OK*)   built=$((built + 1)) ;;
     esac
-    parser="$(printf '%s' "${status}" | awk '{ print $2 }')"
-    rule="$(printf '%s' "${status}" | awk '{ print $3 }')"
+    lexer_class="$(printf '%s' "${status}" | awk '{ print $2 }')"
+    parser="$(printf '%s' "${status}" | awk '{ print $3 }')"
+    rule="$(printf '%s' "${status}" | awk '{ print $4 }')"
 
     if [ -z "${examples_dir}" ]; then
       echo "    Директория с примерами не найдена — прогон пропущен."
@@ -376,7 +457,7 @@ run_antlr_checks() {
     if [ "${#ok_examples[@]}" -gt 0 ]; then
       echo "  -- Корректные примеры (ожидается разбор без ошибок) --"
       for example in "${ok_examples[@]}"; do
-        _antlr_run_example "${outdir}" "${jar}" "${parser}" "${rule}" "${example}" ok "${timeout_s}" "${example#"${work_dir}"/}" \
+        _antlr_run_example "${outdir}" "${jar}" "${lexer_class}" "${parser}" "${rule}" "${example}" ok "${timeout_s}" "${example#"${work_dir}"/}" \
           || failed=$((failed + 1))
       done
     else
@@ -385,7 +466,7 @@ run_antlr_checks() {
     if [ "${#err_examples[@]}" -gt 0 ]; then
       echo "  -- Примеры с ошибками (ожидаются сообщения об ошибках) --"
       for example in "${err_examples[@]}"; do
-        _antlr_run_example "${outdir}" "${jar}" "${parser}" "${rule}" "${example}" error "${timeout_s}" "${example#"${work_dir}"/}" \
+        _antlr_run_example "${outdir}" "${jar}" "${lexer_class}" "${parser}" "${rule}" "${example}" error "${timeout_s}" "${example#"${work_dir}"/}" \
           || failed=$((failed + 1))
       done
     fi
@@ -397,7 +478,8 @@ run_antlr_checks() {
     return 1
   fi
   if [ "${built}" -eq 0 ]; then
-    echo "Итог: ни одна грамматика не была собрана и проверена на примерах (см. причины выше)."
+    echo "Итог: прогон примеров не выполнен ни для одной грамматики (причины выше). Если причина — ограничение"
+    echo "проверки (ПРОПУЩЕН), это не замечание к работе: грамматику нужно проверить по тексту."
     return 0
   fi
   echo "Итог: собрано грамматик — ${built}, все проверенные примеры разобраны ожидаемо."

@@ -211,6 +211,7 @@ make_pr() {
       review)  body='<!-- ai-review-marker -->\n## Ревью\nзамечания' ;;
       skipped) body='<!-- ai-review-marker -->\n<!-- ai-review-skipped -->\nпропущено' ;;
       sha:*)   body="<!-- ai-review-marker -->\n<!-- ai-review-sha:${kind#sha:} -->" ;;
+      failed:*) body="<!-- ai-review-marker -->\n<!-- ai-review-marker-failed -->\n<!-- ai-review-sha:${kind#failed:} -->\nсбой" ;;
       old:*)   body='<!-- ai-review-marker -->\nстарое ревью'; created="${kind#old:}" ;;
       *)       body="${kind}" ;;
     esac
@@ -258,6 +259,48 @@ test_discover_force_rechecks_handled_sha() {
     bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- \
       --only yapis-2026-ivanov:4 --force 2>/dev/null)"
   assert_contains "${out}" '"pr":4' "--force должен перепроверять обработанный коммит"
+}
+
+# Сбой по расписанию не повторяется каждые 10 минут.
+test_discover_schedule_skips_failed_sha() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 6 task2 aaa111 100 failed:aaa111)]"
+  assert_eq "${DISC_OUT}" "[]" "по расписанию коммит со сбоем не повторяется"
+}
+
+# Регрессия: yapis-2026-321701-losik#6 — после технической ошибки ручной
+# перезапуск (./manage.sh review losik) молча отвечал «коммит уже обработан»,
+# хотя сообщение о сбое обещало студенту перезапуск.
+test_discover_manual_run_retries_failed_sha() {
+  local dir="${TMP_ROOT}/disc-retry.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local out
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 6 task2 aaa111 100 failed:aaa111)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- \
+      --only yapis-2026-ivanov 2>/dev/null)"
+  assert_contains "${out}" '"pr":6' "ручной запуск должен повторять ревью после сбоя"
+}
+
+# Ручной запуск без --force по-прежнему не повторяет настоящее ревью.
+test_discover_manual_run_skips_reviewed_sha() {
+  local dir="${TMP_ROOT}/disc-retry2.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local out
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 6 task2 aaa111 100 failed:aaa111 sha:aaa111)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- \
+      --only yapis-2026-ivanov 2>/dev/null)"
+  assert_eq "${out}" "[]" "уже отревьюированный коммит без --force не повторяется"
+}
+
+# Сбои инфраструктуры не расходуют лимит ревью на PR.
+test_discover_failed_comments_do_not_count() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 4 task3 ddd444 100 failed:aaa111 failed:bbb222 failed:ccc333)]"
+  assert_contains "${DISC_OUT}" '"pr":4' "сбои не должны расходовать лимит PR"
 }
 
 # --force без --only перепроверил бы все PR разом и сжёг дневной лимит.
@@ -1611,6 +1654,34 @@ prog : NUM EOF ;
 NUM  : [0-9]+ ;
 EOF
       printf '1\n' > "${dir}/examples/ok.txt" ;;
+    split-names)
+      # Раздельные грамматики с именами не вида XLexer/XParser — законно
+      # для ANTLR (yapis-2026-321701-perminova#7).
+      cat > "${dir}/compiler/lang_set_lexer.g4" <<'EOF'
+lexer grammar lang_set_lexer;
+NUM  : [0-9]+ ;
+SEMI : ';' ;
+WS   : [ \t\r\n]+ -> skip ;
+EOF
+      cat > "${dir}/compiler/lang_set_parser.g4" <<'EOF'
+parser grammar lang_set_parser;
+options { tokenVocab=lang_set_lexer; }
+prog : (NUM SEMI)+ EOF ;
+EOF
+      printf '1;\n2;\n' > "${dir}/examples/ok.txt"
+      printf '1 2;\n' > "${dir}/examples/error-no-semi.txt" ;;
+    superclass)
+      cat > "${dir}/compiler/L.g4" <<'EOF'
+lexer grammar L;
+options { superClass=Dentlr.DentlrLexer; }
+NUM : [0-9]+ ;
+EOF
+      cat > "${dir}/compiler/P.g4" <<'EOF'
+parser grammar P;
+options { tokenVocab=L; }
+prog : NUM EOF ;
+EOF
+      printf '1\n' > "${dir}/examples/ok.txt" ;;
   esac
 }
 
@@ -1620,7 +1691,7 @@ test_antlr_check_passes_good_grammar() {
   _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
   local w="${TMP_ROOT}/g-good"; _make_grammar_work "${w}" good
   local out rc; out="$(_run_antlr "${w}")"; rc=$?
-  assert_contains "${out}" "Стартовое правило: prog" "первое правило парсера" || return 1
+  assert_contains "${out}" "стартовое правило: prog" "первое правило парсера" || return 1
   assert_contains "${out}" "разобран без ошибок" "корректный пример проходит" || return 1
   assert_contains "${out}" "ошибка обнаружена, как и ожидается" "error-пример даёт ошибку" || return 1
   [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
@@ -1652,8 +1723,43 @@ test_antlr_check_skips_foreign_actions() {
   _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
   local w="${TMP_ROOT}/g-py"; _make_grammar_work "${w}" python
   local out rc; out="$(_run_antlr "${w}")"; rc=$?
-  assert_contains "${out}" "ПРОПУЩЕНА" "пропуск объявлен явно" || return 1
+  assert_contains "${out}" "ПРОПУЩЕН" "пропуск объявлен явно" || return 1
   [ "${rc}" -eq 0 ] || { fail "ограничение окружения не должно давать ненулевой код"; return 1; }
+  return 0
+}
+
+# Регрессия: yapis-2026-321701-perminova#7 — пара lang_set_lexer +
+# lang_set_parser считалась «несогласованной» (ограничение TestRig), прогон
+# пропускался, а модель выдала это как существенное замечание.
+test_antlr_check_split_grammars_any_names() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-split"; _make_grammar_work "${w}" split-names
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_not_contains "${out}" "не согласованы" "произвольные имена грамматик законны" || return 1
+  assert_contains "${out}" "Лексер: lang_set_lexer, парсер: lang_set_parser" "классы определены явно" || return 1
+  assert_contains "${out}" "разобран без ошибок" "корректный пример прогнан" || return 1
+  assert_contains "${out}" "ошибка обнаружена, как и ожидается" "error-пример прогнан" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
+  return 0
+}
+
+# superClass (Dentlr и т.п.) — класс вне .g4: в Java не соберётся. Это
+# ограничение проверки, и вывод обязан прямо сказать, что это не ошибка.
+test_antlr_check_skips_super_class() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-sc"; _make_grammar_work "${w}" superclass
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "superClass = Dentlr.DentlrLexer" "причина названа" || return 1
+  assert_contains "${out}" "НЕ ошибка студента" "явно не замечание" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ограничение проверки не должно давать ненулевой код"; return 1; }
+  return 0
+}
+
+# Промпт ЛР2 не должен позволять модели превращать пропуск прогона в замечание.
+test_prompt_task2_skip_is_not_remark() {
+  local p="${REVIEW_DIR}/tasks/task2/prompt.md"
+  grep -q 'а не замечание' "${p}" || { fail "промпт должен говорить, что пропуск — не замечание"; return 1; }
+  grep -q 'не проверено: <причина' "${p}" || { fail "промпт должен требовать «не проверено» в таблице"; return 1; }
   return 0
 }
 

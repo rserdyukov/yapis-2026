@@ -11,7 +11,7 @@ publish: true
 
 ANSI Common Lisp сочетает динамические типы, лексические замыкания, special-переменные с динамической областью, CLOS и расширяемый синтаксис. Основа — ANSI X3.226-1994 в изложении Common Lisp HyperSpec; расширения отдельных реализаций не предполагаются.
 
-*Карточка сравнительная: 35/74 понятий* — [как читать отметку](index.md#как-читать-карточку).
+*Карточка сравнительная: 35/85 понятий* — [как читать отметку](index.md#как-читать-карточку).
 
 ## Метаданные { #meta }
 
@@ -34,6 +34,8 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 ## Публикации { #publications }
 
 - Гай Стил, Ричард Гэбриел. *The Evolution of Lisp*. HOPL II, 1993. DOI: [10.1145/154766.155373](https://doi.org/10.1145/154766.155373). История диалектов Lisp и их объединения в Common Lisp. ([в источниках](sources.md#hopl-lisp))
+- Ричард Гэбриел. [The Rise of "Worse is Better"](https://www.dreamsongs.com/RiseOfWorseIsBetter.html). 1991. Эссе о компромиссе между простотой реализации и корректностью интерфейса на примере C/Unix и Lisp; материал для обсуждения критериев оценки языков. ([в источниках](sources.md#gabriel-worse-is-better))
+- Frederick J. Ross. [The seven programming ur-languages](https://madhadron.com/programming/seven_ur_languages.html). 2022. Семь семейств-«праязыков» (ALGOL, Lisp, ML, Self, Forth, APL, Prolog) с характерными приёмами мышления — рамка для каталога языков. ([в источниках](sources.md#ross-ur-languages))
 
 ## Концепции { #concepts }
 
@@ -54,14 +56,14 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Введение связывания { #bindings-introduction }
 
-*Binding introduction* · [в онтологии](concepts.md#bindings-introduction)
+англ. *Binding introduction* (также *declaration*, *name binding*) · [в онтологии](concepts.md#bindings-introduction)
 
 - **Явное объявление (layer: language, profile: ansi)** — let/let*, параметры функций и defvar/defparameter вводят связывания; setq меняет значение существующего связывания.
 - **Связывание образцом (layer: language, profile: ansi, applies_to: destructuring-bind)** — Макрос связывает переменные по структуре списка, используя destructuring lambda list. ([CLHS: DESTRUCTURING-BIND](https://www.lispworks.com/documentation/HyperSpec/Body/m_destru.htm))
 
 #### Изменяемость связывания { #bindings-mutation }
 
-*Binding mutability* · [в онтологии](concepts.md#bindings-mutation)
+англ. *Binding mutability* (также *rebinding*, *immutable binding*, *const qualification*) · [в онтологии](concepts.md#bindings-mutation)
 
 - **Перепривязываемое (layer: language, profile: ansi)** — setq изменяет значение переменной; setf обобщает изменение на места хранения. Изменяемость объекта не равна изменяемости связывания. ([CLHS: SETQ](https://www.lispworks.com/documentation/HyperSpec/Body/s_setq.htm))
 
@@ -69,7 +71,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms* · [в онтологии](concepts.md#bindings-assignment)
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*) · [в онтологии](concepts.md#bindings-assignment)
 
 - **Одиночное присваивание (layer: language, profile: ansi)** — setq и setf могут перечислять несколько мест, но обновляют их по определённым правилам последовательности.
 - **Распаковка при присваивании (layer: language, profile: ansi, applies_to: multiple-value-setq)** — Распределяет несколько возвращённых значений по переменным; multiple values — отдельный механизм, а не объект-кортеж. ([CLHS: MULTIPLE-VALUE-SETQ](https://www.lispworks.com/documentation/HyperSpec/Body/m_mult_2.htm))
@@ -78,7 +80,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Правило разрешения имён { #scope-resolution }
 
-*Name resolution* · [в онтологии](concepts.md#scope-resolution)
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*) · [в онтологии](concepts.md#scope-resolution)
 
 - **Лексическое (layer: language, profile: ansi)** — Обычные локальные переменные и локальные функции имеют лексическую область; пространства имён переменных и функций различны.
 - **Динамическое (layer: language, profile: ansi, applies_to: special-переменные)** — Объявление special и defvar/defparameter задают динамические связывания; соглашение об имёнах со звёздочками само по себе не включает этот режим. ([CLHS: SPECIAL declaration](https://www.lispworks.com/documentation/HyperSpec/Body/d_specia.htm))
@@ -87,7 +89,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs* · [в онтологии](concepts.md#scope-constructs)
+англ. *Scoping constructs* (также *scope*, *block scope*) · [в онтологии](concepts.md#scope-constructs)
 
 - **Форма связывания let/where (layer: language, profile: ansi)** — let/let*, flet/labels и другие связывающие формы; progn сам по себе не вводит область переменных.
 - **Подпрограмма (layer: language, profile: ansi, applies_to: параметры функций)**
@@ -96,7 +98,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Связывания верхнего уровня { #scope-globals }
 
-*Top-level bindings* · [в онтологии](concepts.md#scope-globals)
+англ. *Top-level bindings* (также *global variables*, *file scope*, *namespace scope*) · [в онтологии](concepts.md#scope-globals)
 
 - **Глобальные переменные (layer: language, profile: ansi)** — defvar и defparameter провозглашают переменную special и задают глобальное значение; defvar не заменяет уже связанное значение. ([CLHS: DEFVAR, DEFPARAMETER](https://www.lispworks.com/documentation/HyperSpec/Body/m_defpar.htm))
 
@@ -104,7 +106,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing* · [в онтологии](concepts.md#scope-shadowing)
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*) · [в онтологии](concepts.md#scope-shadowing)
 
 - **Во вложенной области (layer: language, profile: ansi)** — Внутреннее лексическое связывание скрывает внешнее; динамическое связывание special действует в пределах своего динамического времени жизни.
 
@@ -112,13 +114,13 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Проверка типов { #typing-checking }
 
-*Type checking* · [в онтологии](concepts.md#typing-checking)
+англ. *Type checking* (также *static typing*, *dynamic typing*) · [в онтологии](concepts.md#typing-checking)
 
 - **Динамическая (layer: language, profile: ansi)** — Тип принадлежит объекту. Декларации типов могут использоваться компилятором; неверная декларация не обязана приводить к безопасной runtime-проверке во всех режимах optimize/safety. ([CLHS: Introduction to Types and Classes](https://www.lispworks.com/documentation/HyperSpec/Body/04_a.htm); [CLHS: TYPE declaration](https://www.lispworks.com/documentation/HyperSpec/Body/d_type.htm))
 
 #### Аннотации типов { #typing-annotations }
 
-*Type annotations* · [в онтологии](concepts.md#typing-annotations)
+англ. *Type annotations* (также *type declarations*, *type signatures*) · [в онтологии](concepts.md#typing-annotations)
 
 - **Необязательны (layer: language, profile: ansi)** — declare/declaim и the выражают сведения и утверждения о типах; объявления не превращают ANSI Common Lisp в обязательно статически проверяемый язык.
 
@@ -127,20 +129,20 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Преобразования типов { #typing-conversions }
 
-*Type conversions* · [в онтологии](concepts.md#typing-conversions)
+англ. *Type conversions* (также *type coercion*, *type casting*) · [в онтологии](concepts.md#typing-conversions)
 
 - **Явные (layer: language, profile: ansi)** — coerce и функции вроде float выполняют конкретные допустимые преобразования.
 - **Неявные (layer: language, profile: ansi, applies_to: числовые операции)** — Правила numeric contagion согласуют представления аргументов; это не универсальное преобразование строк в числа. ([CLHS: Numeric Operations](https://www.lispworks.com/documentation/HyperSpec/Body/12_a.htm))
 
 #### Типы-произведения { #typing-product-types }
 
-*Product types* · [в онтологии](concepts.md#typing-product-types)
+англ. *Product types* (также *tuples*, *records*, *structs*) · [в онтологии](concepts.md#typing-product-types)
 
 - **Записи и структуры (layer: language, profile: ansi)** — defstruct задаёт структуры со слотами, а CLOS — классы с объектами и слотами.
 
 #### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value* · [в онтологии](concepts.md#typing-nullability)
+англ. *Nullability* (также *null reference*, *option type*) · [в онтологии](concepts.md#typing-nullability)
 
 - **Специальное значение (layer: language, profile: ansi)** — nil одновременно ложь и пустой список; это обычный Lisp-объект, допустимость которого зависит от операции. Тип null содержит только nil. ([CLHS: Type NULL](https://www.lispworks.com/documentation/HyperSpec/Body/t_null.htm))
 
@@ -150,13 +152,13 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Условный выбор { #control-selection }
 
-*Conditional selection* · [в онтологии](concepts.md#control-selection)
+англ. *Conditional selection* (также *selection statement*, *conditional expression*) · [в онтологии](concepts.md#control-selection)
 
 - **Условное выражение (layer: language, profile: ansi)** — if и cond возвращают значения; только nil ложно.
 
 #### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection* · [в онтологии](concepts.md#control-switch)
+англ. *Switch statement* (также *case statement*, *multiway branch*) · [в онтологии](concepts.md#control-switch)
 
 - **да (layer: language, profile: ansi)** — case выбирает ветвь по eql с ключами; typecase — отдельный выбор по типу. ([CLHS: CASE, CCASE, ECASE](https://www.lispworks.com/documentation/HyperSpec/Body/m_case_.htm))
 
@@ -164,7 +166,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Цикл до истинности условия { #control-until }
 
-*Until loop* · [в онтологии](concepts.md#control-until)
+англ. *Until loop* (также *repeat-until loop*) · [в онтологии](concepts.md#control-until)
 
 - **Проверка перед телом (layer: language, profile: ansi, applies_to: loop с until перед основным действием)** — until — условие завершения макроса loop; положение в теле определяет, до каких действий оно проверяется.
 - **Проверка после тела (layer: language, profile: ansi, applies_to: loop с until после основного действия)** — Проверка после действия даёт форму с постусловием; это не отдельный ключевой оператор ядра. ([CLHS: The LOOP Facility](https://www.lispworks.com/documentation/HyperSpec/Body/06_a.htm))
@@ -173,7 +175,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Формы итерации { #control-iteration }
 
-*Iteration forms* · [в онтологии](concepts.md#control-iteration)
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*) · [в онтологии](concepts.md#control-iteration)
 
 - **По последовательности или итератору (layer: language, profile: ansi)** — dolist и loop; dotimes задаёт счётное повторение.
 - **Функции обхода (layer: language, profile: ansi)** — mapcar/map и reduce — стандартные функции обработки последовательностей.
@@ -184,7 +186,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading* · [в онтологии](concepts.md#subprograms-overloading)
+англ. *Function overloading* (также *overloading*, *operator overloading*) · [в онтологии](concepts.md#subprograms-overloading)
 
 - **нет (layer: language, profile: ansi)** — CLOS generic functions используют динамическую множественную диспетчеризацию и комбинацию методов, а не Java-подобный выбор перегрузки по статической сигнатуре. ([CLHS: Generic Functions and Methods](https://www.lispworks.com/documentation/HyperSpec/Body/07_f.htm))
 
@@ -192,7 +194,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing* · [в онтологии](concepts.md#subprograms-parameter-passing)
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*) · [в онтологии](concepts.md#subprograms-parameter-passing)
 
 - **Разделение объекта (layer: language, profile: ansi)** — Параметры связываются с переданными объектами. Изменение объекта может быть видно вызывающему; setq параметра меняет только соответствующее связывание. ([CLHS: Function Forms](https://www.lispworks.com/documentation/HyperSpec/Body/03_ababc.htm))
 
@@ -200,37 +202,37 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Место определения подпрограмм { #subprograms-placement }
 
-*Subprogram definition placement* · [в онтологии](concepts.md#subprograms-placement)
+англ. *Subprogram definition placement* (также *top-level function*, *member function*, *local function*) · [в онтологии](concepts.md#subprograms-placement)
 
 - **Локальное определение (layer: language, profile: ansi)** — flet задаёт локальные функции, labels допускает их взаимную рекурсию. defun создаёт глобальное определение и может вычисляться не только на верхнем уровне; это не автоматическое лексическое вложение.
 
 #### Вложенные именованные подпрограммы { #subprograms-nesting }
 
-*Nested named subprograms* · [в онтологии](concepts.md#subprograms-nesting)
+англ. *Nested functions* (также *nested subprograms*) · [в онтологии](concepts.md#subprograms-nesting)
 
 - **да (layer: language, profile: ansi)** — Именованные локальные функции flet/labels. ([CLHS: FLET, LABELS, MACROLET](https://www.lispworks.com/documentation/HyperSpec/Body/s_flet_.htm))
 
 #### Захват окружения { #subprograms-closures }
 
-*Closure capture* · [в онтологии](concepts.md#subprograms-closures)
+англ. *Closures* (также *lambda capture*, *captured variables*) · [в онтологии](concepts.md#subprograms-closures)
 
 - **да (layer: language, profile: ansi)** — Замыкание захватывает лексические связывания, а не снимок значений; special-переменные разрешаются динамически. ([CLHS: Closures and Lexical Binding](https://www.lispworks.com/documentation/HyperSpec/Body/03_ad.htm))
 
 #### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions* · [в онтологии](concepts.md#subprograms-lambda)
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*) · [в онтологии](concepts.md#subprograms-lambda)
 
 - **да (layer: language, profile: ansi)**
 
 #### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments* · [в онтологии](concepts.md#subprograms-default-args)
+англ. *Default arguments* (также *optional parameters*) · [в онтологии](concepts.md#subprograms-default-args)
 
 - **да (layer: language, profile: ansi)** — &optional и &key; init-form вычисляется при отсутствии соответствующего аргумента.
 
 #### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments* · [в онтологии](concepts.md#subprograms-named-args)
+англ. *Named arguments* (также *keyword arguments*) · [в онтологии](concepts.md#subprograms-named-args)
 
 - **да (layer: language, profile: ansi)** — &key задаёт keyword arguments; keyword-символы участвуют в протоколе обычного вызова. ([CLHS: Ordinary Lambda Lists](https://www.lispworks.com/documentation/HyperSpec/Body/03_da.htm))
 
@@ -238,19 +240,19 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch* · [в онтологии](concepts.md#abstraction-dispatch)
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*) · [в онтологии](concepts.md#abstraction-dispatch)
 
 - **По нескольким динамическим типам (layer: language, profile: ansi)** — CLOS выбирает применимые методы по специализаторам обязательных аргументов, включая классы и eql-специализаторы; method combination определяет их совместное выполнение. ([CLHS: Generic Functions and Methods](https://www.lispworks.com/documentation/HyperSpec/Body/07_f.htm))
 
 #### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance* · [в онтологии](concepts.md#abstraction-inheritance)
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*) · [в онтологии](concepts.md#abstraction-inheritance)
 
 - **Множественное (layer: language, profile: ansi)** — CLOS-класс может иметь несколько прямых суперклассов; порядок предшествования классов влияет на наследование и методы.
 
 #### Модульность { #abstraction-modules }
 
-*Modules* · [в онтологии](concepts.md#abstraction-modules)
+англ. *Modules* (также *module system*, *namespaces*, *packages*) · [в онтологии](concepts.md#abstraction-modules)
 
 - **Пространства имён и пакеты (layer: language, profile: ansi)** — Пакеты управляют идентичностью, доступностью и экспортом символов; это не система загрузки файлов или проектов вроде ASDF. ([CLHS: Package Concepts](https://www.lispworks.com/documentation/HyperSpec/Body/11_a.htm))
 
@@ -258,7 +260,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Стратегия вычисления { #evaluation-strategy }
 
-*Evaluation strategy* · [в онтологии](concepts.md#evaluation-strategy)
+англ. *Evaluation strategy* (также *eager evaluation*, *lazy evaluation*) · [в онтологии](concepts.md#evaluation-strategy)
 
 - **Строгая (layer: language, profile: ansi, applies_to: обычные вызовы функций)** — Аргументы вычисляются слева направо; специальные операторы и макросы имеют собственные правила вычисления подформ. ([CLHS: Function Forms](https://www.lispworks.com/documentation/HyperSpec/Body/03_ababc.htm))
 
@@ -266,7 +268,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation* · [в онтологии](concepts.md#errors-model)
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*) · [в онтологии](concepts.md#errors-model)
 
 - **Условия и перезапуски (layer: language, profile: ansi)** — Сигнализация condition отделена от выбора restart. Обработчик может работать до раскрутки стека; не всякое condition является ошибкой и не всякая обработка требует нелокального выхода. ([CLHS: Condition System Concepts](https://www.lispworks.com/documentation/HyperSpec/Body/09_a.htm))
 
@@ -276,7 +278,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup* · [в онтологии](concepts.md#resources-cleanup)
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*) · [в онтологии](concepts.md#resources-cleanup)
 
 - **Блок finally / unwind-protect (layer: language, profile: ansi)** — unwind-protect выполняет cleanup-формы при нормальном и нелокальном выходе из защищённой формы. Соответствие finally здесь семантическое; имя конструкции — unwind-protect. ([CLHS: UNWIND-PROTECT](https://www.lispworks.com/documentation/HyperSpec/Body/s_unwind.htm))
 - **Конструкция управления ресурсом (layer: language, profile: ansi, applies_to: with-open-file)** — Стандартный макрос ограничивает динамическое время жизни потока и закрывает его при выходе. ([CLHS: WITH-OPEN-FILE](https://www.lispworks.com/documentation/HyperSpec/Body/m_w_open.htm))
@@ -285,7 +287,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Интерфейс ввода-вывода { #resources-io }
 
-*I/O interface* · [в онтологии](concepts.md#resources-io)
+англ. *Input/output* (также *I/O library*) · [в онтологии](concepts.md#resources-io)
 
 - **API стандартной библиотеки (layer: standard_library, profile: ansi)** — Стандартные потоки, read/write и format. Reader читает Lisp-объекты, что отличается от простого чтения строки.
 
@@ -295,19 +297,19 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries* · [в онтологии](concepts.md#syntax-blocks)
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*) · [в онтологии](concepts.md#syntax-blocks)
 
 - **S-выражения (layer: language, profile: ansi)** — Формы представлены объектами, обычно записанными как списки в скобках; reader macros расширяют способ чтения.
 
 #### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries* · [в онтологии](concepts.md#syntax-statement-terminator)
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*) · [в онтологии](concepts.md#syntax-statement-terminator)
 
 - **Структура выражения (layer: language, profile: ansi)** — Границы формы определяются прочитанным объектом, в частности сбалансированным списком; точка с запятой начинает комментарий, а не завершает оператор.
 
 #### Метапрограммирование { #syntax-metaprogramming }
 
-*Metaprogramming* · [в онтологии](concepts.md#syntax-metaprogramming)
+англ. *Metaprogramming* (также *macros*, *reflection*, *compile-time evaluation*) · [в онтологии](concepts.md#syntax-metaprogramming)
 
 - **Синтаксические макросы (layer: language, profile: ansi)** — defmacro преобразует формы до вычисления; гигиена не обеспечивается автоматически.
 - **Построение и выполнение кода (layer: language, profile: ansi)** — eval и compile работают с представленными Lisp-объектами формами; eval не захватывает произвольное лексическое окружение вызывающего. ([CLHS: DEFMACRO](https://www.lispworks.com/documentation/HyperSpec/Body/m_defmac.htm); [CLHS: EVAL](https://www.lispworks.com/documentation/HyperSpec/Body/f_eval.htm))
@@ -316,7 +318,7 @@ ANSI Common Lisp сочетает динамические типы, лекси�
 
 #### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms* · [в онтологии](concepts.md#paradigm-supported)
+англ. *Programming paradigms* (также *supported paradigms*) · [в онтологии](concepts.md#paradigm-supported)
 
 - **Императивная (layer: language, profile: ansi)**
 - **Функциональная (layer: language, profile: ansi)**

@@ -151,3 +151,74 @@ concepts:
   paradigm.supported:
     - value: imperative
     - value: procedural
+  scope.linkage:
+    - value: external
+      note: "Имена функций и объектов файловой области без static; одно определение на программу."
+    - value: internal
+      note: "static на уровне файла ограничивает связывание единицей трансляции."
+    - value: none
+      note: "Локальные переменные без extern, параметры, typedef и теги."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.2.2 Linkages of identifiers"}
+  subprograms.overload_resolution:
+    - value: n/a
+      note: "Перегрузки функций нет. _Generic (C11) выбирает ассоциацию по совместимости типа управляющего выражения, без ранжирования преобразований; это выбор выражения, а не функции."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.5.1.1 Generic selection"}
+  evaluation.order:
+    - value: unspecified
+      note: "Порядок вычисления операндов и аргументов вызова не задан; непоследовательные побочные эффекты над одним объектом — неопределённое поведение."
+    - value: partially_sequenced
+      note: "Точки следования есть у &&, ||, ?:, запятой и перед вызовом функции."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §5.1.2.3 Program execution; §6.5 Expressions"}
+  evaluation.undefined_behavior:
+    - value: undefined
+      note: "Например, переполнение знакового целого, выход за границы массива, разыменование нулевого указателя."
+    - value: unspecified
+    - value: implementation_defined
+      note: "Например, размер int и знаковость char; реализация обязана документировать выбор."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §3.4 Behavior; Annex J"}
+  evaluation.compile_time:
+    - value: constant_expressions
+      note: "Целочисленные и арифметические константные выражения без вызовов функций; нужны для размеров массивов, case и статических инициализаторов. constexpr-объекты появились только в C23."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.6 Constant expressions"}
+  memory.storage_duration:
+    - value: automatic
+    - value: static
+    - value: thread
+      note: "_Thread_local, C11."
+    - value: dynamic
+      layer: standard_library
+      note: "В терминах стандарта — allocated storage duration: malloc/free."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.2.4 Storage durations of objects"}
+  memory.value_categories:
+    - value: lvalue_rvalue
+      note: "Стандарт определяет lvalue и указатель функции; остальные выражения — просто значения (rvalue в неформальном смысле)."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §6.3.2.1 Lvalues, arrays, and function designators"}
+  memory.concurrency_model:
+    - value: data_race_undefined
+    - value: explicit_ordering
+      applies_to: "_Atomic и stdatomic.h"
+      note: "memory_order_relaxed/acquire/release/seq_cst; volatile не синхронизирует потоки."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2176.pdf", title: "WG14 N2176, §5.1.2.4 Multi-threaded executions and data races; §7.17 Atomics"}
+  tooling.parser_construction:
+    - value: hand_written
+      layer: implementation
+      implementation: GCC 4.1+
+      note: "Bison-парсер C и Objective-C заменён рукописным рекурсивным спуском в GCC 4.1; у Clang парсер тоже рукописный."
+      sources:
+        - {url: "https://gcc.gnu.org/gcc-4.1/changes.html", title: "GCC 4.1 Release Series — Changes"}
+        - {url: "https://clang.llvm.org/features.html", title: "Clang — Features and Goals"}
+  tooling.parsing_algorithm:
+    - value: ll
+      layer: implementation
+      implementation: GCC 4.1+, Clang
+      note: "Рукописный рекурсивный спуск; контекстная зависимость typedef-имён решается обратной связью от таблицы символов к лексеру."
+      sources:
+        - {url: "https://clang.llvm.org/features.html", title: "Clang — Features and Goals"}

@@ -11,7 +11,7 @@ publish: true
 
 Объектно-ориентированный язык со статической проверкой типов, сборкой мусора и структурными исключениями, компилируемый в байт-код JVM — одну из целевых платформ курса. Второй по частоте язык реализации компиляторов в практикуме. Текущий срез свойств карточки — Java SE 21 без preview-возможностей; Java SE 26 в истории выпусков не означает проверки этих свойств для 26.
 
-*Карточка полная: 51/74 понятий; пример, грамматика, оценка* — [как читать отметку](index.md#как-читать-карточку).
+*Карточка полная: 56/85 понятий; пример, грамматика, оценка* — [как читать отметку](index.md#как-читать-карточку).
 
 ## Метаданные { #meta }
 
@@ -50,6 +50,12 @@ publish: true
 - James Gosling, Henry McGilton. *[The Java Language Environment: A White Paper](https://www.oracle.com/java/technologies/language-environment.html)*. Sun Microsystems, 1996.
 - James Gosling, Bill Joy, Guy Steele, Gilad Bracha, Alex Buckley, Daniel Smith, Gavin Bierman. *[The Java Language Specification, Java SE 21 Edition](https://docs.oracle.com/javase/specs/jls/se21/html/index.html)*. Oracle, 2023.
 - Joshua Bloch. *Effective Java, 3rd Edition*. Addison-Wesley, 2018.
+- Rui Pereira, Marco Couto, Francisco Ribeiro, Rui Rua, Jácome Cunha, João Paulo Fernandes, João Saraiva. [Energy Efficiency across Programming Languages: How Do Energy, Time, and Memory Relate?](https://greenlab.di.uminho.pt/wp-content/uploads/2017/10/sleFinal.pdf). SLE 2017, 2017. DOI: [10.1145/3136014.3136031](https://doi.org/10.1145/3136014.3136031). Измерения энергии, времени и памяти для 27 языков на задачах Benchmarks Game — материал к критерию «стоимость»; обсуждайте вместе с ограничениями методики. ([в источниках](sources.md#pereira-energy-2017))
+- Russ Cox. [Programming Language Memory Models](https://research.swtch.com/plmm). 2021. Как Java, C++, JavaScript, Rust и Go определяют семантику разделяемой памяти и атомарных операций и почему это трудно. ([в источниках](sources.md#cox-memory-models))
+- Jakub Dziworski. [Creating JVM language: Enkel (20-part series)](https://jakubdziworski.github.io/enkel/2016/03/10/enkel_first.html). 2016. Двадцать шагов создания языка: грамматика ANTLR 4, visitor, генерация JVM-байткода через ASM. Образец для цепочки ЛР 2–5 на Java. ([в источниках](sources.md#dziworski-enkel))
+- Denis Bogdanas, Grigore Roşu. *K-Java: A Complete Semantics of Java*. POPL '15, 2015. DOI: [10.1145/2676726.2676982](https://doi.org/10.1145/2676726.2676982). Исполняемая формальная семантика Java 1.4 в K-framework. ([в источниках](sources.md#k-java-2015))
+- Torbjörn Ekman, Görel Hedin. [The JastAdd Extensible Java Compiler](https://extendj.org/). OOPSLA '07, 2007. DOI: [10.1145/1297027.1297029](https://doi.org/10.1145/1297027.1297029). Компилятор Java, в котором разрешение имён, типы и генерация байт-кода заданы ссылочными атрибутными грамматиками вместо Visitor'ов. ([в источниках](sources.md#jastadd-ekman-2007))
+- [Eclipse Xtext](https://eclipse.dev/Xtext/). Текстовый верстак: из грамматики получаются парсер (ANTLR), EMF-метамодель, связывание, проверки и редактор для Eclipse и LSP. ([в источниках](sources.md#xtext))
 
 ## Концепции { #concepts }
 
@@ -72,7 +78,7 @@ publish: true
 
 #### Введение связывания { #bindings-introduction }
 
-*Binding introduction* · [в онтологии](concepts.md#bindings-introduction)
+англ. *Binding introduction* (также *declaration*, *name binding*) · [в онтологии](concepts.md#bindings-introduction)
 
 - **Явное объявление (layer: language, profile: java21)** — `int x = 1;` и `var x = 1;` — явные объявления; var опускает только аннотацию типа
 
@@ -82,7 +88,7 @@ publish: true
 
 #### Изменяемость связывания { #bindings-mutation }
 
-*Binding mutability* · [в онтологии](concepts.md#bindings-mutation)
+англ. *Binding mutability* (также *rebinding*, *immutable binding*, *const qualification*) · [в онтологии](concepts.md#bindings-mutation)
 
 - **Перепривязываемое (layer: language, profile: java21)**
 - **Неизменяемое (layer: language, profile: java21, applies_to: final-переменные)** — final запрещает перепривязку, но не изменение объекта по ссылке.
@@ -91,7 +97,7 @@ publish: true
 
 #### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms* · [в онтологии](concepts.md#bindings-assignment)
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*) · [в онтологии](concepts.md#bindings-assignment)
 
 - **Одиночное присваивание (layer: language, profile: java21)** — `a = b = 0` — цепочка одиночных присваиваний; множественного `a, b = c, d` нет
 
@@ -103,7 +109,7 @@ publish: true
 
 #### Правило разрешения имён { #scope-resolution }
 
-*Name resolution* · [в онтологии](concepts.md#scope-resolution)
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*) · [в онтологии](concepts.md#scope-resolution)
 
 - **Лексическое (layer: language, profile: java21)**
 
@@ -111,7 +117,7 @@ publish: true
 
 #### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs* · [в онтологии](concepts.md#scope-constructs)
+англ. *Scoping constructs* (также *scope*, *block scope*) · [в онтологии](concepts.md#scope-constructs)
 
 - **Подпрограмма (layer: language, profile: java21)**
 - **Блок (layer: language, profile: java21)**
@@ -125,7 +131,7 @@ publish: true
 
 #### Связывания верхнего уровня { #scope-globals }
 
-*Top-level bindings* · [в онтологии](concepts.md#scope-globals)
+англ. *Top-level bindings* (также *global variables*, *file scope*, *namespace scope*) · [в онтологии](concepts.md#scope-globals)
 
 - **Статические члены типов (layer: language, profile: java21)** — любая переменная — член класса или локальная; эквивалент глобальной — `static`-поле
 
@@ -137,7 +143,7 @@ publish: true
 
 #### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing* · [в онтологии](concepts.md#scope-shadowing)
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*) · [в онтологии](concepts.md#scope-shadowing)
 
 - **Запрет сокрытия локальных в охватывающем блоке (layer: language, profile: java21, applies_to: локальные переменные)** — локальная переменная не может повторить имя другой локальной в охватывающем блоке того же метода
 - **Во вложенной области (layer: language, profile: java21, applies_to: поля и параметры)** — локальная переменная или параметр может скрыть поле класса; доступ к полю — через `this`
@@ -146,20 +152,20 @@ publish: true
 
 #### Проверка типов { #typing-checking }
 
-*Type checking* · [в онтологии](concepts.md#typing-checking)
+англ. *Type checking* (также *static typing*, *dynamic typing*) · [в онтологии](concepts.md#typing-checking)
 
 - **Статическая (layer: language, profile: java21)**
 
 #### Аннотации типов { #typing-annotations }
 
-*Type annotations* · [в онтологии](concepts.md#typing-annotations)
+англ. *Type annotations* (также *type declarations*, *type signatures*) · [в онтологии](concepts.md#typing-annotations)
 
 - **Обязательны (layer: language, profile: signatures)**
 - **Необязательны (с Java SE 10 включительно, layer: language, profile: local_variables, applies_to: локальные переменные с инициализатором)** — `var x = 1;` — тип выводится, но объявление остаётся явным (JEP 286); поля и параметры именованных методов требуют типа
 
 #### Вывод статических типов { #typing-inference }
 
-*Static type inference* · [в онтологии](concepts.md#typing-inference)
+англ. *Type inference* (также *type deduction*) · [в онтологии](concepts.md#typing-inference)
 
 - **да (с Java SE 10 включительно, layer: language, profile: local_variables, applies_to: локальные переменные с var)**
 - **да (с Java SE 5 включительно, layer: language, profile: java21, applies_to: аргументы типов при вызове обобщённых методов)**
@@ -170,7 +176,7 @@ publish: true
 
 #### Преобразования типов { #typing-conversions }
 
-*Type conversions* · [в онтологии](concepts.md#typing-conversions)
+англ. *Type conversions* (также *type coercion*, *type casting*) · [в онтологии](concepts.md#typing-conversions)
 
 - **Явные (layer: language, profile: java21)** — оператор приведения `(int) x`; сужение может терять информацию
 - **Неявные (layer: language, profile: java21, applies_to: расширяющие преобразования и boxing)** — Расширение int → float и long → float/double может терять точность (JLS 5.1.2). Есть boxing/unboxing и расширение ссылок; некоторые сужения констант допустимы без cast.
@@ -181,25 +187,25 @@ publish: true
 
 #### Совместимость типов { #typing-compatibility }
 
-*Type compatibility* · [в онтологии](concepts.md#typing-compatibility)
+англ. *Type compatibility* (также *type equivalence*, *nominal typing*, *structural typing*, *duck typing*) · [в онтологии](concepts.md#typing-compatibility)
 
 - **Номинальная (layer: language, profile: java21)**
 
 #### Типы-суммы { #typing-sum-types }
 
-*Sum types* · [в онтологии](concepts.md#typing-sum-types)
+англ. *Sum types* (также *tagged unions*, *variant types*, *discriminated unions*) · [в онтологии](concepts.md#typing-sum-types)
 
 - **Закрытая иерархия (с Java SE 17 включительно, layer: language, profile: java21, applies_to: sealed-иерархии)** ([JEP 409: Sealed Classes](https://openjdk.org/jeps/409) (получено 2026-09-20))
 
 #### Типы-произведения { #typing-product-types }
 
-*Product types* · [в онтологии](concepts.md#typing-product-types)
+англ. *Product types* (также *tuples*, *records*, *structs*) · [в онтологии](concepts.md#typing-product-types)
 
 - **Записи и структуры (layer: language, profile: java21, applies_to: классы с полями; record-классы в Java 16 и новее)**
 
 #### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value* · [в онтологии](concepts.md#typing-nullability)
+англ. *Nullability* (также *null reference*, *option type*) · [в онтологии](concepts.md#typing-nullability)
 
 - **Nullable-ссылки по умолчанию (layer: language, profile: java21)** — любая ссылка может быть `null`; `Optional<T>` (с 8) — библиотечная обёртка, не часть системы типов
 - **Тип Option/Optional (с Java SE 8 включительно, layer: standard_library, profile: java21)** — `Optional<T>` представляет отсутствие значения, но сама ссылка Optional тоже может быть null.
@@ -210,7 +216,7 @@ publish: true
 
 #### Условный выбор { #control-selection }
 
-*Conditional selection* · [в онтологии](concepts.md#control-selection)
+англ. *Conditional selection* (также *selection statement*, *conditional expression*) · [в онтологии](concepts.md#control-selection)
 
 - **Условный оператор (layer: language, profile: java21)**
 - **Условное выражение (layer: language, profile: java21)** — тернарное условное выражение `cond ? a : b`
@@ -221,13 +227,13 @@ publish: true
 
 #### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection* · [в онтологии](concepts.md#control-switch)
+англ. *Switch statement* (также *case statement*, *multiway branch*) · [в онтологии](concepts.md#control-switch)
 
 - **да (layer: language, profile: java21)** — `switch` по константам с 1.0; выражение `switch` со стрелками — с 14 (JEP 361); сопоставление по типам — с 21 (JEP 441)
 
 #### Сопоставление с образцом { #control-pattern-matching }
 
-*Pattern matching* · [в онтологии](concepts.md#control-pattern-matching)
+англ. *Pattern matching* · [в онтологии](concepts.md#control-pattern-matching)
 
 - **да (с Java SE 21 включительно, layer: language, profile: java21, applies_to: record patterns)** — Деконструкция record-значений, включая вложенные образцы; граница относится к финализации record patterns, а не ко всем формам pattern matching. ([JEP 440: Record Patterns](https://openjdk.org/jeps/440) (получено 2026-09-20))
 
@@ -235,7 +241,7 @@ publish: true
 
 #### Цикл до истинности условия { #control-until }
 
-*Until loop* · [в онтологии](concepts.md#control-until)
+англ. *Until loop* (также *repeat-until loop*) · [в онтологии](concepts.md#control-until)
 
 - **Отдельная конструкция отсутствует (layer: language, profile: java21)** — Предусловие имитируется `while (!cond)`, постусловие — `do { ... } while (!cond)`.
 
@@ -247,7 +253,7 @@ publish: true
 
 #### Цикл do-while с постусловием { #control-do-while }
 
-*Post-test do-while loop* · [в онтологии](concepts.md#control-do-while)
+англ. *Do-while loop* (также *post-test loop*) · [в онтологии](concepts.md#control-do-while)
 
 - **да (layer: language, profile: java21)**
 
@@ -259,7 +265,7 @@ publish: true
 
 #### Формы итерации { #control-iteration }
 
-*Iteration forms* · [в онтологии](concepts.md#control-iteration)
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*) · [в онтологии](concepts.md#control-iteration)
 
 - **Инициализация / условие / шаг (layer: language, profile: java21)** — `for (int i = 0; i < n; i++)`
 - **По последовательности или итератору (с Java SE 5 включительно, layer: language, profile: java21)** — `for (T x : iterable)`
@@ -274,7 +280,7 @@ publish: true
 
 #### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading* · [в онтологии](concepts.md#subprograms-overloading)
+англ. *Function overloading* (также *overloading*, *operator overloading*) · [в онтологии](concepts.md#subprograms-overloading)
 
 - **да (layer: language, profile: java21)** — выбор по статическим типам аргументов на этапе компиляции
 
@@ -286,7 +292,7 @@ publish: true
 
 #### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing* · [в онтологии](concepts.md#subprograms-parameter-passing)
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*) · [в онтологии](concepts.md#subprograms-parameter-passing)
 
 - **По значению (layer: language, profile: java21, applies_to: примитивные и ссылочные типы)** — JLS 8.4.1 формально называет это передачей по значению — копируется ссылка; изменение объекта видно вызывающему, перепривязка параметра — нет ([JLS 8.4.1 Formal Parameters](https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.4.1) (получено 2026-09-18))
 
@@ -298,7 +304,7 @@ publish: true
 
 #### Место определения подпрограмм { #subprograms-placement }
 
-*Subprogram definition placement* · [в онтологии](concepts.md#subprograms-placement)
+англ. *Subprogram definition placement* (также *top-level function*, *member function*, *local function*) · [в онтологии](concepts.md#subprograms-placement)
 
 - **Член типа (layer: language, profile: java21)** — вложенных методов нет; обход — лямбды (с 8) и локальные классы внутри метода
 
@@ -308,70 +314,76 @@ publish: true
 
 #### Вложенные именованные подпрограммы { #subprograms-nesting }
 
-*Nested named subprograms* · [в онтологии](concepts.md#subprograms-nesting)
+англ. *Nested functions* (также *nested subprograms*) · [в онтологии](concepts.md#subprograms-nesting)
 
 - **нет (layer: language, profile: java21)**
 
 #### Захват окружения { #subprograms-closures }
 
-*Closure capture* · [в онтологии](concepts.md#subprograms-closures)
+англ. *Closures* (также *lambda capture*, *captured variables*) · [в онтологии](concepts.md#subprograms-closures)
 
 - **да (с Java SE 8 включительно, layer: language, profile: java21, applies_to: лямбды)** — Лямбды захватывают final/effectively final локальные переменные. До лямбд локальные и анонимные внутренние классы уже могли захватывать final-локальные переменные.
 
 #### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions* · [в онтологии](concepts.md#subprograms-lambda)
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*) · [в онтологии](concepts.md#subprograms-lambda)
 
 - **да (с Java SE 8 включительно, layer: language, profile: java21)** — лямбда — реализация функционального интерфейса; захватываемые переменные должны быть effectively final
 
 #### Параметрический полиморфизм { #subprograms-generics }
 
-*Parametric polymorphism* · [в онтологии](concepts.md#subprograms-generics)
+англ. *Parametric polymorphism* (также *generics*, *templates*) · [в онтологии](concepts.md#subprograms-generics)
 
 - **да (с Java SE 5 включительно, layer: language, profile: java21)** — стирание типов: во время выполнения параметры типов недоступны
 
 #### Реализация параметрического полиморфизма { #subprograms-generic-mechanism }
 
-*Generic implementation mechanism* · [в онтологии](concepts.md#subprograms-generic-mechanism)
+англ. *Generic implementation mechanism* (также *monomorphization*, *type erasure*, *template instantiation*) · [в онтологии](concepts.md#subprograms-generic-mechanism)
 
 - **Стирание типов (с Java SE 5 включительно, layer: language, profile: java21)**
 
 #### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments* · [в онтологии](concepts.md#subprograms-default-args)
+англ. *Default arguments* (также *optional parameters*) · [в онтологии](concepts.md#subprograms-default-args)
 
 - **нет (layer: language, profile: java21)** — эквивалент — перегрузка
 
 #### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments* · [в онтологии](concepts.md#subprograms-named-args)
+англ. *Named arguments* (также *keyword arguments*) · [в онтологии](concepts.md#subprograms-named-args)
 
 - **нет (layer: language, profile: java21)** — эквивалент — паттерн builder
+
+#### Разрешение перегрузки { #subprograms-overload-resolution }
+
+англ. *Overload resolution* (также *best viable function*, *argument-dependent lookup*) · [в онтологии](concepts.md#subprograms-overload-resolution)
+
+- **Ранжирование неявных преобразований аргументов (layer: language, profile: java21)** — Три фазы поиска применимых методов (без boxing и varargs, с boxing, с varargs), затем выбор most specific; при отсутствии единственного — ошибка неоднозначности. ([JLS 21 §15.12.2 Compile-Time Step 2: Determine Method Signature](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.12.2))
 
 ### Полиморфизм и организация { #abstraction }
 
 #### Контракты полиморфизма { #abstraction-contracts }
 
-*Polymorphic contracts* · [в онтологии](concepts.md#abstraction-contracts)
+англ. *Polymorphic contracts* (также *interfaces*, *traits*, *type classes*, *protocols*) · [в онтологии](concepts.md#abstraction-contracts)
 
 - **Интерфейсы (layer: language, profile: java21)**
 
 #### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch* · [в онтологии](concepts.md#abstraction-dispatch)
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*) · [в онтологии](concepts.md#abstraction-dispatch)
 
 - **Статическая (layer: language, profile: java21, applies_to: статические методы и выбор перегрузки)**
 - **По одному динамическому типу (layer: language, profile: java21, applies_to: переопределяемые методы экземпляра)**
 
 #### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance* · [в онтологии](concepts.md#abstraction-inheritance)
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*) · [в онтологии](concepts.md#abstraction-inheritance)
 
 - **Одиночное (layer: language, profile: java21)** — один суперкласс; интерфейсов может быть несколько, включая default-методы
 
 #### Модульность { #abstraction-modules }
 
-*Modules* · [в онтологии](concepts.md#abstraction-modules)
+англ. *Modules* (также *module system*, *namespaces*, *packages*) · [в онтологии](concepts.md#abstraction-modules)
 
 - **Пространства имён и пакеты (layer: language, profile: java21)**
 - **Явная граница экспорта (с Java SE 9 включительно, layer: language, profile: java21, applies_to: модульная система Java)** ([JEP 261: Module System](https://openjdk.org/jeps/261) (получено 2026-09-20))
@@ -380,42 +392,67 @@ publish: true
 
 #### Стратегия вычисления { #evaluation-strategy }
 
-*Evaluation strategy* · [в онтологии](concepts.md#evaluation-strategy)
+англ. *Evaluation strategy* (также *eager evaluation*, *lazy evaluation*) · [в онтологии](concepts.md#evaluation-strategy)
 
 - **Строгая (layer: language, profile: java21)**
 
 #### Контроль эффектов { #evaluation-effects }
 
-*Effect control* · [в онтологии](concepts.md#evaluation-effects)
+англ. *Effect control* (также *effect system*, *purity*) · [в онтологии](concepts.md#evaluation-effects)
 
 - **Без общего статического разделения эффектов (layer: language, profile: java21)** — checked exceptions отслеживают часть ошибок, но общей системы эффектов нет
 
 #### Гарантированное устранение хвостовых вызовов { #evaluation-tail-calls }
 
-*Guaranteed tail-call elimination* · [в онтологии](concepts.md#evaluation-tail-calls)
+англ. *Tail-call elimination* (также *proper tail calls*, *tail-call optimization*) · [в онтологии](concepts.md#evaluation-tail-calls)
 
 - **нет (layer: language, profile: java21)**
+
+#### Порядок вычисления подвыражений { #evaluation-order }
+
+англ. *Order of evaluation* (также *sequencing*, *sequence points*, *sequenced-before*) · [в онтологии](concepts.md#evaluation-order)
+
+- **Слева направо (layer: language, profile: java21)** — Левый операнд вычисляется полностью до правого; аргументы вызова — слева направо. ([JLS 21 §15.7 Evaluation Order](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.7))
+
+#### Неопределённое поведение { #evaluation-undefined-behavior }
+
+англ. *Undefined behavior* (также *UB*, *unspecified behavior*, *implementation-defined behavior*) · [в онтологии](concepts.md#evaluation-undefined-behavior)
+
+- **Нарушение правил обнаруживается и даёт определённый результат (layer: language, profile: java21)** — Выход за границы массива, разыменование null и целочисленное деление на ноль дают исключения; переполнение int определено как перенос по модулю 2^32. Неуточнённые детали (например, порядок обхода HashMap) относятся к библиотекам.
+
+#### Вычисления во время компиляции { #evaluation-compile-time }
+
+англ. *Constant evaluation* (также *compile-time evaluation*, *constant expressions*, *constexpr*) · [в онтологии](concepts.md#evaluation-compile-time)
+
+- **Константные выражения из ограниченного набора операций (layer: language, profile: java21)** — Константные выражения из литералов и final-переменных; используются в case и аннотациях. ([JLS 21 §15.29 Constant Expressions](https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.29))
 
 ### Память и владение { #memory }
 
 #### Освобождение памяти { #memory-management }
 
-*Memory reclamation* · [в онтологии](concepts.md#memory-management)
+англ. *Memory management* (также *memory reclamation*, *garbage collection*, *reference counting*) · [в онтологии](concepts.md#memory-management)
 
 - **Трассирующая сборка мусора (layer: language, profile: java21)** — автоматическое освобождение памяти; конкретный сборщик выбирает реализация JVM, момент освобождения не гарантирован
 
 #### Передача и разделение владения { #memory-transfer }
 
-*Ownership transfer and sharing* · [в онтологии](concepts.md#memory-transfer)
+англ. *Ownership transfer and sharing* (также *move semantics*, *copy semantics*, *borrowing*) · [в онтологии](concepts.md#memory-transfer)
 
 - **Копирование значения (layer: language, profile: java21)** — копируется значение примитива или ссылки
 - **Разделяемая ссылка на объект (layer: language, profile: java21, applies_to: объекты ссылочных типов)**
+
+#### Модель памяти для параллельного доступа { #memory-concurrency-model }
+
+англ. *Memory model* (также *data race*, *happens-before*, *memory ordering*, *atomics*) · [в онтологии](concepts.md#memory-concurrency-model)
+
+- **Гонка данных имеет ограниченную определённую семантику (layer: language, profile: java21)** — Программа с гонкой данных сохраняет типобезопасность; значения чтения ограничены моделью happens-before, но могут быть неожиданными. ([JLS 21 §17.4 Memory Model](https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html#jls-17.4))
+- **Явно выбираемое упорядочивание атомарных операций (layer: standard_library, profile: java21, applies_to: VarHandle)** — Режимы доступа plain, opaque, acquire/release и volatile.
 
 ### Каналы ошибок { #errors }
 
 #### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation* · [в онтологии](concepts.md#errors-model)
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*) · [в онтологии](concepts.md#errors-model)
 
 - **Исключения (layer: language, profile: java21)** — try / catch / finally; иерархия от Throwable
 
@@ -423,13 +460,13 @@ publish: true
 
 #### Проверяемые исключения { #errors-checked-exceptions }
 
-*Checked exceptions* · [в онтологии](concepts.md#errors-checked-exceptions)
+англ. *Checked exceptions* (также *exception specifications*) · [в онтологии](concepts.md#errors-checked-exceptions)
 
 - **да (layer: language, profile: java21)** — проверяемые исключения объявляются в `throws`; непроверяемые (RuntimeException) — нет
 
 #### Диагностика неиспользованного результата { #errors-must-use }
 
-*Unused-result diagnostics* · [в онтологии](concepts.md#errors-must-use)
+англ. *Unused-result diagnostics* (также *nodiscard*, *must_use*, *warn_unused_result*) · [в онтологии](concepts.md#errors-must-use)
 
 - **Нет специальной диагностики (layer: language, profile: java21)** — язык не требует использовать возвращённое значение метода
 
@@ -439,7 +476,7 @@ publish: true
 
 #### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup* · [в онтологии](concepts.md#resources-cleanup)
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*) · [в онтологии](concepts.md#resources-cleanup)
 
 - **Блок finally / unwind-protect (layer: language, profile: java21)**
 - **Конструкция управления ресурсом (с Java SE 7 включительно, layer: language, profile: java21, applies_to: try-with-resources)** — вызывает close для AutoCloseable; прекращение процесса может пропустить очистку ([OpenJDK: JDK 7 — Project Coin (try-with-resources)](https://openjdk.org/projects/jdk7/features#f618) (получено 2026-09-20))
@@ -448,7 +485,7 @@ publish: true
 
 #### Интерфейс ввода-вывода { #resources-io }
 
-*I/O interface* · [в онтологии](concepts.md#resources-io)
+англ. *Input/output* (также *I/O library*) · [в онтологии](concepts.md#resources-io)
 
 - **API стандартной библиотеки (layer: standard_library, profile: java21)** — `System.out.println`, `Scanner`, `BufferedReader` — классы стандартной библиотеки
 
@@ -458,7 +495,7 @@ publish: true
 
 #### Конкурентное выполнение { #resources-concurrency }
 
-*Concurrency* · [в онтологии](concepts.md#resources-concurrency)
+англ. *Concurrency* (также *threads*, *async/await*, *actors*) · [в онтологии](concepts.md#resources-concurrency)
 
 - **Потоки (layer: standard_library, profile: java21)**
 
@@ -468,7 +505,7 @@ publish: true
 
 #### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries* · [в онтологии](concepts.md#syntax-blocks)
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*) · [в онтологии](concepts.md#syntax-blocks)
 
 - **Явные разделители (layer: language, profile: java21)** — фигурные скобки; для одного оператора их можно опустить, но это не блок
 
@@ -478,19 +515,19 @@ publish: true
 
 #### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries* · [в онтологии](concepts.md#syntax-statement-terminator)
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*) · [в онтологии](concepts.md#syntax-statement-terminator)
 
 - **Точка с запятой (layer: language, profile: java21)**
 
 #### Чувствительность имён к регистру { #syntax-case-sensitive }
 
-*Identifier case sensitivity* · [в онтологии](concepts.md#syntax-case-sensitive)
+англ. *Case sensitivity* (также *identifier case sensitivity*) · [в онтологии](concepts.md#syntax-case-sensitive)
 
 - **да (layer: language, profile: java21)**
 
 #### Метапрограммирование { #syntax-metaprogramming }
 
-*Metaprogramming* · [в онтологии](concepts.md#syntax-metaprogramming)
+англ. *Metaprogramming* (также *macros*, *reflection*, *compile-time evaluation*) · [в онтологии](concepts.md#syntax-metaprogramming)
 
 - **Рефлексия (layer: standard_library, profile: java21)**
 
@@ -498,7 +535,7 @@ publish: true
 
 #### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms* · [в онтологии](concepts.md#paradigm-supported)
+англ. *Programming paradigms* (также *supported paradigms*) · [в онтологии](concepts.md#paradigm-supported)
 
 - **Императивная (layer: language, profile: java21)**
 - **Процедурная (layer: language, profile: java21)** — статические методы; свободных функций нет

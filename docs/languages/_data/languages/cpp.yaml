@@ -174,3 +174,76 @@ concepts:
     - value: procedural
     - value: object_oriented
     - value: functional
+  scope.linkage:
+    - value: external
+    - value: internal
+      note: "static на уровне пространства имён, безымянное пространство имён, const-переменные пространства имён без extern."
+    - value: module
+      note: "Имена, объявленные в модуле без export, связываются только внутри модуля (C++20)."
+    - value: none
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [basic.link], [basic.def.odr]"}
+  subprograms.overload_resolution:
+    - value: conversion_ranking
+      note: "Кандидаты сравниваются по рангам неявных последовательностей преобразований (exact match, promotion, conversion, пользовательские); при равенстве вызов неоднозначен."
+    - value: argument_dependent_lookup
+      note: "Для неквалифицированного вызова кандидаты ищутся и в пространствах имён типов аргументов."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [over.match], [over.ics.rank], [basic.lookup.argdep]"}
+  evaluation.order:
+    - value: unspecified
+      note: "Порядок вычисления аргументов вызова не задан; с C++17 они вычисляются indeterminately sequenced, а не unsequenced."
+    - value: partially_sequenced
+      note: "С C++17 задан порядок для <<, >>, присваивания (справа налево), индексирования и постфиксного выражения вызова; также &&, ||, ?: и запятая."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [intro.execution], [expr.call], [expr.ass]"}
+  evaluation.undefined_behavior:
+    - value: undefined
+      note: "Компилятор вправе считать UB невозможным; внутри константного вычисления UB делает выражение неконстантным и диагностируется."
+    - value: unspecified
+    - value: implementation_defined
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [intro.abstract], [defns.undefined], [expr.const]"}
+  evaluation.compile_time:
+    - value: constant_expressions
+    - value: compile_time_functions
+      note: "constexpr-функции вычисляются при компиляции в константном контексте и допустимы при выполнении."
+    - value: mandatory_compile_time
+      note: "consteval-функции (C++20) — immediate functions, каждый вызов вычисляется при компиляции."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [expr.const], [dcl.constexpr]"}
+  memory.storage_duration:
+    - value: automatic
+    - value: static
+    - value: thread
+      note: "thread_local, C++11."
+    - value: dynamic
+      note: "new/delete и функции выделения; время жизни объекта может начаться позже выделения памяти (placement new)."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [basic.stc], [basic.life]"}
+  memory.value_categories:
+    - value: identity_movability
+      note: "glvalue (lvalue, xvalue) и prvalue; с C++17 prvalue материализуется во временный объект только при необходимости (гарантированный copy elision)."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [basic.lval], [conv.rval]"}
+  memory.concurrency_model:
+    - value: data_race_undefined
+    - value: explicit_ordering
+      layer: standard_library
+      applies_to: "std::atomic и std::memory_order"
+      note: "По умолчанию seq_cst; relaxed, acquire, release, acq_rel задаются явно."
+      sources:
+        - {url: "https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/n4950.pdf", title: "N4950, [intro.races], [atomics.order]"}
+  tooling.parser_construction:
+    - value: hand_written
+      layer: implementation
+      implementation: GCC 3.4+, Clang
+      note: "В GCC 3.4 YACC-парсер C++ заменён рукописным рекурсивным спуском; Clang обосновывает рукописный парсер диагностикой и восстановлением после ошибок."
+      sources:
+        - {url: "https://gcc.gnu.org/gcc-3.4/changes.html", title: "GCC 3.4 Release Series — Changes"}
+        - {url: "https://clang.llvm.org/features.html", title: "Clang — Features and Goals"}
+  tooling.parsing_algorithm:
+    - value: ll
+      layer: implementation
+      implementation: GCC 3.4+, Clang
+      note: "Рекурсивный спуск с произвольным просмотром вперёд и откатами там, где грамматика C++ неоднозначна."

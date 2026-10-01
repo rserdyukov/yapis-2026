@@ -271,3 +271,15 @@ concepts:
       note: "Методы у любых определённых типов и интерфейсы без классов и иерархий типов; FAQ отвечает на вопрос об ООП «и да и нет»."
       sources:
         - {url: "https://go.dev/doc/faq#Is_Go_an_object-oriented_language", title: "Go FAQ — Is Go an object-oriented language?"}
+  tooling.parser_construction:
+    - value: hand_written
+      layer: implementation
+      implementation: gc (cmd/compile), go/parser
+      note: "И компилятор, и пакет go/parser используют рукописные парсеры; выражения разбираются по приоритетам (parseBinaryExpr)."
+      sources:
+        - {url: "https://go.dev/src/go/parser/parser.go", title: "go/parser/parser.go"}
+        - {url: "https://go.dev/src/cmd/compile/internal/syntax/parser.go", title: "cmd/compile/internal/syntax/parser.go"}
+  tooling.parsing_algorithm:
+    - value: ll
+      layer: implementation
+      implementation: gc (cmd/compile), go/parser

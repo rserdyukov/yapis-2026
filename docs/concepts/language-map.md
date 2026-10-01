@@ -238,8 +238,15 @@ ALGOL 60 — точного примера к существующему `by_nam
 | `verification.behavioral_contracts` | `preconditions`, `postconditions`, `invariants` |
 
 К существующей `abstraction.modules` добавлено только значение `module_functors`.
-Остальные исходные концепции сохраняют смысл. В сумме словарь содержит 74
-концепции; это размер схемы, а не мера полноты исследования.
+Остальные исходные концепции сохраняют смысл. В этой редакции словарь содержал
+74 концепции; это размер схемы, а не мера полноты исследования.
+
+Позже по [cppreference.com](../languages/sources.md#cppreference) добавлены
+восемь понятий, которые различают C, C++ и языки с более строгими гарантиями:
+`scope.linkage`, `subprograms.overload_resolution`, `evaluation.order`,
+`evaluation.undefined_behavior`, `evaluation.compile_time`,
+`memory.storage_duration`, `memory.value_categories`,
+`memory.concurrency_model`. Сейчас в словаре 82 концепции.
 
 ### Границы этой редакции
 

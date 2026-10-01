@@ -119,7 +119,7 @@ publish: true
 
 - **Языки:** [Common Lisp](common-lisp.md)
 - **Понятия:** [Диспетчеризация вызовов](glossary.md#abstraction-dispatch)
-- **Источники:** [The Evolution of Lisp](sources.md#hopl-lisp)
+- **Источники:** [The Evolution of Lisp](sources.md#hopl-lisp); [The Rise of "Worse is Better"](sources.md#gabriel-worse-is-better)
 
 ### Скотт Фалман { #fahlman }
 
@@ -156,7 +156,7 @@ publish: true
 
 - **Языки:** [Haskell](haskell.md)
 - **Понятия:** [Стратегия вычисления](glossary.md#evaluation-strategy), [Контроль эффектов](glossary.md#evaluation-effects)
-- **Источники:** [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell)
+- **Источники:** [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell); [The Glasgow Haskell Compiler](sources.md#aosa-ghc)
 
 ### Филип Уодлер { #wadler }
 
@@ -306,7 +306,7 @@ publish: true
 
 - **Языки:** [APL](apl.md)
 - **Понятия:** [Поднятие операций по рангу массива](glossary.md#evaluation-rank-lifting)
-- **Источники:** [Notation as a Tool of Thought](sources.md#iverson-notation); [The Evolution of APL](sources.md#hopl-apl)
+- **Источники:** [A Programming Language](sources.md#iverson-1962); [Notation as a Tool of Thought](sources.md#iverson-notation); [The Evolution of APL](sources.md#hopl-apl)
 
 ## Теория и трансляция
 
@@ -383,10 +383,11 @@ publish: true
 
 *Terence Parr* · [Wikidata Q7701985](https://www.wikidata.org/wiki/Q7701985)
 
-Автор генератора анализаторов ANTLR.
+Автор генератора анализаторов ANTLR и алгоритма разбора ALL(*).
 
+- **Понятия:** [Способ построения синтаксического анализатора](glossary.md#tooling-parser-construction), [Алгоритм синтаксического анализа](glossary.md#tooling-parsing-algorithm)
 - **Слайды лекций:** [09. Построение компилятора с помощью ANTLR](../lectures/html/09-postroenie-kompilyatora-s-pomoschyu-antlr.html)
-- **Источники:** [The Definitive ANTLR 4 Reference](sources.md#antlr-reference)
+- **Источники:** [The Definitive ANTLR 4 Reference](sources.md#antlr-reference); [Adaptive LL(*) Parsing: The Power of Dynamic Analysis](sources.md#parr-allstar-2014)
 
 ### Роберт Нистром { #nystrom }
 
@@ -395,3 +396,46 @@ publish: true
 Автор книги «Crafting Interpreters» о реализации интерпретаторов.
 
 - **Источники:** [Crafting Interpreters](sources.md#crafting-interpreters)
+
+### Мартин Фаулер { #fowler }
+
+*Martin Fowler* · [Wikidata Q74894](https://www.wikidata.org/wiki/Q74894)
+
+Ввёл термины language workbench и language oriented programming (2005); автор книги Domain-Specific Languages (2010).
+
+- **Понятия:** [Языковой верстак](glossary.md#tooling-language-workbench)
+- **Источники:** [Domain-Specific Languages](sources.md#fowler-dsl-2010); [Language Workbenches: The Killer-App for Domain Specific Languages?](sources.md#fowler-lw-2005); [A Language Workbench in Action — MPS](sources.md#fowler-mps-2005)
+
+### Маркус Фёльтер { #voelter }
+
+*Markus Völter* · [Wikidata Q27831986](https://www.wikidata.org/wiki/Q27831986)
+
+Автор книги DSL Engineering (2013) и исследований удобства проекционных редакторов на JetBrains MPS; соавтор обзора Language Workbench Challenge.
+
+- **Понятия:** [Языковой верстак](glossary.md#tooling-language-workbench)
+- **Источники:** [DSL Engineering: Designing, Implementing and Using Domain-Specific Languages](sources.md#voelter-dsl-engineering); [The State of the Art in Language Workbenches: Conclusions from the Language Workbench Challenge](sources.md#erdweg-lwc-2013); [Evaluating and comparing language workbenches: Existing results and benchmarks for the future](sources.md#erdweg-lwc-2015); [Towards User-Friendly Projectional Editors](sources.md#voelter-projectional-2014); [Efficient development of consistent projectional editors using grammar cells](sources.md#voelter-grammar-cells-2016)
+
+### Йос Вармер { #warmer }
+
+*Jos Warmer* · [Wikidata Q130554580](https://www.wikidata.org/wiki/Q130554580)
+
+Соавтор языка ограничений OCL для UML и соавтор языкового верстака Freon.
+
+- **Понятия:** [Языковой верстак](glossary.md#tooling-language-workbench)
+
+### Аннеке Клеппе { #kleppe }
+
+*Anneke Kleppe* · [Wikidata Q123116897](https://www.wikidata.org/wiki/Q123116897)
+
+Соавтор книг о языке ограничений OCL и о создании DSL на основе метамоделей; соавтор языкового верстака Freon.
+
+- **Понятия:** [Языковой верстак](glossary.md#tooling-language-workbench)
+
+### Брайан Форд { #ford }
+
+*Bryan Ford* · [Wikidata Q113253777](https://www.wikidata.org/wiki/Q113253777)
+
+Предложил грамматики разбирающих выражений (PEG, 2004) и packrat-разбор за линейное время (2002).
+
+- **Понятия:** [Алгоритм синтаксического анализа](glossary.md#tooling-parsing-algorithm)
+- **Источники:** [Parsing Expression Grammars: A Recognition-Based Syntactic Foundation](sources.md#ford-peg-2004); [Packrat Parsing: Simple, Powerful, Lazy, Linear Time](sources.md#ford-packrat-2002)

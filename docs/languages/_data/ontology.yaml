@@ -19,6 +19,11 @@ categories:
         legacy_slugs: [variants-1]
         ru: Введение связывания
         en: Binding introduction
+        en_aliases: [declaration, name binding]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/declarations", title: "Declarations"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/structured_binding", title: "Structured binding declaration"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/declarations", title: "Declarations"}
         kind: choice
         note: "Наличие объявления независимо от аннотации и вывода типа; var в Java — явное объявление."
         values:
@@ -30,6 +35,10 @@ categories:
         slug: bindings-mutation
         ru: Изменяемость связывания
         en: Binding mutability
+        en_aliases: [rebinding, immutable binding, const qualification]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/cv", title: "cv (const and volatile) type qualifiers"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/const", title: "const type qualifier"}
         kind: choice
         note: "Изменяемость объекта отделена от возможности перепривязать имя."
         values:
@@ -41,6 +50,10 @@ categories:
         legacy_slugs: [variants-3]
         ru: Формы присваивания и связывания
         en: Assignment and binding forms
+        en_aliases: [assignment, destructuring, unification]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/operator_assignment", title: "Assignment operators"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/operator_assignment", title: "Assignment operators"}
         kind: choice
         values:
           - {id: single, ru: Одиночное присваивание, en: single-target assignment}
@@ -56,6 +69,10 @@ categories:
         slug: scope-resolution
         ru: Правило разрешения имён
         en: Name resolution
+        en_aliases: [name lookup, lexical scoping, dynamic scoping]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/lookup", title: "Name lookup"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/name_space", title: "Lookup and name spaces"}
         kind: choice
         values:
           - {id: lexical, ru: Лексическое, en: lexical}
@@ -65,6 +82,10 @@ categories:
         legacy_slugs: [variants-4]
         ru: Конструкции областей видимости
         en: Scoping constructs
+        en_aliases: [scope, block scope]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/scope", title: "Scope"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/scope", title: "Scope"}
         kind: choice
         values:
           - {id: subprogram, ru: Подпрограмма, en: subprogram}
@@ -79,6 +100,10 @@ categories:
         legacy_slugs: [req-8-2]
         ru: Связывания верхнего уровня
         en: Top-level bindings
+        en_aliases: [global variables, file scope, namespace scope]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/namespace", title: "Namespaces"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/extern", title: "External and tentative definitions"}
         kind: choice
         values:
           - {id: globals, ru: Глобальные переменные, en: global variables}
@@ -89,12 +114,33 @@ categories:
         legacy_slugs: [syntax-shadowing]
         ru: Сокрытие имён
         en: Name shadowing
+        en_aliases: [name hiding, variable shadowing]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/scope", title: "Scope"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/scope", title: "Scope"}
         kind: choice
         note: "Повторное присваивание тому же имени в Python — перепривязка, а не shadowing."
         values:
           - {id: allowed, ru: Во вложенной области, en: nested-scope shadowing}
           - {id: forbidden_in_block, ru: Запрет сокрытия локальных в охватывающем блоке, en: enclosing-local shadowing forbidden}
           - {id: allowed_same_scope, ru: Новое связывание в той же области, en: new binding in the same scope}
+
+      - id: scope.linkage
+        slug: scope-linkage
+        ru: Связывание имён между единицами трансляции
+        en: Linkage
+        en_aliases: [external linkage, internal linkage, one definition rule]
+        kind: choice
+        note: "Linkage определяет, обозначают ли одинаковые имена из разных областей или единиц трансляции одну сущность. Это не область видимости: имя с внешним связыванием может быть невидимо без объявления. Не путать с «связыванием» имени и значения (binding) — в русском одно слово для двух терминов. ODR требует единственного определения сущности с внешним связыванием; нарушение без диагностики — отдельная категория (IFNDR)."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/storage_duration#Linkage", title: "Storage class specifiers: linkage"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/definition", title: "Definitions and ODR (One Definition Rule)"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/storage_duration#Linkage", title: "Storage-class specifiers: linkage"}
+        values:
+          - {id: external, ru: Внешнее связывание, en: external linkage}
+          - {id: internal, ru: Внутреннее связывание единицы трансляции, en: internal linkage}
+          - {id: module, ru: Связывание в пределах модуля, en: module linkage}
+          - {id: none, ru: Без связывания, en: no linkage}
 
   - id: typing
     ru: Типизация
@@ -104,6 +150,10 @@ categories:
         slug: typing-checking
         ru: Проверка типов
         en: Type checking
+        en_aliases: [static typing, dynamic typing]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/type", title: "Type"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/type", title: "Type"}
         kind: choice
         aliases: [статическая типизация, динамическая типизация]
         values:
@@ -114,6 +164,7 @@ categories:
         slug: typing-annotations
         ru: Аннотации типов
         en: Type annotations
+        en_aliases: [type declarations, type signatures]
         kind: choice
         values:
           - {id: required, ru: Обязательны, en: required}
@@ -122,13 +173,24 @@ categories:
       - id: typing.inference
         slug: typing-inference
         ru: Вывод статических типов
-        en: Static type inference
+        en: Type inference
+        en_aliases: [type deduction]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/auto", title: "Placeholder type specifiers"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/template_argument_deduction", title: "Template argument deduction"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/class_template_argument_deduction", title: "Class template argument deduction (CTAD)"}
         kind: bool
       - id: typing.conversions
         slug: typing-conversions
         legacy_slugs: [variants-2, typing-strength]
         ru: Преобразования типов
         en: Type conversions
+        en_aliases: [type coercion, type casting]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/implicit_conversion", title: "Implicit conversions"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/explicit_cast", title: "Explicit type conversion"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/conversion", title: "Implicit conversions"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/cast", title: "cast operator"}
         kind: choice
         note: "Ось заменяет неоднозначное деление strong/weak; допустимость и потери описываются в контексте."
         values:
@@ -138,6 +200,9 @@ categories:
         slug: typing-compatibility
         ru: Совместимость типов
         en: Type compatibility
+        en_aliases: [type equivalence, nominal typing, structural typing, duck typing]
+        references:
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/type#Compatible_types", title: "Type: compatible types"}
         kind: choice
         values:
           - {id: nominal, ru: Номинальная, en: nominal}
@@ -147,6 +212,11 @@ categories:
         slug: typing-sum-types
         ru: Типы-суммы
         en: Sum types
+        en_aliases: [tagged unions, variant types, discriminated unions]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/utility/variant", title: "std::variant"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/union", title: "Union declaration"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/union", title: "Union declaration"}
         kind: choice
         values:
           - {id: tagged, ru: Размеченные варианты, en: tagged variants}
@@ -156,6 +226,11 @@ categories:
         slug: typing-product-types
         ru: Типы-произведения
         en: Product types
+        en_aliases: [tuples, records, structs]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/class", title: "Class declaration"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/utility/tuple", title: "std::tuple"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/struct", title: "Struct declaration"}
         kind: choice
         values:
           - {id: tuple, ru: Кортежи, en: tuples}
@@ -163,7 +238,11 @@ categories:
       - id: typing.nullability
         slug: typing-nullability
         ru: Представление отсутствия значения
-        en: Absence of a value
+        en: Nullability
+        en_aliases: [null reference, option type]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/nullptr", title: "nullptr, the pointer literal"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/utility/optional", title: "std::optional"}
         kind: choice
         values:
           - {id: nullable_everywhere, ru: Nullable-ссылки по умолчанию, en: nullable references by default}
@@ -173,7 +252,8 @@ categories:
       - id: typing.value_dependency
         slug: typing-value-dependency
         ru: Зависимость типа от значения
-        en: Value-dependent types
+        en: Dependent types
+        en_aliases: [value-dependent types]
         kind: choice
         note: "Тип может зависеть от значения параметра: Vect n a связывает длину с n, в отличие от параметризации только типом a. Зависимые пары связывают тип второго компонента со значением первого. Проверка типов сама по себе не гарантирует тотальность."
         values:
@@ -186,6 +266,7 @@ categories:
         slug: typing-abstract-type-identity
         ru: Идентичность абстрактных типов модулей
         en: Abstract module type identity
+        en_aliases: [opaque types, type generativity]
         kind: choice
         note: "Прозрачное сопоставление сигнатуре сохраняет известные равенства типов; opaque sealing скрывает представление абстрактных компонентов. В SML '97 применение functor с opaque result signature создаёт свежие абстрактные типы. Это не свойство каждого type alias и не синоним nominal/structural compatibility."
         values:
@@ -203,6 +284,12 @@ categories:
         legacy_slugs: [variants-6]
         ru: Условный выбор
         en: Conditional selection
+        en_aliases: [selection statement, conditional expression]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/if", title: "if statement"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/operator_other", title: "Other operators (conditional operator)"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/if", title: "if statement"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/operator_other", title: "Other operators (conditional operator)"}
         kind: choice
         values:
           - {id: statement, ru: Условный оператор, en: conditional statement}
@@ -211,7 +298,11 @@ categories:
       - id: control.switch
         slug: control-switch
         ru: Выбор по значению switch/case
-        en: Switch/case value selection
+        en: Switch statement
+        en_aliases: [case statement, multiway branch]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/switch", title: "switch statement"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/switch", title: "switch statement"}
         kind: bool
         note: "Учитывается отдельная конструкция switch/case, не любая цепочка условий или match."
       - id: control.pattern_matching
@@ -224,6 +315,7 @@ categories:
         legacy_slugs: [req-7-2-until]
         ru: Цикл до истинности условия
         en: Until loop
+        en_aliases: [repeat-until loop]
         kind: choice
         note: "Отрицательная полярность условия не определяет момент проверки. Имитирующий код не означает наличие конструкции."
         values:
@@ -234,13 +326,22 @@ categories:
         slug: control-do-while
         legacy_slugs: [req-7-2-do-while]
         ru: Цикл do-while с постусловием
-        en: Post-test do-while loop
+        en: Do-while loop
+        en_aliases: [post-test loop]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/do", title: "do-while loop"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/do", title: "do-while loop"}
         kind: bool
       - id: control.iteration
         slug: control-iteration
         legacy_slugs: [req-7-3]
         ru: Формы итерации
-        en: Iteration forms
+        en: Iteration
+        en_aliases: [loops, for loop, foreach loop, range-based for loop]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/for", title: "for loop"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/range-for", title: "Range-based for loop"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/for", title: "for loop"}
         kind: choice
         values:
           - {id: c_style, ru: Инициализация / условие / шаг, en: C-style loop}
@@ -251,6 +352,7 @@ categories:
         slug: control-logic-search
         ru: Логический поиск решений
         en: Logic search
+        en_aliases: [backtracking, SLD resolution, constraint solving]
         kind: choice
         values:
           - {id: backtracking, ru: Поиск с возвратом, en: backtracking}
@@ -260,6 +362,7 @@ categories:
         slug: control-continuation-extent
         ru: Граница захвата продолжения
         en: Continuation capture boundary
+        en_aliases: [first-class continuations, "call/cc", delimited continuations]
         kind: choice
         note: "Продолжение представляет оставшийся контекст вычисления, а не только окружение замыкания. Undelimited захватывает полный текущий контекст; delimited — часть до заданной границы (prompt). Время жизни, escape-only и число допустимых возобновлений указываются отдельно в контексте: R7RS call/cc допускает сохранение и повторные вызовы, но это не определение границы захвата."
         values:
@@ -277,13 +380,19 @@ categories:
         slug: subprograms-overloading
         legacy_slugs: [variants-7]
         ru: Перегрузка по сигнатуре
-        en: Signature overloading
+        en: Function overloading
+        en_aliases: [overloading, operator overloading]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/operators", title: "operator overloading"}
         kind: bool
       - id: subprograms.parameter_passing
         slug: subprograms-parameter-passing
         legacy_slugs: [variants-8]
         ru: Связывание параметров
         en: Parameter passing
+        en_aliases: [call by value, call by reference, call by sharing]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/reference", title: "Reference declaration"}
         kind: choice
         note: "Передача значения отделена от переноса владения; ссылка сама может передаваться по значению."
         values:
@@ -300,6 +409,10 @@ categories:
         legacy_slugs: [variants-9]
         ru: Место определения подпрограмм
         en: Subprogram definition placement
+        en_aliases: [top-level function, member function, local function]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/member_functions", title: "Non-static member functions"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/function_definition", title: "Function definitions"}
         kind: choice
         values:
           - {id: declaration_region, ru: Выделенная область объявлений, en: declaration region}
@@ -309,27 +422,43 @@ categories:
       - id: subprograms.nesting
         slug: subprograms-nesting
         ru: Вложенные именованные подпрограммы
-        en: Nested named subprograms
+        en: Nested functions
+        en_aliases: [nested subprograms]
+        references:
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/function_definition", title: "Function definitions"}
         kind: bool
       - id: subprograms.closures
         slug: subprograms-closures
         ru: Захват окружения
-        en: Closure capture
+        en: Closures
+        en_aliases: [lambda capture, captured variables]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/lambda", title: "Lambda expressions"}
         kind: bool
       - id: subprograms.lambda
         slug: subprograms-lambda
         ru: Анонимные функции
         en: Anonymous functions
+        en_aliases: [lambda expressions, function literals]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/lambda", title: "Lambda expressions"}
         kind: bool
       - id: subprograms.generics
         slug: subprograms-generics
         ru: Параметрический полиморфизм
         en: Parametric polymorphism
+        en_aliases: [generics, templates]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/templates", title: "Templates"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/constraints", title: "Constraints and concepts"}
         kind: bool
       - id: subprograms.generic_mechanism
         slug: subprograms-generic-mechanism
         ru: Реализация параметрического полиморфизма
         en: Generic implementation mechanism
+        en_aliases: [monomorphization, type erasure, template instantiation]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/function_template", title: "Function template"}
         kind: choice
         values:
           - {id: erasure, ru: Стирание типов, en: type erasure}
@@ -340,12 +469,33 @@ categories:
         slug: subprograms-default-args
         ru: Аргументы по умолчанию
         en: Default arguments
+        en_aliases: [optional parameters]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/default_arguments", title: "Default arguments"}
         kind: bool
       - id: subprograms.named_args
         slug: subprograms-named-args
         ru: Именованные аргументы
         en: Named arguments
+        en_aliases: [keyword arguments]
         kind: bool
+
+      - id: subprograms.overload_resolution
+        slug: subprograms-overload-resolution
+        ru: Разрешение перегрузки
+        en: Overload resolution
+        en_aliases: [best viable function, argument-dependent lookup]
+        kind: choice
+        note: "Как из набора одноимённых кандидатов выбирается вызываемая функция. Наличие перегрузки (subprograms.overloading) не определяет правила выбора: ранжирование преобразований, поиск кандидатов и неоднозначность описываются здесь. Выбор во время выполнения по динамическим типам — abstraction.dispatch."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/overload_resolution", title: "Overload resolution"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/adl", title: "Argument-dependent lookup"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/generic", title: "Generic selection"}
+        values:
+          - {id: conversion_ranking, ru: Ранжирование неявных преобразований аргументов, en: implicit conversion ranking}
+          - {id: exact_signature, ru: Точное совпадение типов без ранжирования, en: exact signature match}
+          - {id: argument_dependent_lookup, ru: Поиск кандидатов по типам аргументов, en: argument-dependent lookup}
+          - {id: arity, ru: По числу аргументов, en: by arity}
 
   - id: abstraction
     ru: Полиморфизм и организация
@@ -355,6 +505,10 @@ categories:
         slug: abstraction-contracts
         ru: Контракты полиморфизма
         en: Polymorphic contracts
+        en_aliases: [interfaces, traits, type classes, protocols]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/abstract_class", title: "Abstract class"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/constraints", title: "Constraints and concepts"}
         kind: choice
         values:
           - {id: interfaces, ru: Интерфейсы, en: interfaces}
@@ -364,7 +518,10 @@ categories:
       - id: abstraction.dispatch
         slug: abstraction-dispatch
         ru: Диспетчеризация вызовов
-        en: Call dispatch
+        en: Method dispatch
+        en_aliases: [static dispatch, dynamic dispatch, virtual functions, multiple dispatch]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/virtual", title: "virtual function specifier"}
         kind: choice
         values:
           - {id: static, ru: Статическая, en: static dispatch}
@@ -374,6 +531,9 @@ categories:
         slug: abstraction-inheritance
         ru: Наследование реализации
         en: Implementation inheritance
+        en_aliases: [inheritance, subclassing, derived classes]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/derived_class", title: "Derived classes"}
         kind: choice
         values:
           - {id: single, ru: Одиночное, en: single}
@@ -383,6 +543,12 @@ categories:
         slug: abstraction-modules
         ru: Модульность
         en: Modules
+        en_aliases: [module system, namespaces, packages]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/modules", title: "Modules"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/namespace", title: "Namespaces"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/preprocessor/include", title: "Source file inclusion"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/preprocessor/include", title: "Source file inclusion"}
         kind: choice
         values:
           - {id: textual_inclusion, ru: Текстовое включение, en: textual inclusion}
@@ -404,6 +570,7 @@ categories:
         slug: evaluation-strategy
         ru: Стратегия вычисления
         en: Evaluation strategy
+        en_aliases: [eager evaluation, lazy evaluation]
         kind: choice
         values:
           - {id: strict, ru: Строгая, en: strict}
@@ -413,6 +580,7 @@ categories:
         slug: evaluation-effects
         ru: Контроль эффектов
         en: Effect control
+        en_aliases: [effect system, purity]
         kind: choice
         values:
           - {id: unrestricted, ru: Без общего статического разделения эффектов, en: no general static effect separation}
@@ -421,12 +589,14 @@ categories:
       - id: evaluation.tail_calls
         slug: evaluation-tail-calls
         ru: Гарантированное устранение хвостовых вызовов
-        en: Guaranteed tail-call elimination
+        en: Tail-call elimination
+        en_aliases: [proper tail calls, tail-call optimization]
         kind: bool
       - id: evaluation.rank_lifting
         slug: evaluation-rank-lifting
         ru: Поднятие операций по рангу массива
         en: Array rank lifting
+        en_aliases: [rank polymorphism, scalar extension]
         kind: choice
         note: "Shape — размеры осей, rank — их число; cell — подмассив выбранного ранга, frame — оставшиеся оси. Ось описывает автоматическое применение операции к элементам или cells и согласование аргументов, а не просто наличие N-мерных массивов. Правила agreement J и Dyalog фиксируются отдельно; явный map не доказывает rank lifting."
         values:
@@ -440,6 +610,9 @@ categories:
         slug: evaluation-result-protocol
         ru: Протокол выдачи и возобновления результатов
         en: Result and resumption protocol
+        en_aliases: [generators, coroutines, goal-directed evaluation]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/coroutines", title: "Coroutines"}
         kind: choice
         note: "Кто запрашивает следующий результат: caller при обычном возврате, потребитель генератора/корутины или охватывающее выражение после неудачи? Python yield и Lua resume/yield дают явное возобновление; Icon автоматически ищет альтернативу внутреннего генератора при неудаче внешнего выражения. Несколько значений одного return не являются потоком альтернатив. Это не strictness и не гарантия конкурентного исполнения."
         values:
@@ -454,6 +627,7 @@ categories:
         slug: evaluation-data-availability
         ru: Ожидание доступности данных
         en: Data availability suspension
+        en_aliases: [dataflow variables, dataflow execution]
         kind: choice
         note: "В Oz 3 поток приостанавливается, когда операции не хватает информации о логической переменной; в G готовность узла определяется наличием всех требуемых входов. Это разные условия запуска, независимые от strictness, порядка операндов и mailbox/rendezvous. Наличие унификации не означает автоматического ожидания."
         values:
@@ -463,6 +637,53 @@ categories:
           - {url: "https://mozart.github.io/mozart-v1/doc-1.4.0/tutorial/node1.html", title: "Mozart 1.4.0 tutorial — Oz 3 dataflow threads"}
           - {url: "https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html", title: "NI — G dataflow and node readiness in LabVIEW"}
 
+      - id: evaluation.order
+        slug: evaluation-order
+        ru: Порядок вычисления подвыражений
+        en: Order of evaluation
+        en_aliases: [sequencing, sequence points, sequenced-before]
+        kind: choice
+        note: "В каком порядке вычисляются операнды одного выражения и аргументы вызова. Ось независима от приоритета и ассоциативности операций: `f() + g() * h()` группируется однозначно, а порядок вызовов может быть не задан. Не путать со strictness (evaluation.strategy): строгая стратегия требует вычислить аргументы до вызова, но не задаёт их взаимный порядок. Непоследовательные модификации одного объекта в C и C++ дают неопределённое поведение."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/eval_order", title: "Order of evaluation"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/eval_order", title: "Order of evaluation"}
+        values:
+          - {id: left_to_right, ru: Слева направо, en: left-to-right}
+          - {id: unspecified, ru: Не задан стандартом, en: unspecified}
+          - {id: partially_sequenced, ru: Задан для отдельных операций, en: sequenced for specific operators}
+      - id: evaluation.undefined_behavior
+        slug: evaluation-undefined-behavior
+        ru: Неопределённое поведение
+        en: Undefined behavior
+        en_aliases: [UB, unspecified behavior, implementation-defined behavior]
+        kind: choice
+        note: "Как спецификация описывает программы, нарушающие её правила или зависящие от выбора реализации. Implementation-defined — реализация выбирает и документирует; unspecified — выбор из допустимых вариантов без документирования; undefined — стандарт не накладывает требований на всё выполнение, а компилятор вправе оптимизировать, считая UB невозможным. Это не синоним ошибки времени выполнения: гарантированное исключение или паника — определённое поведение (errors.model)."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/ub", title: "Undefined behavior"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/as_if", title: "The as-if rule"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/behavior", title: "Undefined behavior"}
+        values:
+          - {id: undefined, ru: Неопределённое поведение, en: undefined behavior}
+          - {id: unspecified, ru: Неуточнённое поведение, en: unspecified behavior}
+          - {id: implementation_defined, ru: Определяемое реализацией, en: implementation-defined behavior}
+          - {id: checked, ru: Нарушение правил обнаруживается и даёт определённый результат, en: checked with defined outcome}
+      - id: evaluation.compile_time
+        slug: evaluation-compile-time
+        ru: Вычисления во время компиляции
+        en: Constant evaluation
+        en_aliases: [compile-time evaluation, constant expressions, constexpr]
+        kind: choice
+        note: "Какие вычисления язык требует или разрешает выполнить при трансляции и где результат обязателен (размер массива, аргумент шаблона). Ось уже syntax.metaprogramming: там описано порождение кода, здесь — вычисление значений. Оптимизирующее свёртывание констант компилятором без гарантии языка сюда не относится."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/constant_expression", title: "Constant expressions"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/constexpr", title: "constexpr specifier"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/consteval", title: "consteval specifier"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/constant_expression", title: "Constant expressions"}
+        values:
+          - {id: constant_expressions, ru: Константные выражения из ограниченного набора операций, en: restricted constant expressions}
+          - {id: compile_time_functions, ru: Функции, допускающие вычисление при компиляции, en: compile-time-evaluable functions}
+          - {id: mandatory_compile_time, ru: Функции, вычисляемые только при компиляции, en: compile-time-only functions}
+
   - id: memory
     ru: Память и владение
     en: Memory and ownership
@@ -470,7 +691,13 @@ categories:
       - id: memory.management
         slug: memory-management
         ru: Освобождение памяти
-        en: Memory reclamation
+        en: Memory management
+        en_aliases: [memory reclamation, garbage collection, reference counting]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/new", title: "new expression"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/delete", title: "delete expression"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/memory/unique_ptr", title: "std::unique_ptr"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/memory", title: "Dynamic memory management"}
         kind: choice
         values:
           - {id: gc, ru: Трассирующая сборка мусора, en: tracing garbage collection}
@@ -481,6 +708,10 @@ categories:
         slug: memory-transfer
         ru: Передача и разделение владения
         en: Ownership transfer and sharing
+        en_aliases: [move semantics, copy semantics, borrowing]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/move_constructor", title: "Move constructors"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/copy_constructor", title: "Copy constructors"}
         kind: choice
         values:
           - {id: copy, ru: Копирование значения, en: value copy}
@@ -492,6 +723,9 @@ categories:
         slug: memory-reference-permissions
         ru: Права ссылок и ограничения алиасов
         en: Reference permissions and alias restrictions
+        en_aliases: [reference capabilities, aliasing control]
+        references:
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/restrict", title: "restrict type qualifier"}
         kind: choice
         note: "Права относятся к ссылке и совместимым алиасам объекта, а не к перепривязке имени или способу освобождения памяти. Pony val гарантирует неизменяемость объекта, box — только read-only view, ref разрешает изменяемые алиасы, iso изолирует доступ. Изоляция не означает обязательное использование ровно один раз: линейность, аффинность и consume требуют отдельного утверждения; не помечать весь Pony как линейный."
         values:
@@ -503,6 +737,56 @@ categories:
         sources:
           - {url: "https://tutorial.ponylang.io/reference-capabilities/reference-capabilities.html", title: "Pony Tutorial — Reference Capabilities: iso, ref, val, box, tag"}
 
+      - id: memory.storage_duration
+        slug: memory-storage-duration
+        ru: Длительность хранения и время жизни объекта
+        en: Storage duration
+        en_aliases: [object lifetime, automatic storage, static storage, dynamic storage]
+        kind: choice
+        note: "Когда выделяется и освобождается память объекта и в какие моменты объект жив. Время жизни относится к объекту, область видимости — к имени: объект с динамической длительностью переживает область имени указателя, а статический локальный объект невидим вне функции. Способ освобождения динамической памяти (сборка мусора, ручное) — memory.management."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/storage_duration", title: "Storage class specifiers"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/lifetime", title: "Lifetime"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/storage_duration", title: "Storage-class specifiers"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/lifetime", title: "Lifetime"}
+        values:
+          - {id: automatic, ru: Автоматическая, до выхода из блока, en: automatic}
+          - {id: static, ru: Статическая, на всё выполнение программы, en: static}
+          - {id: thread, ru: Поточная, на время потока, en: thread}
+          - {id: dynamic, ru: Динамическая, до явного или автоматического освобождения, en: dynamic}
+      - id: memory.value_categories
+        slug: memory-value-categories
+        ru: Категории значений выражений
+        en: Value categories
+        en_aliases: [lvalue, rvalue, glvalue, prvalue, xvalue]
+        kind: choice
+        note: "Классификация выражений по тому, обозначают ли они объект с идентичностью (место хранения) или только значение, и можно ли забрать их ресурсы. Категория — свойство выражения, а не типа и не объекта: имя переменной типа `T&&` само по себе lvalue. Используется для правил присваивания, взятия адреса, связывания ссылок и выбора перемещения (memory.transfer)."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/value_category", title: "Value categories"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/value_category", title: "Value categories"}
+        values:
+          - {id: lvalue_rvalue, ru: Два вида — lvalue и rvalue, en: lvalue/rvalue}
+          - {id: identity_movability, ru: По идентичности и возможности перемещения, en: identity and movability (glvalue/prvalue/xvalue)}
+          - {id: places_values, ru: Выражения-места и выражения-значения, en: place and value expressions}
+      - id: memory.concurrency_model
+        slug: memory-concurrency-model
+        ru: Модель памяти для параллельного доступа
+        en: Memory model
+        en_aliases: [data race, happens-before, memory ordering, atomics]
+        kind: choice
+        note: "Какие значения может прочитать поток при одновременном доступе к памяти и какие гарантии упорядочивания дают атомарные операции и синхронизация. Ось независима от механизма запуска потоков (resources.concurrency): модель определяет смысл общих данных, а не способ создания потока. Гонка данных в C, C++ и unsafe Rust — неопределённое поведение, в Java — определённое, но слабо упорядоченное."
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/memory_model", title: "Memory model"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/multithread", title: "Multi-threaded executions and data races"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/atomic/memory_order", title: "std::memory_order"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/memory_model", title: "Memory model"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/atomic/memory_order", title: "memory_order"}
+        values:
+          - {id: data_race_undefined, ru: Гонка данных — неопределённое поведение, en: data races are undefined behavior}
+          - {id: data_race_defined, ru: Гонка данных имеет ограниченную определённую семантику, en: data races have bounded defined semantics}
+          - {id: races_prevented, ru: Гонки данных исключены статически, en: data races statically prevented}
+          - {id: explicit_ordering, ru: Явно выбираемое упорядочивание атомарных операций, en: explicit atomic memory ordering}
+
   - id: errors
     ru: Каналы ошибок
     en: Error channels
@@ -510,7 +794,12 @@ categories:
       - id: errors.model
         slug: errors-model
         ru: Представление и передача ошибок
-        en: Error representation and propagation
+        en: Error handling
+        en_aliases: [exceptions, result types, error codes]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/exceptions", title: "Exceptions"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/utility/expected", title: "std::expected"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/error", title: "Error handling"}
         kind: choice
         values:
           - {id: exceptions, ru: Исключения, en: exceptions}
@@ -525,12 +814,20 @@ categories:
         legacy_slugs: [errors-checked]
         ru: Проверяемые исключения
         en: Checked exceptions
+        en_aliases: [exception specifications]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/except_spec", title: "Dynamic exception specification (until C++17)"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/noexcept_spec", title: "noexcept specifier"}
         kind: bool
         note: "Статическое требование catch/throws для исключений; Result в возвращаемом типе — другой механизм."
       - id: errors.must_use
         slug: errors-must-use
         ru: Диагностика неиспользованного результата
         en: Unused-result diagnostics
+        en_aliases: [nodiscard, "must_use", "warn_unused_result"]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/attributes/nodiscard", title: "C++ attribute: nodiscard"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/attributes/nodiscard", title: "C attribute: nodiscard"}
         kind: choice
         values:
           - {id: absent, ru: Нет специальной диагностики, en: no dedicated diagnostic}
@@ -547,6 +844,10 @@ categories:
         legacy_slugs: [errors-finally]
         ru: Освобождение ресурсов
         en: Resource cleanup
+        en_aliases: [RAII, deterministic destruction, finally, defer]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/raii", title: "RAII"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/destructor", title: "Destructors"}
         kind: choice
         values:
           - {id: finally, ru: Блок finally / unwind-protect, en: finally / unwind-protect}
@@ -560,7 +861,11 @@ categories:
         slug: resources-io
         legacy_slugs: [req-4]
         ru: Интерфейс ввода-вывода
-        en: I/O interface
+        en: Input/output
+        en_aliases: ["I/O library"]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/io", title: "Input/output library"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/io", title: "File input/output"}
         kind: choice
         values:
           - {id: builtin, ru: Встроенные функции, en: built-in functions}
@@ -570,6 +875,10 @@ categories:
         slug: resources-concurrency
         ru: Конкурентное выполнение
         en: Concurrency
+        en_aliases: [threads, "async/await", actors]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/thread", title: "Concurrency support library"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/thread", title: "Concurrency support library"}
         kind: choice
         values:
           - {id: threads, ru: Потоки, en: threads}
@@ -581,6 +890,7 @@ categories:
         slug: resources-communication-coupling
         ru: Синхронизация отправки и приёма
         en: Send and receive coupling
+        en_aliases: [asynchronous message passing, rendezvous, synchronous channels]
         kind: choice
         note: "Асинхронная отправка в mailbox не требует одновременного receive; rendezvous завершает коммуникацию при встрече отправителя и получателя по небуферизованному каналу. Это не выбор сообщения, не модель времени и не гарантия доставки/fairness. Свидетели — Erlang/OTP и occam 2; scheduler архивного occam runtime не обобщается на язык."
         values:
@@ -593,6 +903,7 @@ categories:
         slug: resources-receive-selection
         ru: Выбор сообщения из очереди
         en: Message selection from a queue
+        en_aliases: [selective receive]
         kind: choice
         note: "Selective receive ищет первое подходящее сообщение, сохраняя более ранние неподходящие; head-only допускает извлечение только головы очереди. Асинхронный mailbox сам по себе не задаёт эту политику. Значение head_only — контраст для документирования, а не утверждение об occam: к rendezvous без очереди эта ось неприменима."
         values:
@@ -610,6 +921,10 @@ categories:
         legacy_slugs: [variants-5]
         ru: Границы синтаксических групп
         en: Syntactic grouping boundaries
+        en_aliases: [block delimiters, compound statement, off-side rule]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/statements", title: "Statements"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/statements", title: "Statements"}
         kind: choice
         values:
           - {id: explicit, ru: Явные разделители, en: explicit delimiters}
@@ -618,7 +933,11 @@ categories:
       - id: syntax.statement_terminator
         slug: syntax-statement-terminator
         ru: Границы операторов и определений
-        en: Statement and definition boundaries
+        en: Statement terminators
+        en_aliases: [statement separators, automatic semicolon insertion]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/statements", title: "Statements"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/statements", title: "Statements"}
         kind: choice
         values:
           - {id: semicolon, ru: Точка с запятой, en: semicolon}
@@ -629,12 +948,21 @@ categories:
       - id: syntax.case_sensitive
         slug: syntax-case-sensitive
         ru: Чувствительность имён к регистру
-        en: Identifier case sensitivity
+        en: Case sensitivity
+        en_aliases: [identifier case sensitivity]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/identifiers", title: "Identifiers"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/identifier", title: "Identifier"}
         kind: bool
       - id: syntax.metaprogramming
         slug: syntax-metaprogramming
         ru: Метапрограммирование
         en: Metaprogramming
+        en_aliases: [macros, reflection, compile-time evaluation]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/preprocessor/replace", title: "Replacing text macros"}
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/template_metaprogramming", title: "Template Metaprogramming"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/preprocessor/replace", title: "Replacing text macros"}
         kind: choice
         values:
           - {id: textual_macros, ru: Текстовые макросы, en: textual macros}
@@ -647,6 +975,10 @@ categories:
         slug: syntax-macro-hygiene
         ru: Гигиена макросов
         en: Macro hygiene
+        en_aliases: [hygienic macros, variable capture]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/preprocessor/replace", title: "Replacing text macros"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/preprocessor/replace", title: "Replacing text macros"}
         kind: choice
         note: "Ось описывает защиту связываний от непреднамеренного захвата имён при раскрытии, независимо от textual/syntactic/procedural формы трансформера. R7RS syntax-rules сохраняет лексические связывания; негигиеничный механизм требует ручного предотвращения capture. Намеренное нарушение гигиены нужно описывать для конкретного API, не выводить из слова macro."
         values:
@@ -658,6 +990,7 @@ categories:
         slug: syntax-program-representation
         ru: Нотация исходной программы
         en: Source program notation
+        en_aliases: [visual programming language]
         kind: choice
         note: "Текст или структурный граф являются исходной программой, а не иллюстрацией, AST компилятора или визуализацией отладчика. Нотация независима от dataflow semantics: не каждый графический язык имеет правило готовности G. G — язык, LabVIEW — среда; для Prograph/Marten подтверждена графическая нотация, но не все правила исполнения."
         values:
@@ -674,7 +1007,8 @@ categories:
       - id: paradigm.supported
         slug: paradigm-supported
         ru: Поддерживаемые парадигмы
-        en: Supported paradigms
+        en: Programming paradigms
+        en_aliases: [supported paradigms]
         kind: choice
         values:
           - {id: imperative, ru: Императивная, en: imperative}
@@ -693,6 +1027,7 @@ categories:
         slug: data-collection-multiplicity
         ru: Кратность элементов коллекции
         en: Collection multiplicity
+        en_aliases: [set semantics, bag semantics, multiset]
         kind: choice
         note: "Set хранит присутствие элемента, bag — число вхождений, sequence — отдельные позиционные вхождения. Ось задаёт модель конкретной коллекции или результата операции, а не всех данных языка: SQL SELECT ALL сохраняет дубли, DISTINCT устраняет их. Порядок выдачи строк и ORDER BY описываются отдельно; SQL bag не превращается в sequence из-за порядка конкретного плана."
         values:
@@ -707,6 +1042,10 @@ categories:
         slug: data-numeric-radix
         ru: Основание числового представления
         en: Numeric representation radix
+        en_aliases: [binary floating point, decimal arithmetic]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/types", title: "Fundamental types"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/arithmetic_types", title: "Arithmetic types"}
         kind: choice
         note: "Binary/decimal относится к представлению и арифметике конкретного числового типа, а не к записи литерала. Основание независимо от точности и fixed/floating scale: десятичное число не обязательно имеет фиксированный масштаб. COBOL PICTURE с V задаёт десятичные позиции и подразумеваемую точку; Python float — двоичное представление."
         values:
@@ -719,6 +1058,10 @@ categories:
         slug: data-numeric-precision
         ru: Ограничение числовой точности
         en: Numeric precision bound
+        en_aliases: [arbitrary-precision arithmetic, bignum, fixed-width integers]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/types", title: "Fundamental types"}
+          - {source: cppreference, languages: [c], url: "https://cppreference.com/c/language/arithmetic_types", title: "Arithmetic types"}
         kind: choice
         note: "Fixed precision ограничивает число разрядов выбранным типом/объявлением; arbitrary precision позволяет увеличивать его по значению или настраиваемому контексту в пределах ресурсов. Это не fixed point: положение точки, rounding и overflow описываются отдельно. Python int точен без фиксированной разрядности, decimal.Decimal использует контекст точности стандартной библиотеки; COBOL PIC ограничивает число позиций поля."
         values:
@@ -736,6 +1079,7 @@ categories:
         slug: computation-rule-semantics
         ru: Смысл применения правил
         en: Rule application semantics
+        en_aliases: [fixpoint semantics, constraint handling rules]
         kind: choice
         note: "Поиск решает заданную цель, fixed-point deduction задаёт замыкание отношений, committed rewriting меняет store без возврата к отвергнутому правилу. Это семантика конкретного ядра/профиля, не алгоритм реализации: top-down/bottom-up и tabling не подменяют определение результата. Наименьшая неподвижная точка здесь относится к положительному конечному Datalog без порождения новых значений; CHR может удалять ограничения и не обязан вычислять такое замыкание."
         values:
@@ -751,6 +1095,7 @@ categories:
         slug: computation-instantiation-modes
         ru: Режимы связанности аргументов
         en: Argument instantiation modes
+        en_aliases: [modes, mode system]
         kind: choice
         note: "Режим описывает состояние аргумента до и после вызова: например, Mercury in соответствует ground→ground, out — free→ground. Mode mapping независим от типа, by-reference передачи и числа решений. Точные допустимые структуры inst и ограничения реализации задаются в профиле."
         values:
@@ -763,6 +1108,7 @@ categories:
         slug: computation-solution-cardinality
         ru: Объявленная кратность решений
         en: Declared solution cardinality
+        en_aliases: [determinism categories]
         kind: choice
         note: "Классификация числа решений и допустимости failure относится к конкретному mode вызова. Mercury det — одно решение, semidet — ноль или одно, multi — одно или больше, nondet — ноль или больше. Гарантия условна для возвращающихся вызовов: det не доказывает завершение, отсутствие исключений или детерминированный порядок планирования потоков."
         values:
@@ -776,6 +1122,7 @@ categories:
         slug: computation-time-domain
         ru: Временная область модели
         en: Model time domain
+        en_aliases: [synchronous time, discrete-event simulation, hybrid systems]
         kind: choice
         note: "Логические такты потоков Lustre, дискретное время HDL-симуляции и непрерывная динамика с событиями Modelica — разные смыслы времени. Hybrid сочетает непрерывную эволюцию и дискретные события. Область времени не определяет deadline реального времени, rendezvous, scheduler или реализуемость модели; при отсутствии встроенного времени нужна контекстная запись, а не вывод по пропуску данных."
         values:
@@ -791,6 +1138,7 @@ categories:
         slug: computation-equation-causality
         ru: Направленность уравнений и присваиваний
         en: Equation and assignment causality
+        en_aliases: [acausal modeling, equation-based modeling]
         kind: choice
         note: "Присваивание обновляет выбранную цель; направленное уравнение потока задаёт выход через входы; ненаправленная система уравнений задаёт отношения для совместного решения. Modelica equation с = не является algorithm assignment с :=. Уравнения не обещают существования или единственности решения; Lustre clocks и HDL очереди обновлений описываются отдельными осями."
         values:
@@ -804,6 +1152,7 @@ categories:
         slug: computation-update-scheduling
         ru: Планирование обновлений в HDL-симуляции
         en: HDL simulation update scheduling
+        en_aliases: [blocking assignment, nonblocking assignment]
         kind: choice
         note: "В процедурном Verilog blocking assignment без задержки обновляет цель перед следующим оператором; nonblocking assignment вычисляет RHS и планирует применение значения позже. Ось описывает симуляционное обновление, не форму множественного присваивания и не порядок потоков. Источник — Icarus; точные IEEE event regions, delays и synthesizable subset требуют отдельного версионного профиля."
         values:
@@ -821,6 +1170,7 @@ categories:
         slug: verification-totality
         ru: Режим гарантии тотальности
         en: Totality guarantee policy
+        en_aliases: [totality checking, termination checking]
         kind: choice
         note: "Ось задаёт обязательность проверки тотальности для определения/профиля, а не наличие dependent types. Нужно явно назвать проверяемые обязательства: coverage, termination либо productivity для corecursion. Idris 2 covering не равен total; Agda допускает отключения/утверждения вне safe-профиля. Принятая через escape hatch тотальность не считается доказанной; checked_required относится лишь к области, где профиль действительно требует все заявленные проверки."
         values:
@@ -835,6 +1185,9 @@ categories:
         slug: verification-behavioral-contracts
         ru: Поведенческие контракты
         en: Behavioral contracts
+        en_aliases: [design by contract, preconditions and postconditions, contract assertions]
+        references:
+          - {source: cppreference, languages: [cpp], url: "https://cppreference.com/cpp/language/contracts", title: "Contract assertions (C++26)"}
         kind: choice
         note: "Предикаты допустимого входа, результата/перехода состояния и инвариантов объекта. Это не abstraction.contracts: interfaces/traits задают контракт полиморфизма, а не такие предикаты. Наличие require/ensure/Pre/Post не означает доказательство: runtime monitoring, assertion policy и статический proof tool фиксируются отдельно с layer/profile; old обозначает состояние до вызова."
         values:
@@ -845,3 +1198,61 @@ categories:
           - {url: "https://www.eiffel.org/doc/eiffel/ET-_Design_by_Contract_(tm),_Assertions_and_Exceptions", title: "Eiffel — Design by Contract: assertions, old and monitoring"}
           - {url: "https://www.adaic.org/resources/add_content/standards/12rm/html/RM-6-1-1.html", title: "Ada 2012 RM §6.1.1 — preconditions, postconditions and assertion policy"}
           - {url: "https://docs.adacore.com/spark2014-docs/html/ug/en/spark_2014.html", title: "SPARK User's Guide — language subset, contracts and GNATprove boundaries"}
+
+  - id: tooling
+    ru: Инструменты построения языковых процессоров
+    en: Language implementation tooling
+    note: "Свойства реализаций и инструментов, а не семантики языка: значения в карточках указываются со слоем implementation или tooling."
+    concepts:
+      - id: tooling.parser_construction
+        slug: tooling-parser-construction
+        ru: Способ построения синтаксического анализатора
+        en: Parser construction
+        en_aliases: [parser generator, compiler-compiler, hand-written parser, parser combinators]
+        kind: choice
+        note: "Как получен анализатор: написан вручную, сгенерирован по грамматике, собран из функций-комбинаторов или построен интерпретацией грамматики во время выполнения. Ось независима от алгоритма разбора (tooling.parsing_algorithm): рукописный рекурсивный спуск и сгенерированный ANTLR-парсер оба нисходящие. Для языка из каталога значение описывает конкретную реализацию (layer: implementation), а не язык."
+        references:
+          - {source: antlr, url: "https://www.antlr.org/", title: "ANTLR"}
+          - {source: lark, url: "https://lark-parser.readthedocs.io/en/latest/", title: "Lark documentation"}
+          - {source: bison, url: "https://www.gnu.org/software/bison/manual/", title: "Bison manual"}
+          - {source: tree-sitter, url: "https://tree-sitter.github.io/tree-sitter/", title: "Tree-sitter"}
+          - {source: pep-617, languages: [python], url: "https://peps.python.org/pep-0617/", title: "PEP 617 — New PEG parser for CPython"}
+        values:
+          - {id: hand_written, ru: Рукописный анализатор, en: hand-written parser}
+          - {id: generated, ru: Генератор по грамматике, en: parser generator}
+          - {id: combinators, ru: Парсер-комбинаторы, en: parser combinators}
+          - {id: interpreted_grammar, ru: Грамматика интерпретируется во время выполнения, en: runtime grammar interpretation}
+      - id: tooling.parsing_algorithm
+        slug: tooling-parsing-algorithm
+        ru: Алгоритм синтаксического анализа
+        en: Parsing algorithm
+        en_aliases: ["LL(k)", "ALL(*)", "LALR(1)", GLR, Earley, PEG, packrat]
+        kind: choice
+        note: "Класс алгоритма определяет, какие грамматики принимаются без переписывания (левая рекурсия, неоднозначность), как сообщаются конфликты и какую сложность ожидать. PEG задаёт упорядоченный выбор и поэтому не бывает неоднозначной, но может молча отбросить альтернативу; GLR и Earley принимают любую КС-грамматику и могут вернуть лес разборов. Способ получения анализатора — tooling.parser_construction."
+        references:
+          - {source: parr-allstar-2014, url: "https://www.antlr.org/papers/allstar-techreport.pdf", title: "Adaptive LL(*) Parsing (tech report)"}
+          - {source: ford-peg-2004, url: "https://bford.info/pub/lang/peg.pdf", title: "Parsing Expression Grammars"}
+          - {source: lark, url: "https://lark-parser.readthedocs.io/en/latest/parsers.html", title: "Lark — Parsers: Earley, LALR(1), CYK"}
+          - {source: bison, url: "https://www.gnu.org/software/bison/manual/html_node/LR-Table-Construction.html", title: "Bison — LR Table Construction"}
+        values:
+          - {id: ll, ru: "Нисходящий LL(k) и рекурсивный спуск", en: "LL(k) / recursive descent"}
+          - {id: adaptive_ll, ru: Адаптивный LL(*) с анализом во время разбора, en: "adaptive LL(*) (ALL(*))"}
+          - {id: lr, ru: "Восходящий LR(1) / LALR(1) / IELR(1)", en: "LR(1) / LALR(1)"}
+          - {id: generalized, ru: "Обобщённый разбор любой КС-грамматики (GLR, Earley)", en: "generalized parsing (GLR, Earley)"}
+          - {id: peg, ru: "Грамматики разбирающих выражений с упорядоченным выбором", en: "PEG / packrat"}
+      - id: tooling.language_workbench
+        slug: tooling-language-workbench
+        ru: Языковой верстак
+        en: Language workbench
+        en_aliases: [language oriented programming, projectional editor, DSL workbench]
+        kind: choice
+        note: "Инструмент, в котором язык задаётся схемой (абстрактным синтаксисом), редакторами и генераторами или интерпретаторами, а среда разработки для языка получается из этих определений. Термин ввёл М. Фаулер (2005). Значения — способ редактирования программ на создаваемом языке; один верстак может поддерживать несколько. Генератор парсеров даёт только анализатор, а не редактор, разрешение имён, проверки и генерацию кода."
+        references:
+          - {source: fowler-lw-2005, url: "https://martinfowler.com/articles/languageWorkbench.html", title: "Language Workbenches: The Killer-App for Domain Specific Languages?"}
+          - {source: erdweg-lwc-2013, url: "https://homepages.cwi.nl/~storm/publications/lwc13paper.pdf", title: "The State of the Art in Language Workbenches (preprint)"}
+          - {source: freon, url: "https://www.freon4dsl.dev/", title: "Freon"}
+        values:
+          - {id: free_form_text, ru: Текстовое редактирование с разбором, en: free-form textual editing}
+          - {id: projectional, ru: Проекционное редактирование дерева, en: projectional editing}
+          - {id: graphical, ru: Графические диаграммы, en: graphical notation}
+

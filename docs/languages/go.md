@@ -11,7 +11,7 @@ publish: true
 
 Go — компилируемый императивный язык со статической типизацией, сборкой мусора и встроенными в язык горутинами и каналами. Интерфейсы реализуются структурно, без объявления `implements`; наследования реализации нет, а ошибки обычно возвращаются как значения типа `error`. Описан срез по спецификации языка go1.27 и стандартной библиотеке; свойства компилятора gc и утилит отмечены отдельными слоями.
 
-*Карточка сравнительная: 38/74 понятий* — [как читать отметку](index.md#как-читать-карточку).
+*Карточка сравнительная: 40/85 понятий* — [как читать отметку](index.md#как-читать-карточку).
 
 ## Метаданные { #meta }
 
@@ -34,10 +34,6 @@ Go — компилируемый императивный язык со ста�
 | Go 1.18 | 2022-03-15 | выпуск | [Go 1.18 Release Notes](https://go.dev/doc/go1.18) (получено 2026-09-25) |
 | Go 1.27 — актуальная | 2026-08-19 | выпуск | [Go — Release History](https://go.dev/doc/devel/release) (получено 2026-09-25) |
 
-## Статьи { #articles }
-
-- [Go: сознательная бедность языка](../garden/go-simplicity.md)
-
 ## Люди { #people }
 
 - [Кен Томпсон](people.md#thompson) — Соавтор Unix и языка B в Bell Labs; один из трёх авторов Go в Google.
@@ -48,6 +44,9 @@ Go — компилируемый императивный язык со ста�
 
 - Роб Пайк, Роберт Гризмер, Кен Томпсон, Russ Cox, Ian Lance Taylor. *The Go Programming Language and Environment*. Communications of the ACM 65(5), 2022. DOI: [10.1145/3488716](https://doi.org/10.1145/3488716). Авторы Go о целях языка — масштаб разработки, простота, инструменты — и о сознательно не включённых возможностях. ([в источниках](sources.md#go-cacm-2022))
 - Роб Пайк. [Go at Google: Language Design in the Service of Software Engineering](https://go.dev/talks/2012/splash.article). SPLASH 2012, 2012. DOI: [10.1145/2384716.2384720](https://doi.org/10.1145/2384716.2384720). Почему в Go нет исключений, наследования и перегрузки: язык проектировался под большие кодовые базы и команды. ([в источниках](sources.md#pike-go-at-google))
+- Rui Pereira, Marco Couto, Francisco Ribeiro, Rui Rua, Jácome Cunha, João Paulo Fernandes, João Saraiva. [Energy Efficiency across Programming Languages: How Do Energy, Time, and Memory Relate?](https://greenlab.di.uminho.pt/wp-content/uploads/2017/10/sleFinal.pdf). SLE 2017, 2017. DOI: [10.1145/3136014.3136031](https://doi.org/10.1145/3136014.3136031). Измерения энергии, времени и памяти для 27 языков на задачах Benchmarks Game — материал к критерию «стоимость»; обсуждайте вместе с ограничениями методики. ([в источниках](sources.md#pereira-energy-2017))
+- Russ Cox. [Programming Language Memory Models](https://research.swtch.com/plmm). 2021. Как Java, C++, JavaScript, Rust и Go определяют семантику разделяемой памяти и атомарных операций и почему это трудно. ([в источниках](sources.md#cox-memory-models))
+- [Introduction to the Go compiler (cmd/compile/README.md)](https://go.dev/src/cmd/compile/README.md). Фазы gc: рукописный парсер, types2, Unified IR, SSA; оптимизации и выбор инструкций записаны DSL-правилами _gen/*.rules, из которых генерируется код. ([в источниках](sources.md#go-compile-readme))
 
 ## Концепции { #concepts }
 
@@ -68,7 +67,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Введение связывания { #bindings-introduction }
 
-*Binding introduction* · [в онтологии](concepts.md#bindings-introduction)
+англ. *Binding introduction* (также *declaration*, *name binding*) · [в онтологии](concepts.md#bindings-introduction)
 
 - **Явное объявление (layer: language, profile: go127)** — Имена вводятся объявлениями `var`, `const`, `type`, `func` и короткой формой `x := expr`. `:=` — тоже объявление: слева должно быть хотя бы одно новое имя в текущем блоке. ([Go spec — Short variable declarations](https://go.dev/ref/spec#Short_variable_declarations); [Go spec — Variable declarations](https://go.dev/ref/spec#Variable_declarations))
 
@@ -76,7 +75,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms* · [в онтологии](concepts.md#bindings-assignment)
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*) · [в онтологии](concepts.md#bindings-assignment)
 
 - **Одиночное присваивание (layer: language, profile: go127)**
 - **Распаковка при присваивании (layer: language, profile: go127)** — Кортежное присваивание `a, b = b, a` и приём нескольких результатов вызова `v, err := f()`. Операнды вычисляются до присваиваний; распаковки структур или срезов по образцу нет. ([Go spec — Assignment statements](https://go.dev/ref/spec#Assignment_statements))
@@ -85,7 +84,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Правило разрешения имён { #scope-resolution }
 
-*Name resolution* · [в онтологии](concepts.md#scope-resolution)
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*) · [в онтологии](concepts.md#scope-resolution)
 
 - **Лексическое (layer: language, profile: go127)** ([Go spec — Declarations and scope](https://go.dev/ref/spec#Declarations_and_scope))
 
@@ -93,7 +92,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs* · [в онтологии](concepts.md#scope-constructs)
+англ. *Scoping constructs* (также *scope*, *block scope*) · [в онтологии](concepts.md#scope-constructs)
 
 - **Блок (layer: language, profile: go127)** — Блоки в фигурных скобках, а также неявные блоки `if`, `for`, `switch` и каждой ветви `case`; блоки вселенной, пакета и файла входят в ту же иерархию. ([Go spec — Blocks](https://go.dev/ref/spec#Blocks))
 - **Модуль (layer: language, profile: go127, applies_to: блок пакета и блок файла)** — Объявления верхнего уровня видимы во всём пакете; имена импортируемых пакетов — только в файле с импортом.
@@ -102,7 +101,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing* · [в онтологии](concepts.md#scope-shadowing)
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*) · [в онтологии](concepts.md#scope-shadowing)
 
 - **Во вложенной области (layer: language, profile: go127)** — Объявление во вложенном блоке скрывает внешнее, например `err` внутри `if`. Повтор имени в `:=` в том же блоке не создаёт новую переменную, а присваивает уже объявленной.
 
@@ -110,13 +109,13 @@ Go — компилируемый императивный язык со ста�
 
 #### Проверка типов { #typing-checking }
 
-*Type checking* · [в онтологии](concepts.md#typing-checking)
+англ. *Type checking* (также *static typing*, *dynamic typing*) · [в онтологии](concepts.md#typing-checking)
 
 - **Статическая (layer: language, profile: go127)** — Типы проверяются компилятором; утверждение типа `x.(T)` и type switch проверяют динамический тип значения интерфейса во время выполнения.
 
 #### Вывод статических типов { #typing-inference }
 
-*Static type inference* · [в онтологии](concepts.md#typing-inference)
+англ. *Type inference* (также *type deduction*) · [в онтологии](concepts.md#typing-inference)
 
 - **да (layer: language, profile: go127)** — Тип переменной выводится из инициализатора в `var x = e` и `x := e`; с Go 1.18 выводятся и аргументы типов обобщённых функций. Параметры и результаты функций аннотируются всегда. ([Go spec — Type inference](https://go.dev/ref/spec#Type_inference))
 
@@ -125,26 +124,26 @@ Go — компилируемый императивный язык со ста�
 
 #### Преобразования типов { #typing-conversions }
 
-*Type conversions* · [в онтологии](concepts.md#typing-conversions)
+англ. *Type conversions* (также *type coercion*, *type casting*) · [в онтологии](concepts.md#typing-conversions)
 
 - **Явные (layer: language, profile: go127)** — Смешивать разные числовые типы нельзя, даже `int` и `int64`: нужна явная конверсия `T(x)`. Нетипизированные константы неявно принимают нужный тип, если значение в нём представимо. ([Go spec — Conversions](https://go.dev/ref/spec#Conversions); [Go spec — Representability](https://go.dev/ref/spec#Representability))
 
 #### Совместимость типов { #typing-compatibility }
 
-*Type compatibility* · [в онтологии](concepts.md#typing-compatibility)
+англ. *Type compatibility* (также *type equivalence*, *nominal typing*, *structural typing*, *duck typing*) · [в онтологии](concepts.md#typing-compatibility)
 
 - **Номинальная (layer: language, profile: go127, applies_to: определённые (именованные) типы)** — `type Celsius float64` вводит новый тип, отличный от `float64`; присваивание между ними требует конверсии. ([Go spec — Type identity](https://go.dev/ref/spec#Type_identity))
 - **Структурная (layer: language, profile: go127, applies_to: реализация интерфейсов и идентичность безымянных составных типов)** — Тип реализует интерфейс, если его набор методов содержит методы интерфейса; объявлять это не нужно. Безымянные типы-литералы с одинаковой структурой идентичны. ([Go spec — Implementing an interface](https://go.dev/ref/spec#Implementing_an_interface); [Go spec — Assignability](https://go.dev/ref/spec#Assignability))
 
 #### Типы-произведения { #typing-product-types }
 
-*Product types* · [в онтологии](concepts.md#typing-product-types)
+англ. *Product types* (также *tuples*, *records*, *structs*) · [в онтологии](concepts.md#typing-product-types)
 
 - **Записи и структуры (layer: language, profile: go127)** — `struct` с именованными и встроенными полями; значения создаются составными литералами `Point{X: 1, Y: 2}`. Несколько результатов функции — не тип-кортеж: их нельзя сохранить в одну переменную. ([Go spec — Struct types](https://go.dev/ref/spec#Struct_types); [Go spec — Composite literals](https://go.dev/ref/spec#Composite_literals))
 
 #### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value* · [в онтологии](concepts.md#typing-nullability)
+англ. *Nullability* (также *null reference*, *option type*) · [в онтологии](concepts.md#typing-nullability)
 
 - **Специальное значение (layer: language, profile: go127)** — `nil` — нулевое значение указателей, срезов, отображений, каналов, функций и интерфейсов. Числа, строки, массивы и структуры не бывают `nil`: они имеют собственные нулевые значения. ([Go spec — The zero value](https://go.dev/ref/spec#The_zero_value))
 
@@ -154,13 +153,13 @@ Go — компилируемый императивный язык со ста�
 
 #### Условный выбор { #control-selection }
 
-*Conditional selection* · [в онтологии](concepts.md#control-selection)
+англ. *Conditional selection* (также *selection statement*, *conditional expression*) · [в онтологии](concepts.md#control-selection)
 
 - **Условный оператор (layer: language, profile: go127)** — `if` с необязательным оператором инициализации `if v, ok := m[k]; ok {…}`. Тернарного условного выражения нет. ([Go spec — If statements](https://go.dev/ref/spec#If_statements); [Go FAQ — Does Go have the ?: operator?](https://go.dev/doc/faq#Does_Go_have_a_ternary_form))
 
 #### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection* · [в онтологии](concepts.md#control-switch)
+англ. *Switch statement* (также *case statement*, *multiway branch*) · [в онтологии](concepts.md#control-switch)
 
 - **да (layer: language, profile: go127)** — Выражение-switch с произвольными выражениями в `case` и type switch по динамическому типу. Переход в следующую ветвь только явным `fallthrough`. ([Go spec — Switch statements](https://go.dev/ref/spec#Switch_statements))
 
@@ -168,7 +167,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Цикл до истинности условия { #control-until }
 
-*Until loop* · [в онтологии](concepts.md#control-until)
+англ. *Until loop* (также *repeat-until loop*) · [в онтологии](concepts.md#control-until)
 
 - **Отдельная конструкция отсутствует (layer: language, profile: go127)** — `for` — единственный оператор цикла; отдельных `while`, `until` и `repeat` нет.
 
@@ -176,7 +175,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Цикл do-while с постусловием { #control-do-while }
 
-*Post-test do-while loop* · [в онтологии](concepts.md#control-do-while)
+англ. *Do-while loop* (также *post-test loop*) · [в онтологии](concepts.md#control-do-while)
 
 - **нет (layer: language, profile: go127)** — Цикл с постусловием имитируют `for { …; if !cond { break } }`.
 
@@ -184,7 +183,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Формы итерации { #control-iteration }
 
-*Iteration forms* · [в онтологии](concepts.md#control-iteration)
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*) · [в онтологии](concepts.md#control-iteration)
 
 - **Инициализация / условие / шаг (layer: language, profile: go127)** — `for init; cond; post {}`; с Go 1.22 каждая итерация получает собственную переменную цикла. Форма `for cond {}` заменяет while. ([Go spec — For statements](https://go.dev/ref/spec#For_statements))
 - **По последовательности или итератору (layer: language, profile: go127)** — `for k, v := range x` по массивам, срезам, строкам (по рунам), отображениям, каналам, целым числам и функциям-итераторам; последние две формы появились в Go 1.22–1.23. ([Go spec — For statements with range clause](https://go.dev/ref/spec#For_range))
@@ -195,7 +194,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading* · [в онтологии](concepts.md#subprograms-overloading)
+англ. *Function overloading* (также *overloading*, *operator overloading*) · [в онтологии](concepts.md#subprograms-overloading)
 
 - **нет (layer: language, profile: go127)** — Функции и методы не перегружаются по сигнатуре: имя в блоке уникально. ([Go FAQ — Why does Go not support overloading?](https://go.dev/doc/faq#overloading))
 
@@ -203,37 +202,37 @@ Go — компилируемый императивный язык со ста�
 
 #### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing* · [в онтологии](concepts.md#subprograms-parameter-passing)
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*) · [в онтологии](concepts.md#subprograms-parameter-passing)
 
 - **По значению (layer: language, profile: go127)** — Аргументы, включая структуры и массивы, копируются. Срез, отображение, канал и указатель копируются как дескрипторы, поэтому изменения данных через них видны вызывающему. ([Go FAQ — When are function parameters passed by value?](https://go.dev/doc/faq#pass_by_value))
 
 #### Захват окружения { #subprograms-closures }
 
-*Closure capture* · [в онтологии](concepts.md#subprograms-closures)
+англ. *Closures* (также *lambda capture*, *captured variables*) · [в онтологии](concepts.md#subprograms-closures)
 
 - **да (layer: language, profile: go127)** — Функциональные литералы захватывают переменные охватывающей функции по ссылке; захваченные переменные живут, пока доступно замыкание. ([Go spec — Function literals](https://go.dev/ref/spec#Function_literals))
 
 #### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions* · [в онтологии](concepts.md#subprograms-lambda)
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*) · [в онтологии](concepts.md#subprograms-lambda)
 
 - **да (layer: language, profile: go127)** — Функциональный литерал `func(x int) int { return x * 2 }`; вложенные именованные объявления `func` внутри функции запрещены.
 
 #### Параметрический полиморфизм { #subprograms-generics }
 
-*Parametric polymorphism* · [в онтологии](concepts.md#subprograms-generics)
+англ. *Parametric polymorphism* (также *generics*, *templates*) · [в онтологии](concepts.md#subprograms-generics)
 
 - **да (с Go 1.18 включительно, layer: language, profile: go127)** — Параметры типов у функций и типов; ограничения — интерфейсы, в том числе с наборами типов `~int | ~float64`. Методы не могут иметь собственных параметров типов. ([Go spec — Type parameter declarations](https://go.dev/ref/spec#Type_parameter_declarations); [Go spec — Type constraints](https://go.dev/ref/spec#Type_constraints))
 
 #### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments* · [в онтологии](concepts.md#subprograms-default-args)
+англ. *Default arguments* (также *optional parameters*) · [в онтологии](concepts.md#subprograms-default-args)
 
 - **нет (layer: language, profile: go127)** — Все параметры обязательны; вариативный последний параметр `...T` и паттерн «функциональных опций» — замена, а не аргументы по умолчанию.
 
 #### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments* · [в онтологии](concepts.md#subprograms-named-args)
+англ. *Named arguments* (также *keyword arguments*) · [в онтологии](concepts.md#subprograms-named-args)
 
 - **нет (layer: language, profile: go127)** — Аргументы сопоставляются только по позиции; именованные поля есть лишь в составных литералах структур. ([Go spec — Calls](https://go.dev/ref/spec#Calls))
 
@@ -241,26 +240,26 @@ Go — компилируемый императивный язык со ста�
 
 #### Контракты полиморфизма { #abstraction-contracts }
 
-*Polymorphic contracts* · [в онтологии](concepts.md#abstraction-contracts)
+англ. *Polymorphic contracts* (также *interfaces*, *traits*, *type classes*, *protocols*) · [в онтологии](concepts.md#abstraction-contracts)
 
 - **Интерфейсы (layer: language, profile: go127)** — Интерфейс задаёт набор методов и неявно удовлетворяется; с Go 1.18 интерфейсы также служат ограничениями параметров типов. ([Go spec — Interface types](https://go.dev/ref/spec#Interface_types))
 
 #### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch* · [в онтологии](concepts.md#abstraction-dispatch)
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*) · [в онтологии](concepts.md#abstraction-dispatch)
 
 - **Статическая (layer: language, profile: go127, applies_to: вызов метода конкретного типа)** — Метод выбирается по статическому типу получателя.
 - **По одному динамическому типу (layer: language, profile: go127, applies_to: вызов метода через значение интерфейса)** — Реализация выбирается по динамическому типу значения, хранящегося в интерфейсе.
 
 #### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance* · [в онтологии](concepts.md#abstraction-inheritance)
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*) · [в онтологии](concepts.md#abstraction-inheritance)
 
 - **Отсутствует (layer: language, profile: go127)** — Встраивание поля продвигает его методы во внешний тип, но это композиция: внешняя структура не становится подтипом встроенной, а метод встроенного типа не переопределяется виртуально. ([Go FAQ — Why is there no type inheritance?](https://go.dev/doc/faq#inheritance); [Go spec — Struct types (embedded fields, promoted methods)](https://go.dev/ref/spec#Struct_types))
 
 #### Модульность { #abstraction-modules }
 
-*Modules* · [в онтологии](concepts.md#abstraction-modules)
+англ. *Modules* (также *module system*, *namespaces*, *packages*) · [в онтологии](concepts.md#abstraction-modules)
 
 - **Пространства имён и пакеты (layer: language, profile: go127)** — Пакет — единица компиляции и пространство имён; импорт по пути, обращение через квалифицированный идентификатор `pkg.Name`. ([Go spec — Packages](https://go.dev/ref/spec#Packages))
 - **Явная граница экспорта (layer: language, profile: go127)** — Экспортируются идентификаторы верхнего уровня, поля и методы, имя которых начинается с заглавной буквы Unicode; отдельного списка экспорта нет. ([Go spec — Exported identifiers](https://go.dev/ref/spec#Exported_identifiers))
@@ -269,7 +268,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Гарантированное устранение хвостовых вызовов { #evaluation-tail-calls }
 
-*Guaranteed tail-call elimination* · [в онтологии](concepts.md#evaluation-tail-calls)
+англ. *Tail-call elimination* (также *proper tail calls*, *tail-call optimization*) · [в онтологии](concepts.md#evaluation-tail-calls)
 
 - **нет (layer: language, profile: go127)** — Спецификация не требует устранения хвостовых вызовов; глубокая рекурсия расходует растущий стек горутины.
 
@@ -277,7 +276,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Освобождение памяти { #memory-management }
 
-*Memory reclamation* · [в онтологии](concepts.md#memory-management)
+англ. *Memory management* (также *memory reclamation*, *garbage collection*, *reference counting*) · [в онтологии](concepts.md#memory-management)
 
 - **Трассирующая сборка мусора (layer: language, profile: go127)** — Спецификация называет язык garbage-collected: явного освобождения памяти нет. Алгоритм (конкурентный трассирующий сборщик gc) — свойство реализации. ([Go spec — Introduction](https://go.dev/ref/spec#Introduction); [A Guide to the Go Garbage Collector](https://go.dev/doc/gc-guide))
 
@@ -285,7 +284,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation* · [в онтологии](concepts.md#errors-model)
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*) · [в онтологии](concepts.md#errors-model)
 
 - **Код ошибки (layer: language, profile: go127)** — Функция возвращает ошибку дополнительным результатом типа-интерфейса `error`, `nil` означает успех. Это не размеченный Result: обе компоненты существуют одновременно, и проверку `err != nil` компилятор не требует. ([Go spec — Errors](https://go.dev/ref/spec#Errors); [Go FAQ — Why does Go not have exceptions?](https://go.dev/doc/faq#exceptions))
 - **Паника (layer: language, profile: go127)** — `panic` раскручивает стек горутины, выполняя отложенные вызовы; `recover` внутри отложенной функции может остановить панику. Предназначена для программных ошибок, а не для обычного потока ошибок. ([Go spec — Handling panics](https://go.dev/ref/spec#Handling_panics); [Go spec — Run-time panics](https://go.dev/ref/spec#Run_time_panics))
@@ -296,20 +295,20 @@ Go — компилируемый императивный язык со ста�
 
 #### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup* · [в онтологии](concepts.md#resources-cleanup)
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*) · [в онтологии](concepts.md#resources-cleanup)
 
 - **Отложенный вызов при выходе (layer: language, profile: go127)** — `defer f.Close()` откладывает вызов до возврата из функции (не блока); аргументы вычисляются сразу, вызовы выполняются в обратном порядке, в том числе при панике. ([Go spec — Defer statements](https://go.dev/ref/spec#Defer_statements))
 
 #### Конкурентное выполнение { #resources-concurrency }
 
-*Concurrency* · [в онтологии](concepts.md#resources-concurrency)
+англ. *Concurrency* (также *threads*, *async/await*, *actors*) · [в онтологии](concepts.md#resources-concurrency)
 
 - **Потоки (layer: language, profile: go127)** — `go f()` запускает горутину — независимый поток управления в общем адресном пространстве. Горутины легковесны и мультиплексируются рантаймом на потоки ОС. ([Go spec — Go statements](https://go.dev/ref/spec#Go_statements))
 - **Передача сообщений (layer: language, profile: go127)** — Типизированные каналы `chan T`, операции `<-` и `select` для ожидания нескольких коммуникаций; мьютексы пакета `sync` — альтернатива на уровне стандартной библиотеки. ([Go spec — Channel types](https://go.dev/ref/spec#Channel_types); [Go spec — Select statements](https://go.dev/ref/spec#Select_statements))
 
 #### Синхронизация отправки и приёма { #resources-communication-coupling }
 
-*Send and receive coupling* · [в онтологии](concepts.md#resources-communication-coupling)
+англ. *Send and receive coupling* (также *asynchronous message passing*, *rendezvous*, *synchronous channels*) · [в онтологии](concepts.md#resources-communication-coupling)
 
 - **Синхронное рандеву по каналу (layer: language, profile: go127, applies_to: небуферизованные каналы)** — Отправка завершается только при встрече с получателем. Буферизованный канал — ограниченная FIFO-очередь, общая для любых горутин: отправка блокируется при заполнении, поэтому это не почтовый ящик процесса и значение asynchronous_mailbox не заявлено. ([Go spec — Channel types](https://go.dev/ref/spec#Channel_types))
 
@@ -319,19 +318,19 @@ Go — компилируемый императивный язык со ста�
 
 #### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries* · [в онтологии](concepts.md#syntax-blocks)
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*) · [в онтологии](concepts.md#syntax-blocks)
 
 - **Явные разделители (layer: language, profile: go127)** — Блоки ограничены фигурными скобками, обязательными даже для одного оператора в `if` и `for`.
 
 #### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries* · [в онтологии](concepts.md#syntax-statement-terminator)
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*) · [в онтологии](concepts.md#syntax-statement-terminator)
 
 - **Необязательная точка с запятой (layer: language, profile: go127)** — Грамматика использует `;`, но лексер автоматически вставляет её после строки, оканчивающейся идентификатором, литералом, `)`, `]`, `}` и некоторыми ключевыми словами. Поэтому `{` нельзя переносить на новую строку; `gofmt` задаёт единый стиль. ([Go spec — Semicolons](https://go.dev/ref/spec#Semicolons))
 
 #### Чувствительность имён к регистру { #syntax-case-sensitive }
 
-*Identifier case sensitivity* · [в онтологии](concepts.md#syntax-case-sensitive)
+англ. *Case sensitivity* (также *identifier case sensitivity*) · [в онтологии](concepts.md#syntax-case-sensitive)
 
 - **да (layer: language, profile: go127)** — Регистр первой буквы ещё и определяет экспорт: `Println` видим вне пакета, `println` — нет. ([Go spec — Identifiers](https://go.dev/ref/spec#Identifiers))
 
@@ -339,7 +338,7 @@ Go — компилируемый императивный язык со ста�
 
 #### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms* · [в онтологии](concepts.md#paradigm-supported)
+англ. *Programming paradigms* (также *supported paradigms*) · [в онтологии](concepts.md#paradigm-supported)
 
 - **Императивная (layer: language, profile: go127)**
 - **Процедурная (layer: language, profile: go127)**
@@ -349,7 +348,21 @@ Go — компилируемый императивный язык со ста�
 
 #### Ограничение числовой точности { #data-numeric-precision }
 
-*Numeric precision bound* · [в онтологии](concepts.md#data-numeric-precision)
+англ. *Numeric precision bound* (также *arbitrary-precision arithmetic*, *bignum*, *fixed-width integers*) · [в онтологии](concepts.md#data-numeric-precision)
 
 - **Фиксированная разрядность типа или поля (layer: language, profile: go127, applies_to: типизированные числовые значения)** — `int8`…`int64`, `uint*`, `float32/64`; разрядность `int` зависит от платформы (32 или 64 бита). Целочисленное переполнение заворачивается по модулю. ([Go spec — Numeric types](https://go.dev/ref/spec#Numeric_types); [Go spec — Integer overflow](https://go.dev/ref/spec#Integer_overflow))
 - **Нефиксированная заранее разрядность (layer: language, profile: go127, applies_to: нетипизированные константные выражения)** — Константы вычисляются точно при компиляции (реализация обязана поддерживать не менее 256 бит); `math/big` даёт такую арифметику во время выполнения на уровне библиотеки. ([Go spec — Constants](https://go.dev/ref/spec#Constants))
+
+### Инструменты построения языковых процессоров { #tooling }
+
+#### Способ построения синтаксического анализатора { #tooling-parser-construction }
+
+англ. *Parser construction* (также *parser generator*, *compiler-compiler*, *hand-written parser*, *parser combinators*) · [в онтологии](concepts.md#tooling-parser-construction)
+
+- **Рукописный анализатор (layer: implementation, profile: go127, implementation: gc (cmd/compile), go/parser)** — И компилятор, и пакет go/parser используют рукописные парсеры; выражения разбираются по приоритетам (parseBinaryExpr). ([go/parser/parser.go](https://go.dev/src/go/parser/parser.go); [cmd/compile/internal/syntax/parser.go](https://go.dev/src/cmd/compile/internal/syntax/parser.go))
+
+#### Алгоритм синтаксического анализа { #tooling-parsing-algorithm }
+
+англ. *Parsing algorithm* (также *LL(k)*, *ALL(*)*, *LALR(1)*, *GLR*, *Earley*, *PEG*, *packrat*) · [в онтологии](concepts.md#tooling-parsing-algorithm)
+
+- **Нисходящий LL(k) и рекурсивный спуск (layer: implementation, profile: go127, implementation: gc (cmd/compile), go/parser)**

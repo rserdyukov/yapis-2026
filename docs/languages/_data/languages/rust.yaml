@@ -291,6 +291,36 @@ concepts:
     - value: allowed
     - value: allowed_same_scope
       note: "повторный `let x` в той же области создаёт новую переменную (идиома для смены типа)"
+  evaluation.order:
+    - value: left_to_right
+      note: "Операнды большинства выражений вычисляются в порядке записи; у присваивания сначала вычисляется правая часть, затем место слева."
+      sources:
+        - {url: "https://doc.rust-lang.org/reference/expressions.html#evaluation-order-of-operands", title: "Rust Reference — Evaluation order of operands"}
+  evaluation.undefined_behavior:
+    - value: checked
+      profile: safe
+      note: "Безопасный код не может вызвать UB: выход за границы — паника, переполнение в debug — паника, в release — перенос."
+    - value: undefined
+      applies_to: unsafe-блоки и функции
+      note: "Нарушение контракта unsafe-операций — неопределённое поведение; ответственность на авторе unsafe-кода."
+      sources:
+        - {url: "https://doc.rust-lang.org/reference/behavior-considered-undefined.html", title: "Rust Reference — Behavior considered undefined"}
+  evaluation.compile_time:
+    - value: constant_expressions
+    - value: compile_time_functions
+      note: "const fn вычисляется при компиляции в константном контексте и вызывается во время выполнения."
+      sources:
+        - {url: "https://doc.rust-lang.org/reference/const_eval.html", title: "Rust Reference — Constant evaluation"}
+  memory.concurrency_model:
+    - value: races_prevented
+      profile: safe
+      note: "Трейты Send/Sync и правила заимствования исключают гонки данных в безопасном коде; логические гонки и взаимоблокировки остаются возможны."
+    - value: explicit_ordering
+      layer: standard_library
+      applies_to: std::sync::atomic
+      note: "Ordering::Relaxed/Acquire/Release/AcqRel/SeqCst — по модели C++20."
+      sources:
+        - {url: "https://doc.rust-lang.org/std/sync/atomic/index.html", title: "Rust std::sync::atomic"}
 
 grammar:
   spec_url: https://doc.rust-lang.org/reference/

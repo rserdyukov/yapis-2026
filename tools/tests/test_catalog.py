@@ -371,6 +371,34 @@ class CatalogTests(unittest.TestCase):
         page = (self.out / "rust.md").read_text(encoding="utf-8")
         self.assertRegex(page, r"\*Карточка сравнительная: \d+/\d+ понятий; грамматика, оценка\*")
 
+    def test_english_terms_and_references_render_per_language(self):
+        self.build()
+        glossary = (self.out / "glossary.md").read_text(encoding="utf-8")
+        section = glossary.split("{ #evaluation-undefined-behavior }")[1].split("\n### ")[0]
+        self.assertIn("англ. *Undefined behavior* (также *UB*", section)
+        self.assertIn("**Справочники:** [cppreference.com](sources.md#cppreference)", section)
+        self.assertIn("C: [Undefined behavior](https://cppreference.com/c/language/behavior)", section)
+        c_card = (self.out / "c.md").read_text(encoding="utf-8")
+        card = c_card.split("{ #evaluation-undefined-behavior }")[1].split("\n#### ")[0]
+        self.assertIn("https://cppreference.com/c/language/behavior", card)
+        self.assertNotIn("/cpp/language/", card)
+        sources = (self.out / "sources.md").read_text(encoding="utf-8")
+        self.assertIn("страницы у понятий: ", sources)
+        onto = self.read_yaml("ontology.yaml")
+        for cat in onto["categories"]:
+            for concept in cat["concepts"]:
+                self.assertTrue(concept.get("en"), concept["id"])
+
+    def test_reference_to_unknown_source_or_foreign_site_is_rejected(self):
+        raw = self.read_yaml("ontology.yaml")
+        refs = raw["categories"][0]["concepts"][0]["references"]
+        refs.append({"source": "no-such-source", "url": "https://example.org/", "title": "x"})
+        refs.append({"source": "cppreference", "languages": ["cpp"], "url": "https://example.org/", "title": "y"})
+        self.write_mutation("ontology.yaml", raw)
+        output = self.build(expected=1)
+        self.assertIn("неизвестный источник no-such-source", output)
+        self.assertIn("не относится к сайту https://cppreference.com/", output)
+
     def test_people_and_sources_render_bidirectional_links(self):
         self.build()
         people = (self.out / "people.md").read_text(encoding="utf-8")

@@ -38,6 +38,12 @@ versions:
     kind: release
     sources:
       - {url: "https://www.wikidata.org/wiki/Q28865", title: "Wikidata P348 3.5.0", retrieved: 2026-09-18}
+  - id: "3.9"
+    label: Python 3.9
+    date: 2020-10-05
+    kind: release
+    sources:
+      - {url: "https://peps.python.org/pep-0596/", title: "PEP 596 — Python 3.9 Release Schedule", retrieved: 2026-09-26}
   - id: "3.10"
     label: Python 3.10
     date: 2021-10-04
@@ -292,6 +298,30 @@ concepts:
   scope.shadowing:
     - value: allowed
       note: "локальное имя вложенной функции может скрыть внешнее; повторное присваивание в одной области — перепривязка"
+  evaluation.order:
+    - value: left_to_right
+      note: "Выражения вычисляются слева направо; в присваивании правая часть вычисляется раньше левой."
+      sources:
+        - {url: "https://docs.python.org/3/reference/expressions.html#evaluation-order", title: "Python 3 Language Reference §6.16 Evaluation order"}
+  evaluation.undefined_behavior:
+    - value: checked
+      note: "Ошибки индексации, типов и арифметики порождают исключения. Детали, оставленные реализации (например, момент освобождения объекта), помечены в справочнике как CPython implementation detail."
+  tooling.parser_construction:
+    - value: generated
+      layer: implementation
+      implementation: CPython
+      since: "3.9"
+      note: "Парсер генерируется pegen из грамматики python.gram; до 3.9 — LL(1)-генератор pgen, старый парсер удалён в 3.10."
+      sources:
+        - {url: "https://peps.python.org/pep-0617/", title: "PEP 617 — New PEG parser for CPython"}
+  tooling.parsing_algorithm:
+    - value: peg
+      layer: implementation
+      implementation: CPython
+      since: "3.9"
+      note: "PEG с выборочной packrat-мемоизацией; леворекурсивные правила поддерживаются. Токенизатор отдельный."
+      sources:
+        - {url: "https://github.com/python/cpython/blob/main/InternalDocs/parser.md", title: "CPython InternalDocs — Guide to the parser"}
 
 grammar:
   spec_url: https://docs.python.org/3/reference/grammar.html

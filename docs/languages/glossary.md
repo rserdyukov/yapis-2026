@@ -11,6 +11,8 @@ publish: true
 
 Словарь онтологии. Определения описывают понятия, а не приписывают свойства всем языкам. У каждого понятия — отношения с другими понятиями и переходы к языкам, [различающим примерам](../concepts/examples/index.md), слайдам лекций, [людям](people.md) и [источникам](sources.md). [Сравнение языков](concepts.md) содержит конкретные контекстные утверждения; [проверочные вопросы](questions.md) показывают применение словаря и пробелы данных.
 
+Рядом с названием понятия указан англоязычный термин: по нему ищут в стандартах, документации и справочниках. Если общепринятого короткого термина нет, английское название описательное, а устоявшиеся названия частных механизмов перечислены как синонимы. Ссылки «Справочники» ведут на страницы, где понятие описано для конкретного языка, например на [cppreference.com](sources.md#cppreference) для C и C++.
+
 ## Как читать связи { #relations }
 
 - **Частный случай:** A → B означает, что механизм A рассматривается как частный случай B, не наоборот.
@@ -21,7 +23,7 @@ publish: true
 
 Симметричные связи записаны один раз и показаны с обеих сторон. Обратная связь «частные случаи» и «помогает изучить» строится автоматически. Из связей не выводятся новые свойства языков и не вычисляются транзитивные рекомендации.
 
-**74 определений · 73 связей · 15 вопросов.**
+**85 определений · 96 связей · 15 вопросов.**
 
 ## Разделы
 
@@ -40,12 +42,13 @@ publish: true
 - [Семантика данных](#data)
 - [Правила вычисления и модели времени](#computation)
 - [Проверяемые свойства программ](#verification)
+- [Инструменты построения языковых процессоров](#tooling)
 
 ## Имена и связывание { #bindings }
 
 ### Введение связывания { #bindings-introduction }
 
-*Binding introduction* · `bindings.introduction` · [Введение связывания](concepts.md#bindings-introduction)
+англ. *Binding introduction* (также *declaration*, *name binding*) · `bindings.introduction` · [Введение связывания](concepts.md#bindings-introduction)
 
 Установление связи между именем и сущностью программы — значением, местом хранения, функцией или логической переменной. Конструкция введения имени не определяет, нужно ли писать его тип.
 
@@ -58,6 +61,7 @@ publish: true
 - Часто путают: [Вывод статических типов](glossary.md#typing-inference) — Введение имени и определение его статического типа — разные действия; Java var делает оба.
 - Связано с: [Ожидание доступности данных](glossary.md#evaluation-data-availability) — Ожидание в Oz связано с ещё не определённой информацией логического связывания.
 - Помогает изучить: [Сокрытие имён](glossary.md#scope-shadowing) — Чтобы понять сокрытие, сначала различите новое и существующее связывание.
+- Часто путают: [Связывание имён между единицами трансляции](glossary.md#scope-linkage) — В русском «связывание» переводит и linkage, и binding; linkage объединяет объявления разных единиц трансляции, binding вводит имя.
 
 **В языках:** [APL](apl.md#bindings-introduction), [Forth](forth.md#bindings-introduction), [C](c.md#bindings-introduction), [Prolog](prolog.md#bindings-introduction), [Smalltalk](smalltalk.md#bindings-introduction), [SQL](sql.md#bindings-introduction), [C++](cpp.md#bindings-introduction), [Common Lisp](common-lisp.md#bindings-introduction), [Erlang](erlang.md#bindings-introduction), [Haskell](haskell.md#bindings-introduction), [Python](python.md#bindings-introduction), [Lua](lua.md#bindings-introduction), [Java](java.md#bindings-introduction), [JavaScript](javascript.md#bindings-introduction), [C#](csharp.md#bindings-introduction), [Go](go.md#bindings-introduction), [Rust](rust.md#bindings-introduction), [TypeScript](typescript.md#bindings-introduction), [Zig](zig.md#bindings-introduction)
 
@@ -65,9 +69,13 @@ publish: true
 
 **Проверить понимание:** [Отсутствие аннотации означает динамическую типизацию?](questions.md#q02); [Чем перепривязка отличается от сокрытия имени?](questions.md#q03)
 
+**Источники:** [1001 Representations of Syntax with Binding](sources.md#cockx-binding-representations)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Declarations](https://cppreference.com/cpp/language/declarations); C++: [Structured binding declaration](https://cppreference.com/cpp/language/structured_binding); C: [Declarations](https://cppreference.com/c/language/declarations)
+
 ### Изменяемость связывания { #bindings-mutation }
 
-*Binding mutability* · `bindings.mutation` · [Изменяемость связывания](concepts.md#bindings-mutation)
+англ. *Binding mutability* (также *rebinding*, *immutable binding*, *const qualification*) · `bindings.mutation` · [Изменяемость связывания](concepts.md#bindings-mutation)
 
 Правила, определяющие, можно ли после введения связывания менять обозначаемое им значение или содержимое соответствующей переменной. Эти правила задаются отдельно от изменяемости достижимого объекта.
 
@@ -83,13 +91,13 @@ publish: true
 
 **Различающие примеры:** [Oz: значение появится позже](../concepts/examples/index.md#oz)
 
-**Статьи сада:** [Haskell: чистота и ленивость](../garden/haskell-purity-laziness.md), [Rust: владение и заимствование](../garden/rust-ownership.md)
-
 **Проверить понимание:** [Можно ли менять объект через неизменяемое имя?](questions.md#q01)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [cv (const and volatile) type qualifiers](https://cppreference.com/cpp/language/cv); C: [const type qualifier](https://cppreference.com/c/language/const)
 
 ### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms* · `bindings.assignment` · [Формы присваивания и связывания](concepts.md#bindings-assignment)
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*) · `bindings.assignment` · [Формы присваивания и связывания](concepts.md#bindings-assignment)
 
 Семейство операций обновления мест хранения и установления связей со значениями. Для сравнения различаются присваивание одной цели, распаковка, неизменяемое определение и унификация, а не объявляются одной операцией.
 
@@ -103,6 +111,7 @@ publish: true
 - Полезный контраст: [Сопоставление с образцом](glossary.md#control-pattern-matching) — Сопоставление с образцом сравнивается здесь с унификацией и присваиванием из семейства форм связывания; это не полные синонимы.
 - Часто путают: [Направленность уравнений и присваиваний](glossary.md#computation-equation-causality) — Равенство в уравнении не означает последовательное изменение переменной.
 - Связано с: [Планирование обновлений в HDL-симуляции](glossary.md#computation-update-scheduling) — Планирование уточняет, когда наблюдается эффект присваивания; не заменяет его синтаксическую форму.
+- Помогает изучить: [Категории значений выражений](glossary.md#memory-value-categories) — Левая часть присваивания требует выражения-места; начинать с присваивания проще.
 
 **В языках:** [APL](apl.md#bindings-assignment), [Forth](forth.md#bindings-assignment), [C](c.md#bindings-assignment), [Prolog](prolog.md#bindings-assignment), [Smalltalk](smalltalk.md#bindings-assignment), [SQL](sql.md#bindings-assignment), [C++](cpp.md#bindings-assignment), [Common Lisp](common-lisp.md#bindings-assignment), [Erlang](erlang.md#bindings-assignment), [Haskell](haskell.md#bindings-assignment), [Python](python.md#bindings-assignment), [Lua](lua.md#bindings-assignment), [Java](java.md#bindings-assignment), [JavaScript](javascript.md#bindings-assignment), [C#](csharp.md#bindings-assignment), [Go](go.md#bindings-assignment), [Rust](rust.md#bindings-assignment), [TypeScript](typescript.md#bindings-assignment), [Zig](zig.md#bindings-assignment)
 
@@ -112,12 +121,14 @@ publish: true
 
 **Источники:** [Can Programming Be Liberated from the von Neumann Style?](sources.md#backus-1978)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Assignment operators](https://cppreference.com/cpp/language/operator_assignment); C: [Assignment operators](https://cppreference.com/c/language/operator_assignment)
+
 
 ## Области видимости { #scope }
 
 ### Правило разрешения имён { #scope-resolution }
 
-*Name resolution* · `scope.resolution` · [Правило разрешения имён](concepts.md#scope-resolution)
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*) · `scope.resolution` · [Правило разрешения имён](concepts.md#scope-resolution)
 
 Правило выбора связывания для конкретного вхождения имени. Лексическое разрешение использует структуру программы, динамическое — активные связывания в ходе выполнения.
 
@@ -134,15 +145,15 @@ publish: true
 
 **В языках:** [APL](apl.md#scope-resolution), [Forth](forth.md#scope-resolution), [C](c.md#scope-resolution), [Prolog](prolog.md#scope-resolution), [Smalltalk](smalltalk.md#scope-resolution), [SQL](sql.md#scope-resolution), [C++](cpp.md#scope-resolution), [Common Lisp](common-lisp.md#scope-resolution), [Haskell](haskell.md#scope-resolution), [Python](python.md#scope-resolution), [Lua](lua.md#scope-resolution), [Java](java.md#scope-resolution), [JavaScript](javascript.md#scope-resolution), [C#](csharp.md#scope-resolution), [Go](go.md#scope-resolution), [Rust](rust.md#scope-resolution), [TypeScript](typescript.md#scope-resolution)
 
-**Статьи сада:** [APL: нотация как инструмент мышления](../garden/apl-arrays.md)
-
 **Проверить понимание:** [Чем перепривязка отличается от сокрытия имени?](questions.md#q03); [Замыкание и продолжение сохраняют одно и то же?](questions.md#q08)
 
-**Источники:** [Основные концепции языков программирования, 5-е изд.](sources.md#sebesta)
+**Источники:** [Основные концепции языков программирования, 5-е изд.](sources.md#sebesta); [Programming Languages: Application and Interpretation, 3rd ed.](sources.md#plai); [Essentials of Programming Languages, 3rd ed.](sources.md#eopl3); [Static Analysis at GitHub](sources.md#clem-thomson-github); [1001 Representations of Syntax with Binding](sources.md#cockx-binding-representations); [Scopes as Types](sources.md#statix-2018); [MIT 6.S050: Programming Language Design](sources.md#mit-6s050); [Dan Grossman: Programming Languages (Coursera, University of Washington)](sources.md#grossman-programming-languages)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Name lookup](https://cppreference.com/cpp/language/lookup); C: [Lookup and name spaces](https://cppreference.com/c/language/name_space)
 
 ### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs* · `scope.constructs` · [Конструкции областей видимости](concepts.md#scope-constructs)
+англ. *Scoping constructs* (также *scope*, *block scope*) · `scope.constructs` · [Конструкции областей видимости](concepts.md#scope-constructs)
 
 Синтаксические конструкции, создающие области, внутри которых действуют определённые связывания имён и правила их видимости.
 
@@ -153,18 +164,20 @@ publish: true
 **Связи:**
 
 - Часто путают: [Границы синтаксических групп](glossary.md#syntax-blocks) — Границы синтаксической группы и границы области имён не обязаны совпадать.
+- Полезный контраст: [Связывание имён между единицами трансляции](glossary.md#scope-linkage) — Область видимости говорит, где имя доступно; linkage — обозначают ли одинаковые имена одну сущность.
+- Часто путают: [Длительность хранения и время жизни объекта](glossary.md#memory-storage-duration) — Время жизни объекта и область видимости имени задаются разными правилами.
 
 **В языках:** [APL](apl.md#scope-constructs), [C](c.md#scope-constructs), [Prolog](prolog.md#scope-constructs), [Smalltalk](smalltalk.md#scope-constructs), [SQL](sql.md#scope-constructs), [C++](cpp.md#scope-constructs), [Common Lisp](common-lisp.md#scope-constructs), [Erlang](erlang.md#scope-constructs), [Haskell](haskell.md#scope-constructs), [Python](python.md#scope-constructs), [Lua](lua.md#scope-constructs), [Java](java.md#scope-constructs), [JavaScript](javascript.md#scope-constructs), [Go](go.md#scope-constructs), [Rust](rust.md#scope-constructs), [TypeScript](typescript.md#scope-constructs), [Zig](zig.md#scope-constructs)
-
-**Статьи сада:** [JavaScript: цена обратной совместимости](../garden/javascript-compatibility.md)
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [08. Обработка ошибок](../lectures/html/08-obrabotka-oshibok.html)
 
 **Проверить понимание:** [Может ли блок иметь границы, но не создавать область имён?](questions.md#q04)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Scope](https://cppreference.com/cpp/language/scope); C: [Scope](https://cppreference.com/c/language/scope)
+
 ### Связывания верхнего уровня { #scope-globals }
 
-*Top-level bindings* · `scope.globals` · [Связывания верхнего уровня](concepts.md#scope-globals)
+англ. *Top-level bindings* (также *global variables*, *file scope*, *namespace scope*) · `scope.globals` · [Связывания верхнего уровня](concepts.md#scope-globals)
 
 Формы доступности и организации связываний вне локального вызова — глобальная среда, пространство модуля или статические члены типа.
 
@@ -178,9 +191,11 @@ publish: true
 
 **В языках:** [APL](apl.md#scope-globals), [Forth](forth.md#scope-globals), [C](c.md#scope-globals), [Prolog](prolog.md#scope-globals), [Smalltalk](smalltalk.md#scope-globals), [Common Lisp](common-lisp.md#scope-globals), [Haskell](haskell.md#scope-globals), [Python](python.md#scope-globals), [Lua](lua.md#scope-globals), [Java](java.md#scope-globals), [JavaScript](javascript.md#scope-globals), [Rust](rust.md#scope-globals)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Namespaces](https://cppreference.com/cpp/language/namespace); C: [External and tentative definitions](https://cppreference.com/c/language/extern)
+
 ### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing* · `scope.shadowing` · [Сокрытие имён](concepts.md#scope-shadowing)
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*) · `scope.shadowing` · [Сокрытие имён](concepts.md#scope-shadowing)
 
 Введение нового связывания с тем же именем, из-за которого часть вхождений перестаёт обозначать прежнее связывание.
 
@@ -200,12 +215,34 @@ publish: true
 
 **Проверить понимание:** [Чем перепривязка отличается от сокрытия имени?](questions.md#q03)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Scope](https://cppreference.com/cpp/language/scope); C: [Scope](https://cppreference.com/c/language/scope)
+
+### Связывание имён между единицами трансляции { #scope-linkage }
+
+англ. *Linkage* (также *external linkage*, *internal linkage*, *one definition rule*) · `scope.linkage` · [Связывание имён между единицами трансляции](concepts.md#scope-linkage)
+
+Правило, по которому одинаковые имена из разных областей видимости или единиц трансляции обозначают одну сущность либо разные. Внешнее связывание объединяет объявления всей программы, внутреннее — объявления одной единицы трансляции, отсутствие связывания делает каждое объявление отдельной сущностью.
+
+**Пример.** В C `static int counter;` на уровне файла имеет внутреннее связывание: одноимённая переменная другого файла — другой объект; `extern int counter;` ссылается на определение с внешним связыванием.
+
+**Граница понятия.** Linkage не равен области видимости: `extern`-объявление внутри блока видно только в блоке, но обозначает глобальную сущность. Русское «связывание» здесь переводит linkage, а не binding имени со значением.
+
+**Связи:**
+
+- Часто путают: [Введение связывания](glossary.md#bindings-introduction) — В русском «связывание» переводит и linkage, и binding; linkage объединяет объявления разных единиц трансляции, binding вводит имя.
+- Полезный контраст: [Конструкции областей видимости](glossary.md#scope-constructs) — Область видимости говорит, где имя доступно; linkage — обозначают ли одинаковые имена одну сущность.
+- Связано с: [Модульность](glossary.md#abstraction-modules) — Текстовое включение опирается на внешнее связывание; модули C++20 вводят module linkage.
+
+**В языках:** [C](c.md#scope-linkage), [C++](cpp.md#scope-linkage)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Storage class specifiers: linkage](https://cppreference.com/cpp/language/storage_duration#Linkage); C++: [Definitions and ODR (One Definition Rule)](https://cppreference.com/cpp/language/definition); C: [Storage-class specifiers: linkage](https://cppreference.com/c/language/storage_duration#Linkage)
+
 
 ## Типизация { #typing }
 
 ### Проверка типов { #typing-checking }
 
-*Type checking* · `typing.checking` · [Проверка типов](concepts.md#typing-checking)
+англ. *Type checking* (также *static typing*, *dynamic typing*) · `typing.checking` · [Проверка типов](concepts.md#typing-checking)
 
 Проверка допустимости операций и сочетаний значений по правилам типов. Статическая выполняется до соответствующего выполнения программы, динамическая — при выполнении; gradual-система описывает взаимодействие статически и динамически типизированных частей.
 
@@ -219,20 +256,21 @@ publish: true
 - Часто путают: [Аннотации типов](glossary.md#typing-annotations) — Наличие записи типа не доказывает, кто и когда её проверяет.
 - Часто путают: [Вывод статических типов](glossary.md#typing-inference) — Вывод статического типа не является runtime-определением типа объекта.
 - Помогает изучить: [Вывод статических типов](glossary.md#typing-inference) — Учебная рекомендация: сначала разобраться, что такое статическая проверка, затем как типы выводятся.
+- Связано с: [Неопределённое поведение](glossary.md#evaluation-undefined-behavior) — Статическая проверка типов не исключает UB во время выполнения.
 
 **В языках:** [APL](apl.md#typing-checking), [Forth](forth.md#typing-checking), [C](c.md#typing-checking), [Prolog](prolog.md#typing-checking), [Smalltalk](smalltalk.md#typing-checking), [SQL](sql.md#typing-checking), [C++](cpp.md#typing-checking), [Common Lisp](common-lisp.md#typing-checking), [Erlang](erlang.md#typing-checking), [Haskell](haskell.md#typing-checking), [Python](python.md#typing-checking), [Lua](lua.md#typing-checking), [Java](java.md#typing-checking), [JavaScript](javascript.md#typing-checking), [C#](csharp.md#typing-checking), [Go](go.md#typing-checking), [Rust](rust.md#typing-checking), [TypeScript](typescript.md#typing-checking), [Zig](zig.md#typing-checking)
-
-**Статьи сада:** [Forth: стек вместо синтаксиса](../garden/forth-stack.md), [JavaScript: цена обратной совместимости](../garden/javascript-compatibility.md), [Zig: comptime вместо макросов](../garden/zig-comptime.md)
 
 **Слайды лекций:** [20. Критерии оценки языков программирования](../lectures/html/20-kriterii-ocenki-yazykov-programmirovaniya.html)
 
 **Проверить понимание:** [Отсутствие аннотации означает динамическую типизацию?](questions.md#q02)
 
-**Источники:** [Основные концепции языков программирования, 5-е изд.](sources.md#sebesta)
+**Источники:** [Основные концепции языков программирования, 5-е изд.](sources.md#sebesta); [Programming Languages: Application and Interpretation, 3rd ed.](sources.md#plai); [Dan Grossman: Programming Languages (Coursera, University of Washington)](sources.md#grossman-programming-languages)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Type](https://cppreference.com/cpp/language/type); C: [Type](https://cppreference.com/c/language/type)
 
 ### Аннотации типов { #typing-annotations }
 
-*Type annotations* · `typing.annotations` · [Аннотации типов](concepts.md#typing-annotations)
+англ. *Type annotations* (также *type declarations*, *type signatures*) · `typing.annotations` · [Аннотации типов](concepts.md#typing-annotations)
 
 Записанная автором программы информация о типе выражения, связывания, параметра или результата. Роль аннотации зависит от языка и проверяющего инструмента.
 
@@ -250,7 +288,7 @@ publish: true
 
 ### Вывод статических типов { #typing-inference }
 
-*Static type inference* · `typing.inference` · [Вывод статических типов](concepts.md#typing-inference)
+англ. *Type inference* (также *type deduction*) · `typing.inference` · [Вывод статических типов](concepts.md#typing-inference)
 
 Выведение статического типа из структуры программы, ограничений и контекста без полной записи типа программистом.
 
@@ -268,9 +306,13 @@ publish: true
 
 **Проверить понимание:** [Отсутствие аннотации означает динамическую типизацию?](questions.md#q02)
 
+**Источники:** [Essentials of Programming Languages, 3rd ed.](sources.md#eopl3); [Type inference](sources.md#bendersky-type-inference); [The Programming Languages Zoo](sources.md#plzoo)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Placeholder type specifiers](https://cppreference.com/cpp/language/auto); C++: [Template argument deduction](https://cppreference.com/cpp/language/template_argument_deduction); C++: [Class template argument deduction (CTAD)](https://cppreference.com/cpp/language/class_template_argument_deduction)
+
 ### Преобразования типов { #typing-conversions }
 
-*Type conversions* · `typing.conversions` · [Преобразования типов](concepts.md#typing-conversions)
+англ. *Type conversions* (также *type coercion*, *type casting*) · `typing.conversions` · [Преобразования типов](concepts.md#typing-conversions)
 
 Правила перехода от значения или представления одного типа к другому, явно запрошенного или вставленного неявно. Преобразование может требовать вычисления, проверки и сопровождаться потерей информации.
 
@@ -282,16 +324,17 @@ publish: true
 
 - Полезный контраст: [Совместимость типов](glossary.md#typing-compatibility) — Допустимость использования и изменение представления — разные вопросы; совместимость может не требовать преобразования.
 - Связано с: [Ограничение числовой точности](glossary.md#data-numeric-precision) — Преобразование числового типа может округлять значение или терять разряды.
+- Связано с: [Разрешение перегрузки](glossary.md#subprograms-overload-resolution) — Ранжирование кандидатов сравнивает неявные преобразования аргументов.
 
 **В языках:** [APL](apl.md#typing-conversions), [Forth](forth.md#typing-conversions), [C](c.md#typing-conversions), [Prolog](prolog.md#typing-conversions), [Smalltalk](smalltalk.md#typing-conversions), [SQL](sql.md#typing-conversions), [C++](cpp.md#typing-conversions), [Common Lisp](common-lisp.md#typing-conversions), [Erlang](erlang.md#typing-conversions), [Haskell](haskell.md#typing-conversions), [Python](python.md#typing-conversions), [Lua](lua.md#typing-conversions), [Java](java.md#typing-conversions), [JavaScript](javascript.md#typing-conversions), [C#](csharp.md#typing-conversions), [Go](go.md#typing-conversions), [Rust](rust.md#typing-conversions), [TypeScript](typescript.md#typing-conversions), [Zig](zig.md#typing-conversions)
 
-**Статьи сада:** [JavaScript: цена обратной совместимости](../garden/javascript-compatibility.md)
-
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [08. Обработка ошибок](../lectures/html/08-obrabotka-oshibok.html), [20. Критерии оценки языков программирования](../lectures/html/20-kriterii-ocenki-yazykov-programmirovaniya.html)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Implicit conversions](https://cppreference.com/cpp/language/implicit_conversion); C++: [Explicit type conversion](https://cppreference.com/cpp/language/explicit_cast); C: [Implicit conversions](https://cppreference.com/c/language/conversion); C: [cast operator](https://cppreference.com/c/language/cast)
 
 ### Совместимость типов { #typing-compatibility }
 
-*Type compatibility* · `typing.compatibility` · [Совместимость типов](concepts.md#typing-compatibility)
+англ. *Type compatibility* (также *type equivalence*, *nominal typing*, *structural typing*, *duck typing*) · `typing.compatibility` · [Совместимость типов](concepts.md#typing-compatibility)
 
 Условия, при которых значение или выражение допустимо использовать там, где требуется определённый тип или набор операций. Основанием могут быть имена типов, структура или фактически поддержанные операции.
 
@@ -306,11 +349,11 @@ publish: true
 
 **В языках:** [Smalltalk](smalltalk.md#typing-compatibility), [SQL](sql.md#typing-compatibility), [C++](cpp.md#typing-compatibility), [Haskell](haskell.md#typing-compatibility), [Python](python.md#typing-compatibility), [Lua](lua.md#typing-compatibility), [Java](java.md#typing-compatibility), [JavaScript](javascript.md#typing-compatibility), [C#](csharp.md#typing-compatibility), [Go](go.md#typing-compatibility), [Rust](rust.md#typing-compatibility), [TypeScript](typescript.md#typing-compatibility)
 
-**Статьи сада:** [Go: сознательная бедность языка](../garden/go-simplicity.md), [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md), [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
+**Справочники:** [cppreference.com](sources.md#cppreference): C: [Type: compatible types](https://cppreference.com/c/language/type#Compatible_types)
 
 ### Типы-суммы { #typing-sum-types }
 
-*Sum types* · `typing.sum_types` · [Типы-суммы](concepts.md#typing-sum-types)
+англ. *Sum types* (также *tagged unions*, *variant types*, *discriminated unions*) · `typing.sum_types` · [Типы-суммы](concepts.md#typing-sum-types)
 
 Описание значения как одной из альтернатив типов или вариантов. Конкретная система определяет, как альтернативы различаются, пересекаются и проверяются при использовании.
 
@@ -325,9 +368,11 @@ publish: true
 
 **В языках:** [C++](cpp.md#typing-sum-types), [Haskell](haskell.md#typing-sum-types), [Python](python.md#typing-sum-types), [Java](java.md#typing-sum-types), [Rust](rust.md#typing-sum-types), [TypeScript](typescript.md#typing-sum-types), [Zig](zig.md#typing-sum-types)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [std::variant](https://cppreference.com/cpp/utility/variant); C++: [Union declaration](https://cppreference.com/cpp/language/union); C: [Union declaration](https://cppreference.com/c/language/union)
+
 ### Типы-произведения { #typing-product-types }
 
-*Product types* · `typing.product_types` · [Типы-произведения](concepts.md#typing-product-types)
+англ. *Product types* (также *tuples*, *records*, *structs*) · `typing.product_types` · [Типы-произведения](concepts.md#typing-product-types)
 
 Составной тип, значение которого содержит компоненты всех заданных типов одновременно; позиции или имена различают компоненты.
 
@@ -342,9 +387,11 @@ publish: true
 
 **В языках:** [C](c.md#typing-product-types), [SQL](sql.md#typing-product-types), [C++](cpp.md#typing-product-types), [Common Lisp](common-lisp.md#typing-product-types), [Erlang](erlang.md#typing-product-types), [Haskell](haskell.md#typing-product-types), [Python](python.md#typing-product-types), [Lua](lua.md#typing-product-types), [Java](java.md#typing-product-types), [C#](csharp.md#typing-product-types), [Go](go.md#typing-product-types), [Rust](rust.md#typing-product-types), [TypeScript](typescript.md#typing-product-types), [Zig](zig.md#typing-product-types)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Class declaration](https://cppreference.com/cpp/language/class); C++: [std::tuple](https://cppreference.com/cpp/utility/tuple); C: [Struct declaration](https://cppreference.com/c/language/struct)
+
 ### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value* · `typing.nullability` · [Представление отсутствия значения](concepts.md#typing-nullability)
+англ. *Nullability* (также *null reference*, *option type*) · `typing.nullability` · [Представление отсутствия значения](concepts.md#typing-nullability)
 
 Способ выразить отсутствие полезного значения и ограничить места, где такое отсутствие допустимо: специальное значение, nullable-тип либо явная обёртка с вариантами.
 
@@ -358,11 +405,11 @@ publish: true
 
 **В языках:** [C](c.md#typing-nullability), [Smalltalk](smalltalk.md#typing-nullability), [SQL](sql.md#typing-nullability), [C++](cpp.md#typing-nullability), [Common Lisp](common-lisp.md#typing-nullability), [Haskell](haskell.md#typing-nullability), [Python](python.md#typing-nullability), [Lua](lua.md#typing-nullability), [Java](java.md#typing-nullability), [JavaScript](javascript.md#typing-nullability), [C#](csharp.md#typing-nullability), [Go](go.md#typing-nullability), [Rust](rust.md#typing-nullability), [TypeScript](typescript.md#typing-nullability), [Zig](zig.md#typing-nullability)
 
-**Статьи сада:** [SQL: декларативность](../garden/sql-declarative.md)
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [nullptr, the pointer literal](https://cppreference.com/cpp/language/nullptr); C++: [std::optional](https://cppreference.com/cpp/utility/optional)
 
 ### Зависимость типа от значения { #typing-value-dependency }
 
-*Value-dependent types* · `typing.value_dependency` · [Зависимость типа от значения](concepts.md#typing-value-dependency)
+англ. *Dependent types* (также *value-dependent types*) · `typing.value_dependency` · [Зависимость типа от значения](concepts.md#typing-value-dependency)
 
 Зависимость структуры типа от значения параметра, позволяющая выражать отношения между данными в типе функции или семейства типов.
 
@@ -381,7 +428,7 @@ publish: true
 
 ### Идентичность абстрактных типов модулей { #typing-abstract-type-identity }
 
-*Abstract module type identity* · `typing.abstract_type_identity` · [Идентичность абстрактных типов модулей](concepts.md#typing-abstract-type-identity)
+англ. *Abstract module type identity* (также *opaque types*, *type generativity*) · `typing.abstract_type_identity` · [Идентичность абстрактных типов модулей](concepts.md#typing-abstract-type-identity)
 
 Правила сохранения или создания идентичности типового компонента при абстракции модулей и скрытии его представления.
 
@@ -403,7 +450,7 @@ publish: true
 
 ### Условный выбор { #control-selection }
 
-*Conditional selection* · `control.selection` · [Условный выбор](concepts.md#control-selection)
+англ. *Conditional selection* (также *selection statement*, *conditional expression*) · `control.selection` · [Условный выбор](concepts.md#control-selection)
 
 Выбор ветви вычисления по условию или условиям. Выбор может быть оператором, выражением со значением или набором охранных условий.
 
@@ -417,13 +464,13 @@ publish: true
 
 **В языках:** [APL](apl.md#control-selection), [Forth](forth.md#control-selection), [C](c.md#control-selection), [Smalltalk](smalltalk.md#control-selection), [SQL](sql.md#control-selection), [C++](cpp.md#control-selection), [Common Lisp](common-lisp.md#control-selection), [Erlang](erlang.md#control-selection), [Haskell](haskell.md#control-selection), [Python](python.md#control-selection), [Lua](lua.md#control-selection), [Java](java.md#control-selection), [JavaScript](javascript.md#control-selection), [C#](csharp.md#control-selection), [Go](go.md#control-selection), [Rust](rust.md#control-selection), [TypeScript](typescript.md#control-selection), [Zig](zig.md#control-selection)
 
-**Статьи сада:** [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
-
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [08. Обработка ошибок](../lectures/html/08-obrabotka-oshibok.html)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [if statement](https://cppreference.com/cpp/language/if); C++: [Other operators (conditional operator)](https://cppreference.com/cpp/language/operator_other); C: [if statement](https://cppreference.com/c/language/if); C: [Other operators (conditional operator)](https://cppreference.com/c/language/operator_other)
 
 ### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection* · `control.switch` · [Выбор по значению switch/case](concepts.md#control-switch)
+англ. *Switch statement* (также *case statement*, *multiway branch*) · `control.switch` · [Выбор по значению switch/case](concepts.md#control-switch)
 
 Специализированный многовариантный выбор по проверяемому значению и меткам вариантов, с правилами совпадения и переходов конкретного языка.
 
@@ -440,9 +487,11 @@ publish: true
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [20. Критерии оценки языков программирования](../lectures/html/20-kriterii-ocenki-yazykov-programmirovaniya.html)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [switch statement](https://cppreference.com/cpp/language/switch); C: [switch statement](https://cppreference.com/c/language/switch)
+
 ### Сопоставление с образцом { #control-pattern-matching }
 
-*Pattern matching* · `control.pattern_matching` · [Сопоставление с образцом](concepts.md#control-pattern-matching)
+англ. *Pattern matching* · `control.pattern_matching` · [Сопоставление с образцом](concepts.md#control-pattern-matching)
 
 Сопоставление значения с описанием допустимой формы, литерала или конструктора с возможным извлечением частей и связыванием имён.
 
@@ -461,7 +510,7 @@ publish: true
 
 ### Цикл до истинности условия { #control-until }
 
-*Until loop* · `control.until` · [Цикл до истинности условия](concepts.md#control-until)
+англ. *Until loop* (также *repeat-until loop*) · `control.until` · [Цикл до истинности условия](concepts.md#control-until)
 
 Повторение до истинности условия остановки. Проверка перед телом допускает ноль выполнений, после тела — требует хотя бы одного.
 
@@ -478,7 +527,7 @@ publish: true
 
 ### Цикл do-while с постусловием { #control-do-while }
 
-*Post-test do-while loop* · `control.do_while` · [Цикл do-while с постусловием](concepts.md#control-do-while)
+англ. *Do-while loop* (также *post-test loop*) · `control.do_while` · [Цикл do-while с постусловием](concepts.md#control-do-while)
 
 Конструкция цикла, сначала выполняющая тело и затем проверяющая условие продолжения для следующей итерации.
 
@@ -493,9 +542,11 @@ publish: true
 
 **В языках:** [Forth](forth.md#control-do-while), [C](c.md#control-do-while), [Prolog](prolog.md#control-do-while), [Erlang](erlang.md#control-do-while), [Python](python.md#control-do-while), [Lua](lua.md#control-do-while), [Java](java.md#control-do-while), [JavaScript](javascript.md#control-do-while), [Go](go.md#control-do-while), [Rust](rust.md#control-do-while), [Zig](zig.md#control-do-while)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [do-while loop](https://cppreference.com/cpp/language/do); C: [do-while loop](https://cppreference.com/c/language/do)
+
 ### Формы итерации { #control-iteration }
 
-*Iteration forms* · `control.iteration` · [Формы итерации](concepts.md#control-iteration)
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*) · `control.iteration` · [Формы итерации](concepts.md#control-iteration)
 
 Способ систематически повторять вычисление — по условию и шагу, элементам последовательности, через генераторную конструкцию или функцию обхода.
 
@@ -512,15 +563,15 @@ publish: true
 
 **В языках:** [APL](apl.md#control-iteration), [Forth](forth.md#control-iteration), [C](c.md#control-iteration), [Smalltalk](smalltalk.md#control-iteration), [SQL](sql.md#control-iteration), [C++](cpp.md#control-iteration), [Common Lisp](common-lisp.md#control-iteration), [Erlang](erlang.md#control-iteration), [Haskell](haskell.md#control-iteration), [Python](python.md#control-iteration), [Lua](lua.md#control-iteration), [Java](java.md#control-iteration), [JavaScript](javascript.md#control-iteration), [C#](csharp.md#control-iteration), [Go](go.md#control-iteration), [Rust](rust.md#control-iteration), [TypeScript](typescript.md#control-iteration), [Zig](zig.md#control-iteration)
 
-**Статьи сада:** [APL: нотация как инструмент мышления](../garden/apl-arrays.md), [Go: сознательная бедность языка](../garden/go-simplicity.md)
-
 **Слайды лекций:** [20. Критерии оценки языков программирования](../lectures/html/20-kriterii-ocenki-yazykov-programmirovaniya.html)
 
 **Проверить понимание:** [Почему одинаковая операция даёт разные результаты для коллекций?](questions.md#q13)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [for loop](https://cppreference.com/cpp/language/for); C++: [Range-based for loop](https://cppreference.com/cpp/language/range-for); C: [for loop](https://cppreference.com/c/language/for)
+
 ### Логический поиск решений { #control-logic-search }
 
-*Logic search* · `control.logic_search` · [Логический поиск решений](concepts.md#control-logic-search)
+англ. *Logic search* (также *backtracking*, *SLD resolution*, *constraint solving*) · `control.logic_search` · [Логический поиск решений](concepts.md#control-logic-search)
 
 Механизмы построения решений логических целей — перебор альтернатив с возвратом, сохранение результатов подцелей или распространение ограничений.
 
@@ -542,7 +593,7 @@ publish: true
 
 ### Граница захвата продолжения { #control-continuation-extent }
 
-*Continuation capture boundary* · `control.continuation_extent` · [Граница захвата продолжения](concepts.md#control-continuation-extent)
+англ. *Continuation capture boundary* (также *first-class continuations*, *call/cc*, *delimited continuations*) · `control.continuation_extent` · [Граница захвата продолжения](concepts.md#control-continuation-extent)
 
 Граница контекста вычисления, представленного захваченным продолжением: весь текущий остаток вычисления либо его часть до ограничителя.
 
@@ -562,14 +613,14 @@ publish: true
 
 **Люди:** [Гай Стил](people.md#steele)
 
-**Источники:** [Scheme R7RS-small §6.10 — call-with-current-continuation](https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-8.html); [Racket Reference §10.4 — prompts and delimited continuations](https://docs.racket-lang.org/reference/cont.html)
+**Источники:** [Essentials of Programming Languages, 3rd ed.](sources.md#eopl3); [Scheme R7RS-small §6.10 — call-with-current-continuation](https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-8.html); [Racket Reference §10.4 — prompts and delimited continuations](https://docs.racket-lang.org/reference/cont.html)
 
 
 ## Подпрограммы и абстракция { #subprograms }
 
 ### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading* · `subprograms.overloading` · [Перегрузка по сигнатуре](concepts.md#subprograms-overloading)
+англ. *Function overloading* (также *overloading*, *operator overloading*) · `subprograms.overloading` · [Перегрузка по сигнатуре](concepts.md#subprograms-overloading)
 
 Использование одного имени для нескольких сигнатур подпрограмм с выбором применимой сигнатуры по правилам языка и контексту вызова.
 
@@ -580,10 +631,9 @@ publish: true
 **Связи:**
 
 - Часто путают: [Диспетчеризация вызовов](glossary.md#abstraction-dispatch) — Перегрузка по сигнатуре отличается от выбора реализации по динамическим типам; они могут сочетаться.
+- Помогает изучить: [Разрешение перегрузки](glossary.md#subprograms-overload-resolution) — Сначала понять, что имя может обозначать несколько функций, затем — как выбирается одна.
 
 **В языках:** [APL](apl.md#subprograms-overloading), [Forth](forth.md#subprograms-overloading), [C](c.md#subprograms-overloading), [Prolog](prolog.md#subprograms-overloading), [Smalltalk](smalltalk.md#subprograms-overloading), [SQL](sql.md#subprograms-overloading), [C++](cpp.md#subprograms-overloading), [Common Lisp](common-lisp.md#subprograms-overloading), [Erlang](erlang.md#subprograms-overloading), [Haskell](haskell.md#subprograms-overloading), [Python](python.md#subprograms-overloading), [Lua](lua.md#subprograms-overloading), [Java](java.md#subprograms-overloading), [JavaScript](javascript.md#subprograms-overloading), [C#](csharp.md#subprograms-overloading), [Go](go.md#subprograms-overloading), [Rust](rust.md#subprograms-overloading), [TypeScript](typescript.md#subprograms-overloading), [Zig](zig.md#subprograms-overloading)
-
-**Статьи сада:** [Go: сознательная бедность языка](../garden/go-simplicity.md)
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [08. Обработка ошибок](../lectures/html/08-obrabotka-oshibok.html)
 
@@ -593,9 +643,11 @@ publish: true
 
 **Источники:** [Дизайн и эволюция C++](sources.md#stroustrup-de); [How to Make Ad-hoc Polymorphism Less Ad Hoc](sources.md#wadler-blott-1989)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [operator overloading](https://cppreference.com/cpp/language/operators)
+
 ### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing* · `subprograms.parameter_passing` · [Связывание параметров](concepts.md#subprograms-parameter-passing)
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*) · `subprograms.parameter_passing` · [Связывание параметров](concepts.md#subprograms-parameter-passing)
 
 Правила связывания фактических аргументов с формальными параметрами, определяющие доступ к значениям, переменным вызывающей стороны или отложенным вычислениям.
 
@@ -611,17 +663,17 @@ publish: true
 
 **В языках:** [APL](apl.md#subprograms-parameter-passing), [Forth](forth.md#subprograms-parameter-passing), [C](c.md#subprograms-parameter-passing), [Prolog](prolog.md#subprograms-parameter-passing), [Smalltalk](smalltalk.md#subprograms-parameter-passing), [C++](cpp.md#subprograms-parameter-passing), [Common Lisp](common-lisp.md#subprograms-parameter-passing), [Erlang](erlang.md#subprograms-parameter-passing), [Haskell](haskell.md#subprograms-parameter-passing), [Python](python.md#subprograms-parameter-passing), [Lua](lua.md#subprograms-parameter-passing), [Java](java.md#subprograms-parameter-passing), [JavaScript](javascript.md#subprograms-parameter-passing), [C#](csharp.md#subprograms-parameter-passing), [Go](go.md#subprograms-parameter-passing), [Rust](rust.md#subprograms-parameter-passing), [TypeScript](typescript.md#subprograms-parameter-passing), [Zig](zig.md#subprograms-parameter-passing)
 
-**Статьи сада:** [Forth: стек вместо синтаксиса](../garden/forth-stack.md), [Haskell: чистота и ленивость](../garden/haskell-purity-laziness.md)
-
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [08. Обработка ошибок](../lectures/html/08-obrabotka-oshibok.html)
 
 **Проверить понимание:** [Копия ссылки — это передача по ссылке на переменную?](questions.md#q05)
 
 **Источники:** [Основные концепции языков программирования, 5-е изд.](sources.md#sebesta)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Reference declaration](https://cppreference.com/cpp/language/reference)
+
 ### Место определения подпрограмм { #subprograms-placement }
 
-*Subprogram definition placement* · `subprograms.placement` · [Место определения подпрограмм](concepts.md#subprograms-placement)
+англ. *Subprogram definition placement* (также *top-level function*, *member function*, *local function*) · `subprograms.placement` · [Место определения подпрограмм](concepts.md#subprograms-placement)
 
 Допустимые структурные места определения подпрограммы в программе: верхний уровень, выделенная область объявлений, член типа или локальная область.
 
@@ -637,9 +689,11 @@ publish: true
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Non-static member functions](https://cppreference.com/cpp/language/member_functions); C: [Function definitions](https://cppreference.com/c/language/function_definition)
+
 ### Вложенные именованные подпрограммы { #subprograms-nesting }
 
-*Nested named subprograms* · `subprograms.nesting` · [Вложенные именованные подпрограммы](concepts.md#subprograms-nesting)
+англ. *Nested functions* (также *nested subprograms*) · `subprograms.nesting` · [Вложенные именованные подпрограммы](concepts.md#subprograms-nesting)
 
 Возможность определять именованную подпрограмму внутри области другой подпрограммы или локальной связывающей конструкции.
 
@@ -654,9 +708,11 @@ publish: true
 
 **В языках:** [APL](apl.md#subprograms-nesting), [Forth](forth.md#subprograms-nesting), [C](c.md#subprograms-nesting), [Prolog](prolog.md#subprograms-nesting), [C++](cpp.md#subprograms-nesting), [Common Lisp](common-lisp.md#subprograms-nesting), [Haskell](haskell.md#subprograms-nesting), [Python](python.md#subprograms-nesting), [Java](java.md#subprograms-nesting), [JavaScript](javascript.md#subprograms-nesting), [C#](csharp.md#subprograms-nesting), [Rust](rust.md#subprograms-nesting), [TypeScript](typescript.md#subprograms-nesting)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C: [Function definitions](https://cppreference.com/c/language/function_definition)
+
 ### Захват окружения { #subprograms-closures }
 
-*Closure capture* · `subprograms.closures` · [Захват окружения](concepts.md#subprograms-closures)
+англ. *Closures* (также *lambda capture*, *captured variables*) · `subprograms.closures` · [Захват окружения](concepts.md#subprograms-closures)
 
 Сохранение функции вместе с доступом к необходимым связываниям окружающей лексической среды. Способ захвата значений, переменных и владения определяется языком.
 
@@ -673,13 +729,15 @@ publish: true
 
 **В языках:** [Forth](forth.md#subprograms-closures), [C](c.md#subprograms-closures), [Smalltalk](smalltalk.md#subprograms-closures), [C++](cpp.md#subprograms-closures), [Common Lisp](common-lisp.md#subprograms-closures), [Erlang](erlang.md#subprograms-closures), [Haskell](haskell.md#subprograms-closures), [Python](python.md#subprograms-closures), [Lua](lua.md#subprograms-closures), [Java](java.md#subprograms-closures), [JavaScript](javascript.md#subprograms-closures), [C#](csharp.md#subprograms-closures), [Go](go.md#subprograms-closures), [Rust](rust.md#subprograms-closures), [TypeScript](typescript.md#subprograms-closures), [Zig](zig.md#subprograms-closures)
 
-**Статьи сада:** [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
-
 **Проверить понимание:** [Замыкание и продолжение сохраняют одно и то же?](questions.md#q08)
+
+**Источники:** [Programming Languages: Application and Interpretation, 3rd ed.](sources.md#plai); [Dan Grossman: Programming Languages (Coursera, University of Washington)](sources.md#grossman-programming-languages)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Lambda expressions](https://cppreference.com/cpp/language/lambda)
 
 ### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions* · `subprograms.lambda` · [Анонимные функции](concepts.md#subprograms-lambda)
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*) · `subprograms.lambda` · [Анонимные функции](concepts.md#subprograms-lambda)
 
 Конструкция создания функции как выражения без обязательного отдельного именованного определения.
 
@@ -695,9 +753,11 @@ publish: true
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Lambda expressions](https://cppreference.com/cpp/language/lambda)
+
 ### Параметрический полиморфизм { #subprograms-generics }
 
-*Parametric polymorphism* · `subprograms.generics` · [Параметрический полиморфизм](concepts.md#subprograms-generics)
+англ. *Parametric polymorphism* (также *generics*, *templates*) · `subprograms.generics` · [Параметрический полиморфизм](concepts.md#subprograms-generics)
 
 Параметризация типов или подпрограмм типовыми параметрами, позволяющая описать семейство применений без отдельной ручной реализации для каждого конкретного типа.
 
@@ -712,13 +772,13 @@ publish: true
 
 **В языках:** [C++](cpp.md#subprograms-generics), [Haskell](haskell.md#subprograms-generics), [Python](python.md#subprograms-generics), [Java](java.md#subprograms-generics), [C#](csharp.md#subprograms-generics), [Go](go.md#subprograms-generics), [Rust](rust.md#subprograms-generics), [TypeScript](typescript.md#subprograms-generics), [Zig](zig.md#subprograms-generics)
 
-**Статьи сада:** [Zig: comptime вместо макросов](../garden/zig-comptime.md)
-
 **Проверить понимание:** [Перегрузка, type class и виртуальный вызов — один механизм?](questions.md#q10)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Templates](https://cppreference.com/cpp/language/templates); C++: [Constraints and concepts](https://cppreference.com/cpp/language/constraints)
 
 ### Реализация параметрического полиморфизма { #subprograms-generic-mechanism }
 
-*Generic implementation mechanism* · `subprograms.generic_mechanism` · [Реализация параметрического полиморфизма](concepts.md#subprograms-generic-mechanism)
+англ. *Generic implementation mechanism* (также *monomorphization*, *type erasure*, *template instantiation*) · `subprograms.generic_mechanism` · [Реализация параметрического полиморфизма](concepts.md#subprograms-generic-mechanism)
 
 Механизмы реализации обобщённого кода и его ограничений — специализированные экземпляры, стирание параметров, их сохранение во время исполнения или передача наборов операций.
 
@@ -732,11 +792,11 @@ publish: true
 
 **В языках:** [Java](java.md#subprograms-generic-mechanism), [C#](csharp.md#subprograms-generic-mechanism), [Rust](rust.md#subprograms-generic-mechanism), [TypeScript](typescript.md#subprograms-generic-mechanism), [Zig](zig.md#subprograms-generic-mechanism)
 
-**Статьи сада:** [Zig: comptime вместо макросов](../garden/zig-comptime.md)
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Function template](https://cppreference.com/cpp/language/function_template)
 
 ### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments* · `subprograms.default_args` · [Аргументы по умолчанию](concepts.md#subprograms-default-args)
+англ. *Default arguments* (также *optional parameters*) · `subprograms.default_args` · [Аргументы по умолчанию](concepts.md#subprograms-default-args)
 
 Правила получения аргумента, который вызывающий код не передал явно, из заданного определения или выражения по умолчанию.
 
@@ -750,11 +810,11 @@ publish: true
 
 **В языках:** [APL](apl.md#subprograms-default-args), [SQL](sql.md#subprograms-default-args), [Common Lisp](common-lisp.md#subprograms-default-args), [Python](python.md#subprograms-default-args), [Lua](lua.md#subprograms-default-args), [Java](java.md#subprograms-default-args), [JavaScript](javascript.md#subprograms-default-args), [Go](go.md#subprograms-default-args), [Rust](rust.md#subprograms-default-args)
 
-**Статьи сада:** [Go: сознательная бедность языка](../garden/go-simplicity.md)
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Default arguments](https://cppreference.com/cpp/language/default_arguments)
 
 ### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments* · `subprograms.named_args` · [Именованные аргументы](concepts.md#subprograms-named-args)
+англ. *Named arguments* (также *keyword arguments*) · `subprograms.named_args` · [Именованные аргументы](concepts.md#subprograms-named-args)
 
 Сопоставление фактического аргумента с параметром по имени, а не только по позиции в списке вызова.
 
@@ -768,12 +828,32 @@ publish: true
 
 **В языках:** [APL](apl.md#subprograms-named-args), [Smalltalk](smalltalk.md#subprograms-named-args), [SQL](sql.md#subprograms-named-args), [Common Lisp](common-lisp.md#subprograms-named-args), [Python](python.md#subprograms-named-args), [Lua](lua.md#subprograms-named-args), [Java](java.md#subprograms-named-args), [Go](go.md#subprograms-named-args), [Rust](rust.md#subprograms-named-args)
 
+### Разрешение перегрузки { #subprograms-overload-resolution }
+
+англ. *Overload resolution* (также *best viable function*, *argument-dependent lookup*) · `subprograms.overload_resolution` · [Разрешение перегрузки](concepts.md#subprograms-overload-resolution)
+
+Процедура выбора одной функции из набора одноимённых кандидатов по аргументам вызова. Она включает поиск кандидатов, отбор применимых и сравнение необходимых преобразований аргументов; при равных кандидатах вызов неоднозначен.
+
+**Пример.** В C++ для `f(1)` при кандидатах `f(long)` и `f(double)` оба преобразования — conversion одного ранга, поэтому вызов неоднозначен; добавление `f(int)` даёт точное совпадение.
+
+**Граница понятия.** Разрешение перегрузки выполняется по статическим типам при компиляции; выбор переопределения виртуальной функции по динамическому типу — диспетчеризация, а не перегрузка.
+
+**Связи:**
+
+- Сначала полезно изучить: [Перегрузка по сигнатуре](glossary.md#subprograms-overloading) — Сначала понять, что имя может обозначать несколько функций, затем — как выбирается одна.
+- Часто путают: [Диспетчеризация вызовов](glossary.md#abstraction-dispatch) — Перегрузка выбирается по статическим типам при компиляции, переопределение — по динамическому типу получателя.
+- Связано с: [Преобразования типов](glossary.md#typing-conversions) — Ранжирование кандидатов сравнивает неявные преобразования аргументов.
+
+**В языках:** [C](c.md#subprograms-overload-resolution), [C++](cpp.md#subprograms-overload-resolution), [Java](java.md#subprograms-overload-resolution)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Overload resolution](https://cppreference.com/cpp/language/overload_resolution); C++: [Argument-dependent lookup](https://cppreference.com/cpp/language/adl); C: [Generic selection](https://cppreference.com/c/language/generic)
+
 
 ## Полиморфизм и организация { #abstraction }
 
 ### Контракты полиморфизма { #abstraction-contracts }
 
-*Polymorphic contracts* · `abstraction.contracts` · [Контракты полиморфизма](concepts.md#abstraction-contracts)
+англ. *Polymorphic contracts* (также *interfaces*, *traits*, *type classes*, *protocols*) · `abstraction.contracts` · [Контракты полиморфизма](concepts.md#abstraction-contracts)
 
 Требования к доступным операциям типа или значения, через которые код использует разные реализации единообразно: интерфейсы, traits, type classes или протоколы.
 
@@ -787,17 +867,17 @@ publish: true
 
 **В языках:** [Smalltalk](smalltalk.md#abstraction-contracts), [Erlang](erlang.md#abstraction-contracts), [Haskell](haskell.md#abstraction-contracts), [Python](python.md#abstraction-contracts), [Java](java.md#abstraction-contracts), [C#](csharp.md#abstraction-contracts), [Go](go.md#abstraction-contracts), [Rust](rust.md#abstraction-contracts), [TypeScript](typescript.md#abstraction-contracts)
 
-**Статьи сада:** [Haskell: чистота и ленивость](../garden/haskell-purity-laziness.md)
-
 **Проверить понимание:** [Перегрузка, type class и виртуальный вызов — один механизм?](questions.md#q10)
 
 **Люди:** [Филип Уодлер](people.md#wadler)
 
 **Источники:** [How to Make Ad-hoc Polymorphism Less Ad Hoc](sources.md#wadler-blott-1989); [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Abstract class](https://cppreference.com/cpp/language/abstract_class); C++: [Constraints and concepts](https://cppreference.com/cpp/language/constraints)
+
 ### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch* · `abstraction.dispatch` · [Диспетчеризация вызовов](concepts.md#abstraction-dispatch)
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*) · `abstraction.dispatch` · [Диспетчеризация вызовов](concepts.md#abstraction-dispatch)
 
 Выбор реализации вызываемой операции по статической информации или динамическим характеристикам одного либо нескольких аргументов.
 
@@ -810,10 +890,9 @@ publish: true
 - Часто путают: [Перегрузка по сигнатуре](glossary.md#subprograms-overloading) — Перегрузка по сигнатуре отличается от выбора реализации по динамическим типам; они могут сочетаться.
 - Часто путают: [Параметрический полиморфизм](glossary.md#subprograms-generics) — CLOS generic function относится к выбору методов, а не обязательно к параметризации типом.
 - Связано с: [Наследование реализации](glossary.md#abstraction-inheritance) — Наследование и переопределение дают кандидатов для вызова, но диспетчеризация возможна и без наследования реализации.
+- Часто путают: [Разрешение перегрузки](glossary.md#subprograms-overload-resolution) — Перегрузка выбирается по статическим типам при компиляции, переопределение — по динамическому типу получателя.
 
 **В языках:** [Smalltalk](smalltalk.md#abstraction-dispatch), [C++](cpp.md#abstraction-dispatch), [Common Lisp](common-lisp.md#abstraction-dispatch), [Python](python.md#abstraction-dispatch), [Lua](lua.md#abstraction-dispatch), [Java](java.md#abstraction-dispatch), [C#](csharp.md#abstraction-dispatch), [Go](go.md#abstraction-dispatch), [Rust](rust.md#abstraction-dispatch), [Zig](zig.md#abstraction-dispatch)
-
-**Статьи сада:** [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md), [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
 
 **Проверить понимание:** [Перегрузка, type class и виртуальный вызов — один механизм?](questions.md#q10)
 
@@ -821,9 +900,11 @@ publish: true
 
 **Источники:** [The Early History of Smalltalk](sources.md#hopl-smalltalk)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [virtual function specifier](https://cppreference.com/cpp/language/virtual)
+
 ### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance* · `abstraction.inheritance` · [Наследование реализации](concepts.md#abstraction-inheritance)
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*) · `abstraction.inheritance` · [Наследование реализации](concepts.md#abstraction-inheritance)
 
 Получение реализации или состояния типа из одного либо нескольких родительских типов с правилами дополнения и переопределения.
 
@@ -838,11 +919,11 @@ publish: true
 
 **В языках:** [APL](apl.md#abstraction-inheritance), [Smalltalk](smalltalk.md#abstraction-inheritance), [C++](cpp.md#abstraction-inheritance), [Common Lisp](common-lisp.md#abstraction-inheritance), [Erlang](erlang.md#abstraction-inheritance), [Python](python.md#abstraction-inheritance), [Lua](lua.md#abstraction-inheritance), [Java](java.md#abstraction-inheritance), [JavaScript](javascript.md#abstraction-inheritance), [C#](csharp.md#abstraction-inheritance), [Go](go.md#abstraction-inheritance), [Rust](rust.md#abstraction-inheritance), [TypeScript](typescript.md#abstraction-inheritance), [Zig](zig.md#abstraction-inheritance)
 
-**Статьи сада:** [Go: сознательная бедность языка](../garden/go-simplicity.md), [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md)
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Derived classes](https://cppreference.com/cpp/language/derived_class)
 
 ### Модульность { #abstraction-modules }
 
-*Modules* · `abstraction.modules` · [Модульность](concepts.md#abstraction-modules)
+англ. *Modules* (также *module system*, *namespaces*, *packages*) · `abstraction.modules` · [Модульность](concepts.md#abstraction-modules)
 
 Организация программы в единицы с контролируемыми именами, зависимостями и границами использования; конкретный механизм определяет импорт, экспорт и параметризацию.
 
@@ -855,17 +936,20 @@ publish: true
 - Связано с: [Связывания верхнего уровня](glossary.md#scope-globals) — Доступность имени верхнего уровня зависит от модульных границ и экспорта; оно не обязано быть глобально видимым.
 - Связано с: [Идентичность абстрактных типов модулей](glossary.md#typing-abstract-type-identity) — Скрытие представления и генерация свежего типа проявляются при согласовании модулей и сигнатур.
 - Помогает изучить: [Идентичность абстрактных типов модулей](glossary.md#typing-abstract-type-identity) — Свежие типы результата функтора проще изучать после структуры и сигнатуры модуля.
+- Связано с: [Связывание имён между единицами трансляции](glossary.md#scope-linkage) — Текстовое включение опирается на внешнее связывание; модули C++20 вводят module linkage.
 
 **В языках:** [Forth](forth.md#abstraction-modules), [C](c.md#abstraction-modules), [Prolog](prolog.md#abstraction-modules), [SQL](sql.md#abstraction-modules), [C++](cpp.md#abstraction-modules), [Common Lisp](common-lisp.md#abstraction-modules), [Erlang](erlang.md#abstraction-modules), [Haskell](haskell.md#abstraction-modules), [Python](python.md#abstraction-modules), [Lua](lua.md#abstraction-modules), [Java](java.md#abstraction-modules), [JavaScript](javascript.md#abstraction-modules), [C#](csharp.md#abstraction-modules), [Go](go.md#abstraction-modules), [Rust](rust.md#abstraction-modules), [TypeScript](typescript.md#abstraction-modules), [Zig](zig.md#abstraction-modules)
 
 **Различающие примеры:** [Standard ML: одинаковое представление, разные типы](../concepts/examples/index.md#sml)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Modules](https://cppreference.com/cpp/language/modules); C++: [Namespaces](https://cppreference.com/cpp/language/namespace); C++: [Source file inclusion](https://cppreference.com/cpp/preprocessor/include); C: [Source file inclusion](https://cppreference.com/c/preprocessor/include)
 
 
 ## Вычисление и эффекты { #evaluation }
 
 ### Стратегия вычисления { #evaluation-strategy }
 
-*Evaluation strategy* · `evaluation.strategy` · [Стратегия вычисления](concepts.md#evaluation-strategy)
+англ. *Evaluation strategy* (также *eager evaluation*, *lazy evaluation*) · `evaluation.strategy` · [Стратегия вычисления](concepts.md#evaluation-strategy)
 
 Правила востребованности вычислений: требует ли операция значения аргумента до своего выполнения или может получить результат без вычисления некоторых аргументов.
 
@@ -877,20 +961,19 @@ publish: true
 
 - Связано с: [Аргументы по умолчанию](glossary.md#subprograms-default-args) — Для default-выражения важно отдельно знать момент вычисления; общая строгость вызова его не определяет.
 - Часто путают: [Протокол выдачи и возобновления результатов](glossary.md#evaluation-result-protocol) — Приостановка генератора не превращает обычное вычисление аргументов языка в нестрогое.
+- Часто путают: [Порядок вычисления подвыражений](glossary.md#evaluation-order) — Строгая стратегия требует вычислить аргументы до вызова, но не задаёт их взаимный порядок.
 
 **В языках:** [APL](apl.md#evaluation-strategy), [Forth](forth.md#evaluation-strategy), [C](c.md#evaluation-strategy), [Smalltalk](smalltalk.md#evaluation-strategy), [SQL](sql.md#evaluation-strategy), [C++](cpp.md#evaluation-strategy), [Common Lisp](common-lisp.md#evaluation-strategy), [Erlang](erlang.md#evaluation-strategy), [Haskell](haskell.md#evaluation-strategy), [Python](python.md#evaluation-strategy), [Java](java.md#evaluation-strategy), [JavaScript](javascript.md#evaluation-strategy), [C#](csharp.md#evaluation-strategy), [Rust](rust.md#evaluation-strategy), [TypeScript](typescript.md#evaluation-strategy)
-
-**Статьи сада:** [APL: нотация как инструмент мышления](../garden/apl-arrays.md), [Haskell: чистота и ленивость](../garden/haskell-purity-laziness.md), [SQL: декларативность](../garden/sql-declarative.md)
 
 **Проверить понимание:** [Генератор делает язык нестрогим?](questions.md#q09)
 
 **Люди:** [Пол Худак](people.md#hudak), [Саймон Пейтон-Джонс](people.md#peyton-jones)
 
-**Источники:** [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell); [Why Functional Programming Matters](sources.md#hughes-why-fp)
+**Источники:** [Programming Languages: Application and Interpretation, 3rd ed.](sources.md#plai); [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell); [Why Functional Programming Matters](sources.md#hughes-why-fp); [MIT 6.S050: Programming Language Design](sources.md#mit-6s050); [The Programming Languages Zoo](sources.md#plzoo)
 
 ### Контроль эффектов { #evaluation-effects }
 
-*Effect control* · `evaluation.effects` · [Контроль эффектов](concepts.md#evaluation-effects)
+англ. *Effect control* (также *effect system*, *purity*) · `evaluation.effects` · [Контроль эффектов](concepts.md#evaluation-effects)
 
 Способы выражения и контроля наблюдаемых действий помимо получения обычного значения — изменения состояния, ввода-вывода и других эффектов.
 
@@ -905,15 +988,13 @@ publish: true
 
 **В языках:** [APL](apl.md#evaluation-effects), [Forth](forth.md#evaluation-effects), [Prolog](prolog.md#evaluation-effects), [Haskell](haskell.md#evaluation-effects), [Python](python.md#evaluation-effects), [Java](java.md#evaluation-effects), [Rust](rust.md#evaluation-effects)
 
-**Статьи сада:** [Haskell: чистота и ленивость](../garden/haskell-purity-laziness.md)
-
 **Люди:** [Саймон Пейтон-Джонс](people.md#peyton-jones)
 
 **Источники:** [Can Programming Be Liberated from the von Neumann Style?](sources.md#backus-1978); [A History of Haskell — Being Lazy with Class](sources.md#hopl-haskell)
 
 ### Гарантированное устранение хвостовых вызовов { #evaluation-tail-calls }
 
-*Guaranteed tail-call elimination* · `evaluation.tail_calls` · [Гарантированное устранение хвостовых вызовов](concepts.md#evaluation-tail-calls)
+англ. *Tail-call elimination* (также *proper tail calls*, *tail-call optimization*) · `evaluation.tail_calls` · [Гарантированное устранение хвостовых вызовов](concepts.md#evaluation-tail-calls)
 
 Гарантия, что хвостовой вызов не требует сохранения дополнительного контекста возврата и не вызывает неограниченного роста такого контекста в цепочке хвостовых вызовов.
 
@@ -927,11 +1008,9 @@ publish: true
 
 **В языках:** [APL](apl.md#evaluation-tail-calls), [Forth](forth.md#evaluation-tail-calls), [Smalltalk](smalltalk.md#evaluation-tail-calls), [Erlang](erlang.md#evaluation-tail-calls), [Python](python.md#evaluation-tail-calls), [Lua](lua.md#evaluation-tail-calls), [Java](java.md#evaluation-tail-calls), [JavaScript](javascript.md#evaluation-tail-calls), [Go](go.md#evaluation-tail-calls), [Rust](rust.md#evaluation-tail-calls), [Zig](zig.md#evaluation-tail-calls)
 
-**Статьи сада:** [JavaScript: цена обратной совместимости](../garden/javascript-compatibility.md)
-
 ### Поднятие операций по рангу массива { #evaluation-rank-lifting }
 
-*Array rank lifting* · `evaluation.rank_lifting` · [Поднятие операций по рангу массива](concepts.md#evaluation-rank-lifting)
+англ. *Array rank lifting* (также *rank polymorphism*, *scalar extension*) · `evaluation.rank_lifting` · [Поднятие операций по рангу массива](concepts.md#evaluation-rank-lifting)
 
 Автоматическое применение операции к ячейкам массива выбранной размерности с правилами объединения результатов и согласования аргументов.
 
@@ -947,8 +1026,6 @@ publish: true
 
 **Различающие примеры:** [J: та же операция, другой ранг](../concepts/examples/index.md#j)
 
-**Статьи сада:** [APL: нотация как инструмент мышления](../garden/apl-arrays.md)
-
 **Проверить понимание:** [Почему одинаковая операция даёт разные результаты для коллекций?](questions.md#q13)
 
 **Люди:** [Кеннет Айверсон](people.md#iverson)
@@ -957,7 +1034,7 @@ publish: true
 
 ### Протокол выдачи и возобновления результатов { #evaluation-result-protocol }
 
-*Result and resumption protocol* · `evaluation.result_protocol` · [Протокол выдачи и возобновления результатов](concepts.md#evaluation-result-protocol)
+англ. *Result and resumption protocol* (также *generators*, *coroutines*, *goal-directed evaluation*) · `evaluation.result_protocol` · [Протокол выдачи и возобновления результатов](concepts.md#evaluation-result-protocol)
 
 Правила выдачи результатов и инициирования следующего результата: обычный возврат, явное возобновление или автоматический поиск альтернатив при неудаче.
 
@@ -979,9 +1056,11 @@ publish: true
 
 **Источники:** [Griswold — Icon overview §§2–3: generators and goal-directed evaluation](https://www2.cs.arizona.edu/icon/docs/ipd266.htm); [Python 3 — Iterator and Generator Types](https://docs.python.org/3/library/stdtypes.html#iterator-types); [Lua 5.4 Reference Manual §2.6 — Coroutines](https://www.lua.org/manual/5.4/manual.html#2.6)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Coroutines](https://cppreference.com/cpp/language/coroutines)
+
 ### Ожидание доступности данных { #evaluation-data-availability }
 
-*Data availability suspension* · `evaluation.data_availability` · [Ожидание доступности данных](concepts.md#evaluation-data-availability)
+англ. *Data availability suspension* (также *dataflow variables*, *dataflow execution*) · `evaluation.data_availability` · [Ожидание доступности данных](concepts.md#evaluation-data-availability)
 
 Приостановка или запуск вычисления в зависимости от наличия необходимой информации на входах или в логических переменных.
 
@@ -999,14 +1078,74 @@ publish: true
 
 **Проверить понимание:** [Синхронный канал и синхронные такты означают одно и то же?](questions.md#q14)
 
-**Источники:** [Mozart 1.4.0 tutorial — Oz 3 dataflow threads](https://mozart.github.io/mozart-v1/doc-1.4.0/tutorial/node1.html); [NI — G dataflow and node readiness in LabVIEW](https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html)
+**Источники:** [Programming Paradigms for Dummies: What Every Programmer Should Know](sources.md#van-roy-paradigms); [Mozart 1.4.0 tutorial — Oz 3 dataflow threads](https://mozart.github.io/mozart-v1/doc-1.4.0/tutorial/node1.html); [NI — G dataflow and node readiness in LabVIEW](https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html)
+
+### Порядок вычисления подвыражений { #evaluation-order }
+
+англ. *Order of evaluation* (также *sequencing*, *sequence points*, *sequenced-before*) · `evaluation.order` · [Порядок вычисления подвыражений](concepts.md#evaluation-order)
+
+Правила, определяющие, в какой последовательности вычисляются операнды одного выражения и аргументы вызова и когда становятся видны их побочные эффекты.
+
+**Пример.** В Java `f() + g()` всегда вызывает f раньше g; в C порядок вызовов в `f() + g()` не задан, а `i = i++ + 1` — неопределённое поведение.
+
+**Граница понятия.** Приоритет и ассоциативность задают группировку, а не порядок вычисления; строгая стратегия вычисления тоже не задаёт взаимный порядок аргументов.
+
+**Связи:**
+
+- Часто путают: [Стратегия вычисления](glossary.md#evaluation-strategy) — Строгая стратегия требует вычислить аргументы до вызова, но не задаёт их взаимный порядок.
+- Связано с: [Неопределённое поведение](glossary.md#evaluation-undefined-behavior) — В C и C++ непоследовательные изменения одного объекта дают неопределённое поведение.
+
+**В языках:** [C](c.md#evaluation-order), [C++](cpp.md#evaluation-order), [Python](python.md#evaluation-order), [Java](java.md#evaluation-order), [Rust](rust.md#evaluation-order)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Order of evaluation](https://cppreference.com/cpp/language/eval_order); C: [Order of evaluation](https://cppreference.com/c/language/eval_order)
+
+### Неопределённое поведение { #evaluation-undefined-behavior }
+
+англ. *Undefined behavior* (также *UB*, *unspecified behavior*, *implementation-defined behavior*) · `evaluation.undefined_behavior` · [Неопределённое поведение](concepts.md#evaluation-undefined-behavior)
+
+Способ, которым спецификация языка описывает выполнение программ, нарушающих её правила или зависящих от выбора реализации. Различают поведение, определяемое реализацией, неуточнённое и неопределённое; для последнего стандарт не накладывает никаких требований.
+
+**Пример.** Переполнение `int` в C и C++ — неопределённое поведение: компилятор вправе удалить проверку `if (x + 1 < x)`. В Java то же переполнение определено как циклический перенос.
+
+**Граница понятия.** Неопределённое поведение — не гарантированная ошибка: программа может «работать». Паника Rust или исключение Java при выходе за границы массива — определённое поведение.
+
+**Связи:**
+
+- Связано с: [Порядок вычисления подвыражений](glossary.md#evaluation-order) — В C и C++ непоследовательные изменения одного объекта дают неопределённое поведение.
+- Часто путают: [Представление и передача ошибок](glossary.md#errors-model) — Гарантированное исключение или паника — определённое поведение; UB не обещает ни ошибки, ни сигнала.
+- Связано с: [Проверка типов](glossary.md#typing-checking) — Статическая проверка типов не исключает UB во время выполнения.
+- Связано с: [Модель памяти для параллельного доступа](glossary.md#memory-concurrency-model) — Гонка данных в C и C++ — неопределённое поведение.
+
+**В языках:** [C](c.md#evaluation-undefined-behavior), [C++](cpp.md#evaluation-undefined-behavior), [Python](python.md#evaluation-undefined-behavior), [Java](java.md#evaluation-undefined-behavior), [Rust](rust.md#evaluation-undefined-behavior)
+
+**Источники:** [Schrödinger's Code: Undefined Behavior in Theory and Practice](sources.md#kelly-ub-2021); [Undefined Behavior deserves a better reputation](sources.md#jung-ub-2021); [Why Aren't Programming Language Specifications Comprehensive?](sources.md#tratt-specifications); [Поговорим об оптимизирующих компиляторах (цикл статей)](sources.md#xortator-optimizing-compilers); [An Executable Formal Semantics of C with Applications](sources.md#ellison-rosu-c-2012)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Undefined behavior](https://cppreference.com/cpp/language/ub); C++: [The as-if rule](https://cppreference.com/cpp/language/as_if); C: [Undefined behavior](https://cppreference.com/c/language/behavior)
+
+### Вычисления во время компиляции { #evaluation-compile-time }
+
+англ. *Constant evaluation* (также *compile-time evaluation*, *constant expressions*, *constexpr*) · `evaluation.compile_time` · [Вычисления во время компиляции](concepts.md#evaluation-compile-time)
+
+Гарантированное языком вычисление значений при трансляции программы, а также правила, какие выражения и функции для этого допустимы и где такое значение обязательно.
+
+**Пример.** В C++ `constexpr int sq(int x) { return x * x; }` допускает `int a[sq(3)];`; `consteval`-функция вычисляется только при компиляции. В C константное выражение — ограниченный набор операций без вызовов функций.
+
+**Граница понятия.** Свёртывание констант оптимизатором — свойство реализации, а не языка; порождение кода макросами и шаблонами относится к метапрограммированию.
+
+**Связи:**
+
+- Частный случай понятия: [Метапрограммирование](glossary.md#syntax-metaprogramming) — Вычисление значений при компиляции — частный механизм метапрограммирования, отдельный от порождения кода.
+
+**В языках:** [C](c.md#evaluation-compile-time), [C++](cpp.md#evaluation-compile-time), [Java](java.md#evaluation-compile-time), [Rust](rust.md#evaluation-compile-time)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Constant expressions](https://cppreference.com/cpp/language/constant_expression); C++: [constexpr specifier](https://cppreference.com/cpp/language/constexpr); C++: [consteval specifier](https://cppreference.com/cpp/language/consteval); C: [Constant expressions](https://cppreference.com/c/language/constant_expression)
 
 
 ## Память и владение { #memory }
 
 ### Освобождение памяти { #memory-management }
 
-*Memory reclamation* · `memory.management` · [Освобождение памяти](concepts.md#memory-management)
+англ. *Memory management* (также *memory reclamation*, *garbage collection*, *reference counting*) · `memory.management` · [Освобождение памяти](concepts.md#memory-management)
 
 Политика определения момента и ответственного за освобождение памяти объектов: явный вызов, анализ достижимости, подсчёт ссылок или правила владения и времени жизни.
 
@@ -1017,16 +1156,19 @@ publish: true
 **Связи:**
 
 - Часто путают: [Освобождение ресурсов](glossary.md#resources-cleanup) — Освобождение памяти объекта и закрытие внешнего ресурса имеют разные условия и сроки.
+- Связано с: [Длительность хранения и время жизни объекта](glossary.md#memory-storage-duration) — Динамическая длительность требует способа освобождения; автоматическая и статическая — нет.
 
 **В языках:** [Forth](forth.md#memory-management), [C](c.md#memory-management), [Prolog](prolog.md#memory-management), [Smalltalk](smalltalk.md#memory-management), [C++](cpp.md#memory-management), [Erlang](erlang.md#memory-management), [Haskell](haskell.md#memory-management), [Python](python.md#memory-management), [Lua](lua.md#memory-management), [Java](java.md#memory-management), [C#](csharp.md#memory-management), [Go](go.md#memory-management), [Rust](rust.md#memory-management), [Zig](zig.md#memory-management)
 
-**Статьи сада:** [Rust: владение и заимствование](../garden/rust-ownership.md)
-
 **Проверить понимание:** [Сборщик мусора гарантирует закрытие файла?](questions.md#q07)
+
+**Источники:** [MIT 6.S050: Programming Language Design](sources.md#mit-6s050)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [new expression](https://cppreference.com/cpp/language/new); C++: [delete expression](https://cppreference.com/cpp/language/delete); C++: [std::unique_ptr](https://cppreference.com/cpp/memory/unique_ptr); C: [Dynamic memory management](https://cppreference.com/c/memory)
 
 ### Передача и разделение владения { #memory-transfer }
 
-*Ownership transfer and sharing* · `memory.transfer` · [Передача и разделение владения](concepts.md#memory-transfer)
+англ. *Ownership transfer and sharing* (также *move semantics*, *copy semantics*, *borrowing*) · `memory.transfer` · [Передача и разделение владения](concepts.md#memory-transfer)
 
 Правила копирования значений, перемещения владения и разделения доступа к объектам, включая заимствования с ограниченным временем использования.
 
@@ -1038,18 +1180,19 @@ publish: true
 
 - Часто путают: [Связывание параметров](glossary.md#subprograms-parameter-passing) — Способ связать параметр и передача ответственности за объект — независимые измерения вызова.
 - Связано с: [Права ссылок и ограничения алиасов](glossary.md#memory-reference-permissions) — Перемещение и заимствование изменяют допустимые способы доступа, но модель прав не сводится к перемещению.
+- Связано с: [Категории значений выражений](glossary.md#memory-value-categories) — В C++ перемещение выбирается для rvalue-выражений; std::move меняет только категорию.
 
 **В языках:** [C](c.md#memory-transfer), [C++](cpp.md#memory-transfer), [Erlang](erlang.md#memory-transfer), [Python](python.md#memory-transfer), [Java](java.md#memory-transfer), [JavaScript](javascript.md#memory-transfer), [C#](csharp.md#memory-transfer), [Rust](rust.md#memory-transfer), [TypeScript](typescript.md#memory-transfer)
 
 **Различающие примеры:** [Pony: read-only не означает immutable](../concepts/examples/index.md#pony)
 
-**Статьи сада:** [Erlang: модель ошибок «let it crash»](../garden/erlang-let-it-crash.md), [Rust: владение и заимствование](../garden/rust-ownership.md)
-
 **Проверить понимание:** [Можно ли менять объект через неизменяемое имя?](questions.md#q01); [Копия ссылки — это передача по ссылке на переменную?](questions.md#q05)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Move constructors](https://cppreference.com/cpp/language/move_constructor); C++: [Copy constructors](https://cppreference.com/cpp/language/copy_constructor)
 
 ### Права ссылок и ограничения алиасов { #memory-reference-permissions }
 
-*Reference permissions and alias restrictions* · `memory.reference_permissions` · [Права ссылок и ограничения алиасов](concepts.md#memory-reference-permissions)
+англ. *Reference permissions and alias restrictions* (также *reference capabilities*, *aliasing control*) · `memory.reference_permissions` · [Права ссылок и ограничения алиасов](concepts.md#memory-reference-permissions)
 
 Права конкретной ссылки на чтение и изменение объекта и ограничения на одновременное существование других ссылок к нему.
 
@@ -1066,18 +1209,78 @@ publish: true
 
 **Различающие примеры:** [Pony: read-only не означает immutable](../concepts/examples/index.md#pony)
 
-**Статьи сада:** [Rust: владение и заимствование](../garden/rust-ownership.md)
-
 **Проверить понимание:** [Можно ли менять объект через неизменяемое имя?](questions.md#q01)
 
 **Источники:** [Pony Tutorial — Reference Capabilities: iso, ref, val, box, tag](https://tutorial.ponylang.io/reference-capabilities/reference-capabilities.html)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C: [restrict type qualifier](https://cppreference.com/c/language/restrict)
+
+### Длительность хранения и время жизни объекта { #memory-storage-duration }
+
+англ. *Storage duration* (также *object lifetime*, *automatic storage*, *static storage*, *dynamic storage*) · `memory.storage_duration` · [Длительность хранения и время жизни объекта](concepts.md#memory-storage-duration)
+
+Категория, определяющая, когда выделяется и освобождается память объекта, и связанные правила начала и окончания его времени жизни.
+
+**Пример.** В C локальная `int x;` имеет автоматическую длительность и уничтожается при выходе из блока; `static int n;` в функции живёт всё время выполнения программы, хотя её имя видно только в функции.
+
+**Граница понятия.** Время жизни — свойство объекта, область видимости — свойство имени. Возврат указателя на автоматический объект оставляет висячий указатель, хотя синтаксически ошибки нет.
+
+**Связи:**
+
+- Часто путают: [Конструкции областей видимости](glossary.md#scope-constructs) — Время жизни объекта и область видимости имени задаются разными правилами.
+- Связано с: [Освобождение памяти](glossary.md#memory-management) — Динамическая длительность требует способа освобождения; автоматическая и статическая — нет.
+- Связано с: [Освобождение ресурсов](glossary.md#resources-cleanup) — Деструктор при выходе из области вызывается в конце времени жизни автоматического объекта.
+
+**В языках:** [C](c.md#memory-storage-duration), [C++](cpp.md#memory-storage-duration)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Storage class specifiers](https://cppreference.com/cpp/language/storage_duration); C++: [Lifetime](https://cppreference.com/cpp/language/lifetime); C: [Storage-class specifiers](https://cppreference.com/c/language/storage_duration); C: [Lifetime](https://cppreference.com/c/language/lifetime)
+
+### Категории значений выражений { #memory-value-categories }
+
+англ. *Value categories* (также *lvalue*, *rvalue*, *glvalue*, *prvalue*, *xvalue*) · `memory.value_categories` · [Категории значений выражений](concepts.md#memory-value-categories)
+
+Классификация выражений по тому, обозначают ли они объект с идентичностью или только значение, и можно ли использовать их ресурсы. От категории зависят присваивание, взятие адреса, связывание ссылок и выбор перемещения.
+
+**Пример.** В C++ `x` — lvalue, `x + 1` — prvalue, `std::move(x)` — xvalue: rvalue-ссылка `T&&` связывается с двумя последними.
+
+**Граница понятия.** Категория относится к выражению, а не к типу: параметр `T&& p` внутри функции — lvalue. Названия lvalue/rvalue не означают «слева/справа от =».
+
+**Связи:**
+
+- Сначала полезно изучить: [Формы присваивания и связывания](glossary.md#bindings-assignment) — Левая часть присваивания требует выражения-места; начинать с присваивания проще.
+- Связано с: [Передача и разделение владения](glossary.md#memory-transfer) — В C++ перемещение выбирается для rvalue-выражений; std::move меняет только категорию.
+
+**В языках:** [C](c.md#memory-value-categories), [C++](cpp.md#memory-value-categories)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Value categories](https://cppreference.com/cpp/language/value_category); C: [Value categories](https://cppreference.com/c/language/value_category)
+
+### Модель памяти для параллельного доступа { #memory-concurrency-model }
+
+англ. *Memory model* (также *data race*, *happens-before*, *memory ordering*, *atomics*) · `memory.concurrency_model` · [Модель памяти для параллельного доступа](concepts.md#memory-concurrency-model)
+
+Правила, определяющие, какие значения может прочитать поток при одновременном доступе нескольких потоков к памяти, что считается гонкой данных и какие гарантии упорядочивания дают синхронизация и атомарные операции.
+
+**Пример.** C++ `std::atomic<int>` с `memory_order_release`/`acquire` передаёт данные между потоками без гонки; неатомарная запись и чтение того же `int` без синхронизации — гонка данных и неопределённое поведение.
+
+**Граница понятия.** Модель памяти не является механизмом запуска потоков; `volatile` в C и C++ не делает доступ атомарным и не синхронизирует потоки.
+
+**Связи:**
+
+- Сначала полезно изучить: [Конкурентное выполнение](glossary.md#resources-concurrency) — Модель памяти обсуждают после того, как понятно, откуда берутся параллельные потоки.
+- Связано с: [Неопределённое поведение](glossary.md#evaluation-undefined-behavior) — Гонка данных в C и C++ — неопределённое поведение.
+
+**В языках:** [C](c.md#memory-concurrency-model), [C++](cpp.md#memory-concurrency-model), [Java](java.md#memory-concurrency-model), [Rust](rust.md#memory-concurrency-model)
+
+**Источники:** [Programming Language Memory Models](sources.md#cox-memory-models)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Memory model](https://cppreference.com/cpp/language/memory_model); C++: [Multi-threaded executions and data races](https://cppreference.com/cpp/language/multithread); C++: [std::memory_order](https://cppreference.com/cpp/atomic/memory_order); C: [Memory model](https://cppreference.com/c/language/memory_model); C: [memory_order](https://cppreference.com/c/atomic/memory_order)
 
 
 ## Каналы ошибок { #errors }
 
 ### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation* · `errors.model` · [Представление и передача ошибок](concepts.md#errors-model)
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*) · `errors.model` · [Представление и передача ошибок](concepts.md#errors-model)
 
 Каналы представления и передачи неуспешного исхода или исключительной ситуации: значение, исключение, condition/restart, логическая неудача или аварийный механизм.
 
@@ -1089,10 +1292,9 @@ publish: true
 
 - Связано с: [Проверяемые исключения](glossary.md#errors-checked-exceptions) — Статическая обязанность catch/throws относится к исключительному каналу, а не ко всем видам неуспеха.
 - Связано с: [Освобождение ресурсов](glossary.md#resources-cleanup) — Нелокальный выход требует определить очистку ресурсов; возврат значения-ошибки сам по себе не создаёт такой выход.
+- Часто путают: [Неопределённое поведение](glossary.md#evaluation-undefined-behavior) — Гарантированное исключение или паника — определённое поведение; UB не обещает ни ошибки, ни сигнала.
 
 **В языках:** [APL](apl.md#errors-model), [Forth](forth.md#errors-model), [C](c.md#errors-model), [Prolog](prolog.md#errors-model), [Smalltalk](smalltalk.md#errors-model), [SQL](sql.md#errors-model), [C++](cpp.md#errors-model), [Common Lisp](common-lisp.md#errors-model), [Erlang](erlang.md#errors-model), [Haskell](haskell.md#errors-model), [Python](python.md#errors-model), [Lua](lua.md#errors-model), [Java](java.md#errors-model), [JavaScript](javascript.md#errors-model), [C#](csharp.md#errors-model), [Go](go.md#errors-model), [Rust](rust.md#errors-model), [TypeScript](typescript.md#errors-model), [Zig](zig.md#errors-model)
-
-**Статьи сада:** [Erlang: модель ошибок «let it crash»](../garden/erlang-let-it-crash.md), [Go: сознательная бедность языка](../garden/go-simplicity.md)
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [20. Критерии оценки языков программирования](../lectures/html/20-kriterii-ocenki-yazykov-programmirovaniya.html)
 
@@ -1102,9 +1304,11 @@ publish: true
 
 **Источники:** [A History of Erlang](sources.md#hopl-erlang); [Making Reliable Distributed Systems in the Presence of Software Errors](sources.md#armstrong-thesis)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Exceptions](https://cppreference.com/cpp/language/exceptions); C++: [std::expected](https://cppreference.com/cpp/utility/expected); C: [Error handling](https://cppreference.com/c/error)
+
 ### Проверяемые исключения { #errors-checked-exceptions }
 
-*Checked exceptions* · `errors.checked_exceptions` · [Проверяемые исключения](concepts.md#errors-checked-exceptions)
+англ. *Checked exceptions* (также *exception specifications*) · `errors.checked_exceptions` · [Проверяемые исключения](concepts.md#errors-checked-exceptions)
 
 Статическое требование обработать определённые классы исключений или объявить возможность их распространения в контракте подпрограммы.
 
@@ -1121,9 +1325,11 @@ publish: true
 
 **Проверить понимание:** [Чем checked exception отличается от Result и must-use?](questions.md#q06)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Dynamic exception specification (until C++17)](https://cppreference.com/cpp/language/except_spec); C++: [noexcept specifier](https://cppreference.com/cpp/language/noexcept_spec)
+
 ### Диагностика неиспользованного результата { #errors-must-use }
 
-*Unused-result diagnostics* · `errors.must_use` · [Диагностика неиспользованного результата](concepts.md#errors-must-use)
+англ. *Unused-result diagnostics* (также *nodiscard*, *must_use*, *warn_unused_result*) · `errors.must_use` · [Диагностика неиспользованного результата](concepts.md#errors-must-use)
 
 Диагностика отбрасывания результата, который помечен как требующий внимания вызывающего кода. Уровень диагностики и допустимые способы отбрасывания зависят от профиля.
 
@@ -1139,12 +1345,14 @@ publish: true
 
 **Проверить понимание:** [Чем checked exception отличается от Result и must-use?](questions.md#q06)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [C++ attribute: nodiscard](https://cppreference.com/cpp/language/attributes/nodiscard); C: [C attribute: nodiscard](https://cppreference.com/c/language/attributes/nodiscard)
+
 
 ## Ресурсы и взаимодействие { #resources }
 
 ### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup* · `resources.cleanup` · [Освобождение ресурсов](concepts.md#resources-cleanup)
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*) · `resources.cleanup` · [Освобождение ресурсов](concepts.md#resources-cleanup)
 
 Правила выполнения освобождающих действий при завершении работы с ресурсом или выходе из области, включая обычные и исключительные пути.
 
@@ -1156,10 +1364,9 @@ publish: true
 
 - Часто путают: [Освобождение памяти](glossary.md#memory-management) — Освобождение памяти объекта и закрытие внешнего ресурса имеют разные условия и сроки.
 - Связано с: [Представление и передача ошибок](glossary.md#errors-model) — Нелокальный выход требует определить очистку ресурсов; возврат значения-ошибки сам по себе не создаёт такой выход.
+- Связано с: [Длительность хранения и время жизни объекта](glossary.md#memory-storage-duration) — Деструктор при выходе из области вызывается в конце времени жизни автоматического объекта.
 
 **В языках:** [C](c.md#resources-cleanup), [Smalltalk](smalltalk.md#resources-cleanup), [C++](cpp.md#resources-cleanup), [Common Lisp](common-lisp.md#resources-cleanup), [Erlang](erlang.md#resources-cleanup), [Python](python.md#resources-cleanup), [Lua](lua.md#resources-cleanup), [Java](java.md#resources-cleanup), [JavaScript](javascript.md#resources-cleanup), [C#](csharp.md#resources-cleanup), [Go](go.md#resources-cleanup), [Rust](rust.md#resources-cleanup), [TypeScript](typescript.md#resources-cleanup), [Zig](zig.md#resources-cleanup)
-
-**Статьи сада:** [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md), [Rust: владение и заимствование](../garden/rust-ownership.md)
 
 **Слайды лекций:** [20. Критерии оценки языков программирования](../lectures/html/20-kriterii-ocenki-yazykov-programmirovaniya.html)
 
@@ -1169,9 +1376,11 @@ publish: true
 
 **Источники:** [Дизайн и эволюция C++](sources.md#stroustrup-de)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [RAII](https://cppreference.com/cpp/language/raii); C++: [Destructors](https://cppreference.com/cpp/language/destructor)
+
 ### Интерфейс ввода-вывода { #resources-io }
 
-*I/O interface* · `resources.io` · [Интерфейс ввода-вывода](concepts.md#resources-io)
+англ. *Input/output* (также *I/O library*) · `resources.io` · [Интерфейс ввода-вывода](concepts.md#resources-io)
 
 Уровень и форма предоставления операций обмена с внешним окружением — встроенная операция, стандартная библиотека, макрос или API конкретной среды.
 
@@ -1185,9 +1394,11 @@ publish: true
 
 **В языках:** [APL](apl.md#resources-io), [Forth](forth.md#resources-io), [C](c.md#resources-io), [Prolog](prolog.md#resources-io), [Smalltalk](smalltalk.md#resources-io), [SQL](sql.md#resources-io), [C++](cpp.md#resources-io), [Common Lisp](common-lisp.md#resources-io), [Haskell](haskell.md#resources-io), [Python](python.md#resources-io), [Java](java.md#resources-io), [C#](csharp.md#resources-io), [Rust](rust.md#resources-io)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Input/output library](https://cppreference.com/cpp/io); C: [File input/output](https://cppreference.com/c/io)
+
 ### Конкурентное выполнение { #resources-concurrency }
 
-*Concurrency* · `resources.concurrency` · [Конкурентное выполнение](concepts.md#resources-concurrency)
+англ. *Concurrency* (также *threads*, *async/await*, *actors*) · `resources.concurrency` · [Конкурентное выполнение](concepts.md#resources-concurrency)
 
 Возможность организовать несколько вычислений с перекрывающимся временем жизни и правила их продвижения и взаимодействия.
 
@@ -1198,18 +1409,19 @@ publish: true
 **Связи:**
 
 - Связано с: [Синхронизация отправки и приёма](glossary.md#resources-communication-coupling) — Взаимодействующим вычислениям нужен определённый протокол отправки и приёма.
+- Помогает изучить: [Модель памяти для параллельного доступа](glossary.md#memory-concurrency-model) — Модель памяти обсуждают после того, как понятно, откуда берутся параллельные потоки.
 
 **В языках:** [Smalltalk](smalltalk.md#resources-concurrency), [Erlang](erlang.md#resources-concurrency), [Python](python.md#resources-concurrency), [Lua](lua.md#resources-concurrency), [Java](java.md#resources-concurrency), [JavaScript](javascript.md#resources-concurrency), [C#](csharp.md#resources-concurrency), [Go](go.md#resources-concurrency), [Rust](rust.md#resources-concurrency), [TypeScript](typescript.md#resources-concurrency), [Zig](zig.md#resources-concurrency)
 
-**Статьи сада:** [Erlang: модель ошибок «let it crash»](../garden/erlang-let-it-crash.md), [Go: сознательная бедность языка](../garden/go-simplicity.md)
-
 **Люди:** [Джо Армстронг](people.md#armstrong)
 
-**Источники:** [A History of Erlang](sources.md#hopl-erlang); [Making Reliable Distributed Systems in the Presence of Software Errors](sources.md#armstrong-thesis)
+**Источники:** [A History of Erlang](sources.md#hopl-erlang); [Making Reliable Distributed Systems in the Presence of Software Errors](sources.md#armstrong-thesis); [Programming Language Memory Models](sources.md#cox-memory-models)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Concurrency support library](https://cppreference.com/cpp/thread); C: [Concurrency support library](https://cppreference.com/c/thread)
 
 ### Синхронизация отправки и приёма { #resources-communication-coupling }
 
-*Send and receive coupling* · `resources.communication_coupling` · [Синхронизация отправки и приёма](concepts.md#resources-communication-coupling)
+англ. *Send and receive coupling* (также *asynchronous message passing*, *rendezvous*, *synchronous channels*) · `resources.communication_coupling` · [Синхронизация отправки и приёма](concepts.md#resources-communication-coupling)
 
 Степень зависимости завершения отправки от готовности получателя: независимое помещение сообщения в очередь или согласованная встреча отправителя и получателя.
 
@@ -1226,15 +1438,13 @@ publish: true
 
 **В языках:** [Erlang](erlang.md#resources-communication-coupling), [Go](go.md#resources-communication-coupling)
 
-**Статьи сада:** [Erlang: модель ошибок «let it crash»](../garden/erlang-let-it-crash.md)
-
 **Проверить понимание:** [Синхронный канал и синхронные такты означают одно и то же?](questions.md#q14)
 
 **Источники:** [Making Reliable Distributed Systems in the Presence of Software Errors](sources.md#armstrong-thesis); [Erlang/OTP — Concurrent Programming: send and receive](https://www.erlang.org/doc/system/conc_prog.html); [INMOS occam Run-time Model Specification SW-0064-4 §3 — synchronized unbuffered channels](https://www.transputer.net/obooks/sw-0064-4/sw-0064-4.html)
 
 ### Выбор сообщения из очереди { #resources-receive-selection }
 
-*Message selection from a queue* · `resources.receive_selection` · [Выбор сообщения из очереди](concepts.md#resources-receive-selection)
+англ. *Message selection from a queue* (также *selective receive*) · `resources.receive_selection` · [Выбор сообщения из очереди](concepts.md#resources-receive-selection)
 
 Правило выбора доступного сообщения из очереди получателя — например, только голова либо первое сообщение, подходящее под образец.
 
@@ -1248,8 +1458,6 @@ publish: true
 
 **В языках:** [Erlang](erlang.md#resources-receive-selection)
 
-**Статьи сада:** [Erlang: модель ошибок «let it crash»](../garden/erlang-let-it-crash.md)
-
 **Проверить понимание:** [Синхронный канал и синхронные такты означают одно и то же?](questions.md#q14)
 
 **Источники:** [Erlang/OTP — Concurrent Programming: selective receive and retained messages](https://www.erlang.org/doc/system/conc_prog.html)
@@ -1259,7 +1467,7 @@ publish: true
 
 ### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries* · `syntax.blocks` · [Границы синтаксических групп](concepts.md#syntax-blocks)
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*) · `syntax.blocks` · [Границы синтаксических групп](concepts.md#syntax-blocks)
 
 Способ обозначения границ синтаксических групп — разделителями, значимыми отступами или структурой читаемых форм.
 
@@ -1271,18 +1479,21 @@ publish: true
 
 - Часто путают: [Конструкции областей видимости](glossary.md#scope-constructs) — Границы синтаксической группы и границы области имён не обязаны совпадать.
 - Связано с: [Границы операторов и определений](glossary.md#syntax-statement-terminator) — Границы групп и границы отдельных операторов совместно определяют разбор, но могут задаваться разными средствами.
+- Связано с: [Алгоритм синтаксического анализа](glossary.md#tooling-parsing-algorithm) — Значимые отступы не описываются КС-грамматикой напрямую и требуют лексера с состоянием (INDENT/DEDENT) или внешнего сканера.
 
 **В языках:** [APL](apl.md#syntax-blocks), [Forth](forth.md#syntax-blocks), [C](c.md#syntax-blocks), [Prolog](prolog.md#syntax-blocks), [Smalltalk](smalltalk.md#syntax-blocks), [SQL](sql.md#syntax-blocks), [C++](cpp.md#syntax-blocks), [Common Lisp](common-lisp.md#syntax-blocks), [Erlang](erlang.md#syntax-blocks), [Haskell](haskell.md#syntax-blocks), [Python](python.md#syntax-blocks), [Lua](lua.md#syntax-blocks), [Java](java.md#syntax-blocks), [JavaScript](javascript.md#syntax-blocks), [C#](csharp.md#syntax-blocks), [Go](go.md#syntax-blocks), [Rust](rust.md#syntax-blocks), [TypeScript](typescript.md#syntax-blocks), [Zig](zig.md#syntax-blocks)
-
-**Статьи сада:** [Forth: стек вместо синтаксиса](../garden/forth-stack.md)
 
 **Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html)
 
 **Проверить понимание:** [Может ли блок иметь границы, но не создавать область имён?](questions.md#q04)
 
+**Источники:** [The Next 700 Programming Languages](sources.md#landin-1966); [Syntax Design](sources.md#toal-syntax-design)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Statements](https://cppreference.com/cpp/language/statements); C: [Statements](https://cppreference.com/c/language/statements)
+
 ### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries* · `syntax.statement_terminator` · [Границы операторов и определений](concepts.md#syntax-statement-terminator)
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*) · `syntax.statement_terminator` · [Границы операторов и определений](concepts.md#syntax-statement-terminator)
 
 Правила распознавания границ операторов и определений: терминатор, разделитель, перевод строки либо структура формы.
 
@@ -1296,13 +1507,15 @@ publish: true
 
 **В языках:** [APL](apl.md#syntax-statement-terminator), [Forth](forth.md#syntax-statement-terminator), [Prolog](prolog.md#syntax-statement-terminator), [Smalltalk](smalltalk.md#syntax-statement-terminator), [SQL](sql.md#syntax-statement-terminator), [Common Lisp](common-lisp.md#syntax-statement-terminator), [Erlang](erlang.md#syntax-statement-terminator), [Python](python.md#syntax-statement-terminator), [Lua](lua.md#syntax-statement-terminator), [Java](java.md#syntax-statement-terminator), [JavaScript](javascript.md#syntax-statement-terminator), [Go](go.md#syntax-statement-terminator), [Rust](rust.md#syntax-statement-terminator), [Zig](zig.md#syntax-statement-terminator)
 
-**Статьи сада:** [Forth: стек вместо синтаксиса](../garden/forth-stack.md), [JavaScript: цена обратной совместимости](../garden/javascript-compatibility.md)
-
 **Проверить понимание:** [Может ли блок иметь границы, но не создавать область имён?](questions.md#q04)
+
+**Источники:** [Syntax Design](sources.md#toal-syntax-design)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Statements](https://cppreference.com/cpp/language/statements); C: [Statements](https://cppreference.com/c/language/statements)
 
 ### Чувствительность имён к регистру { #syntax-case-sensitive }
 
-*Identifier case sensitivity* · `syntax.case_sensitive` · [Чувствительность имён к регистру](concepts.md#syntax-case-sensitive)
+англ. *Case sensitivity* (также *identifier case sensitivity*) · `syntax.case_sensitive` · [Чувствительность имён к регистру](concepts.md#syntax-case-sensitive)
 
 Правило различения идентификаторов по регистру после предусмотренных языком шагов чтения и нормализации.
 
@@ -1316,9 +1529,11 @@ publish: true
 
 **В языках:** [APL](apl.md#syntax-case-sensitive), [Prolog](prolog.md#syntax-case-sensitive), [Smalltalk](smalltalk.md#syntax-case-sensitive), [SQL](sql.md#syntax-case-sensitive), [Erlang](erlang.md#syntax-case-sensitive), [Python](python.md#syntax-case-sensitive), [Lua](lua.md#syntax-case-sensitive), [Java](java.md#syntax-case-sensitive), [Go](go.md#syntax-case-sensitive), [Rust](rust.md#syntax-case-sensitive), [Zig](zig.md#syntax-case-sensitive)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Identifiers](https://cppreference.com/cpp/language/identifiers); C: [Identifier](https://cppreference.com/c/language/identifier)
+
 ### Метапрограммирование { #syntax-metaprogramming }
 
-*Metaprogramming* · `syntax.metaprogramming` · [Метапрограммирование](concepts.md#syntax-metaprogramming)
+англ. *Metaprogramming* (также *macros*, *reflection*, *compile-time evaluation*) · `syntax.metaprogramming` · [Метапрограммирование](concepts.md#syntax-metaprogramming)
 
 Средства, с помощью которых программа анализирует, создаёт или преобразует код либо его представление на определённой стадии обработки.
 
@@ -1329,18 +1544,20 @@ publish: true
 **Связи:**
 
 - Связано с: [Гигиена макросов](glossary.md#syntax-macro-hygiene) — Гигиена уточняет один аспект преобразования синтаксиса, но не любого метапрограммирования.
+- Частные случаи: [Вычисления во время компиляции](glossary.md#evaluation-compile-time) — Вычисление значений при компиляции — частный механизм метапрограммирования, отдельный от порождения кода.
+- Связано с: [Языковой верстак](glossary.md#tooling-language-workbench) — Верстак и макросы — два пути к language oriented programming: внешний инструмент против средств самого языка.
 
 **В языках:** [APL](apl.md#syntax-metaprogramming), [Forth](forth.md#syntax-metaprogramming), [C](c.md#syntax-metaprogramming), [Prolog](prolog.md#syntax-metaprogramming), [Smalltalk](smalltalk.md#syntax-metaprogramming), [SQL](sql.md#syntax-metaprogramming), [C++](cpp.md#syntax-metaprogramming), [Common Lisp](common-lisp.md#syntax-metaprogramming), [Erlang](erlang.md#syntax-metaprogramming), [Python](python.md#syntax-metaprogramming), [Lua](lua.md#syntax-metaprogramming), [Java](java.md#syntax-metaprogramming), [Rust](rust.md#syntax-metaprogramming), [Zig](zig.md#syntax-metaprogramming)
 
-**Статьи сада:** [Forth: стек вместо синтаксиса](../garden/forth-stack.md), [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md), [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md), [Zig: comptime вместо макросов](../garden/zig-comptime.md)
-
 **Люди:** [Чарльз Мур](people.md#moore), [Дэн Ингаллс](people.md#ingalls), [Эндрю Келли](people.md#andrew-kelley)
 
-**Источники:** [Zig 0.16.0 Language Reference](sources.md#zig-langref)
+**Источники:** [Zig 0.16.0 Language Reference](sources.md#zig-langref); [A Programmable Programming Language](sources.md#felleisen-programmable-2018); [Racket](sources.md#racket)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Replacing text macros](https://cppreference.com/cpp/preprocessor/replace); C++: [Template Metaprogramming](https://cppreference.com/cpp/language/template_metaprogramming); C: [Replacing text macros](https://cppreference.com/c/preprocessor/replace)
 
 ### Гигиена макросов { #syntax-macro-hygiene }
 
-*Macro hygiene* · `syntax.macro_hygiene` · [Гигиена макросов](concepts.md#syntax-macro-hygiene)
+англ. *Macro hygiene* (также *hygienic macros*, *variable capture*) · `syntax.macro_hygiene` · [Гигиена макросов](concepts.md#syntax-macro-hygiene)
 
 Сохранение корректных связей имён при раскрытии макроса, предотвращающее непреднамеренный захват между введёнными именами и контекстом использования.
 
@@ -1358,13 +1575,13 @@ publish: true
 
 **Различающие примеры:** [Scheme: вернуться в вычисление](../concepts/examples/index.md#scheme)
 
-**Статьи сада:** [Zig: comptime вместо макросов](../garden/zig-comptime.md)
+**Источники:** [A Programmable Programming Language](sources.md#felleisen-programmable-2018); [Scheme R7RS-small §4.3 — hygienic macros](https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-6.html)
 
-**Источники:** [Scheme R7RS-small §4.3 — hygienic macros](https://standards.scheme.org/corrected-r7rs/r7rs-Z-H-6.html)
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Replacing text macros](https://cppreference.com/cpp/preprocessor/replace); C: [Replacing text macros](https://cppreference.com/c/preprocessor/replace)
 
 ### Нотация исходной программы { #syntax-program-representation }
 
-*Source program notation* · `syntax.program_representation` · [Нотация исходной программы](concepts.md#syntax-program-representation)
+англ. *Source program notation* (также *visual programming language*) · `syntax.program_representation` · [Нотация исходной программы](concepts.md#syntax-program-representation)
 
 Форма, в которой автор задаёт исходную программу для исполнения или трансляции: текст либо структурный граф с узлами и связями.
 
@@ -1375,19 +1592,18 @@ publish: true
 **Связи:**
 
 - Часто путают: [Ожидание доступности данных](glossary.md#evaluation-data-availability) — Графическая запись не доказывает правило готовности по данным.
+- Связано с: [Языковой верстак](glossary.md#tooling-language-workbench) — Проекционный верстак хранит программу как модель, а текст или диаграмма — лишь её проекции.
 
 **В языках:** [APL](apl.md#syntax-program-representation), [Forth](forth.md#syntax-program-representation), [SQL](sql.md#syntax-program-representation)
 
-**Статьи сада:** [APL: нотация как инструмент мышления](../garden/apl-arrays.md)
-
-**Источники:** [NI — G graphical programming in LabVIEW](https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html); [Marten 1.6 — Prograph cases, operations and links (notation only)](https://www.andescotia.com/products/marten/)
+**Источники:** [Language Workbenches: The Killer-App for Domain Specific Languages?](sources.md#fowler-lw-2005); [Towards User-Friendly Projectional Editors](sources.md#voelter-projectional-2014); [NI — G graphical programming in LabVIEW](https://www.ni.com/en/shop/labview/benefits-of-programming-graphically-in-ni-labview.html); [Marten 1.6 — Prograph cases, operations and links (notation only)](https://www.andescotia.com/products/marten/)
 
 
 ## Парадигмы { #paradigm }
 
 ### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms* · `paradigm.supported` · [Поддерживаемые парадигмы](concepts.md#paradigm-supported)
+англ. *Programming paradigms* (также *supported paradigms*) · `paradigm.supported` · [Поддерживаемые парадигмы](concepts.md#paradigm-supported)
 
 Устойчивые способы организации вычислений и программных абстракций, поддержанные механизмами языка и его практикой использования.
 
@@ -1401,18 +1617,16 @@ publish: true
 
 **В языках:** [APL](apl.md#paradigm-supported), [Forth](forth.md#paradigm-supported), [C](c.md#paradigm-supported), [Prolog](prolog.md#paradigm-supported), [Smalltalk](smalltalk.md#paradigm-supported), [SQL](sql.md#paradigm-supported), [C++](cpp.md#paradigm-supported), [Common Lisp](common-lisp.md#paradigm-supported), [Erlang](erlang.md#paradigm-supported), [Haskell](haskell.md#paradigm-supported), [Python](python.md#paradigm-supported), [Lua](lua.md#paradigm-supported), [Java](java.md#paradigm-supported), [JavaScript](javascript.md#paradigm-supported), [Go](go.md#paradigm-supported), [Rust](rust.md#paradigm-supported), [TypeScript](typescript.md#paradigm-supported), [Zig](zig.md#paradigm-supported)
 
-**Статьи сада:** [SQL: декларативность](../garden/sql-declarative.md)
-
 **Слайды лекций:** [02. Понятие языка](../lectures/html/02-ponyatie-yazyka.html)
 
-**Источники:** [Стили и методы программирования](sources.md#nepeivoda)
+**Источники:** [Стили и методы программирования](sources.md#nepeivoda); [Programming Paradigms for Dummies: What Every Programmer Should Know](sources.md#van-roy-paradigms); [Why Concatenative Programming Matters](sources.md#purdy-concatenative)
 
 
 ## Семантика данных { #data }
 
 ### Кратность элементов коллекции { #data-collection-multiplicity }
 
-*Collection multiplicity* · `data.collection_multiplicity` · [Кратность элементов коллекции](concepts.md#data-collection-multiplicity)
+англ. *Collection multiplicity* (также *set semantics*, *bag semantics*, *multiset*) · `data.collection_multiplicity` · [Кратность элементов коллекции](concepts.md#data-collection-multiplicity)
 
 Правила учёта повторных элементов и их позиций в конкретной коллекции или результате операции: присутствие, число вхождений либо позиционные вхождения.
 
@@ -1428,8 +1642,6 @@ publish: true
 
 **Различающие примеры:** [Datalog: цикл в графе, конечное замыкание](../concepts/examples/index.md#datalog), [SQL: одинаковые строки не исчезают сами](../concepts/examples/index.md#sql)
 
-**Статьи сада:** [SQL: декларативность](../garden/sql-declarative.md)
-
 **Проверить понимание:** [Почему одинаковая операция даёт разные результаты для коллекций?](questions.md#q13)
 
 **Люди:** [Дональд Чемберлин](people.md#chamberlin), [Эдгар Кодд](people.md#codd)
@@ -1438,7 +1650,7 @@ publish: true
 
 ### Основание числового представления { #data-numeric-radix }
 
-*Numeric representation radix* · `data.numeric_radix` · [Основание числового представления](concepts.md#data-numeric-radix)
+англ. *Numeric representation radix* (также *binary floating point*, *decimal arithmetic*) · `data.numeric_radix` · [Основание числового представления](concepts.md#data-numeric-radix)
 
 Основание представления и арифметики числового типа или поля, например двоичное либо десятичное.
 
@@ -1456,9 +1668,11 @@ publish: true
 
 **Источники:** [GnuCOBOL 3.1 RC-1 Programmer's Guide §6.9.33 — PICTURE and V scale](https://gnucobol.sourceforge.io/HTML/gnucobpg.html); [Python 3 — binary float representation and hex conversion](https://docs.python.org/3/library/stdtypes.html#additional-methods-on-float)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Fundamental types](https://cppreference.com/cpp/language/types); C: [Arithmetic types](https://cppreference.com/c/language/arithmetic_types)
+
 ### Ограничение числовой точности { #data-numeric-precision }
 
-*Numeric precision bound* · `data.numeric_precision` · [Ограничение числовой точности](concepts.md#data-numeric-precision)
+англ. *Numeric precision bound* (также *arbitrary-precision arithmetic*, *bignum*, *fixed-width integers*) · `data.numeric_precision` · [Ограничение числовой точности](concepts.md#data-numeric-precision)
 
 Ограничение количества значащих разрядов, задаваемое типом, полем или настраиваемым контекстом вычисления.
 
@@ -1477,12 +1691,14 @@ publish: true
 
 **Источники:** [Python 3 — unlimited-precision integers and user-definable Decimal precision](https://docs.python.org/3/library/stdtypes.html#numeric-types-int-float-complex); [GnuCOBOL 3.1 RC-1 Programmer's Guide §6.9.33 — numeric PICTURE](https://gnucobol.sourceforge.io/HTML/gnucobpg.html)
 
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Fundamental types](https://cppreference.com/cpp/language/types); C: [Arithmetic types](https://cppreference.com/c/language/arithmetic_types)
+
 
 ## Правила вычисления и модели времени { #computation }
 
 ### Смысл применения правил { #computation-rule-semantics }
 
-*Rule application semantics* · `computation.rule_semantics` · [Смысл применения правил](concepts.md#computation-rule-semantics)
+англ. *Rule application semantics* (также *fixpoint semantics*, *constraint handling rules*) · `computation.rule_semantics` · [Смысл применения правил](concepts.md#computation-rule-semantics)
 
 Смысл применения правил к состоянию задачи: поиск ответа на цель, построение замыкания фактов либо преобразование хранилища с фиксацией выбора.
 
@@ -1500,13 +1716,11 @@ publish: true
 
 **Различающие примеры:** [Datalog: цикл в графе, конечное замыкание](../concepts/examples/index.md#datalog)
 
-**Статьи сада:** [SQL: декларативность](../garden/sql-declarative.md)
-
 **Источники:** [Mercury Reference Manual — goal solutions and determinism](https://www.mercurylang.org/information/doc-release/mercury_ref/Determinism-categories.html); [Z3 Guide — Basic Datalog fixed-point engine](https://microsoft.github.io/z3guide/docs/fixedpoints/basicdatalog/); [Soufflé Tutorial — recursive relations and arithmetic extension limits](https://souffle-lang.github.io/tutorial); [SWI-Prolog CHR — simplification, propagation and simpagation](https://www.swi-prolog.org/pldoc/man?section=chr-syntaxandsemantics)
 
 ### Режимы связанности аргументов { #computation-instantiation-modes }
 
-*Argument instantiation modes* · `computation.instantiation_modes` · [Режимы связанности аргументов](concepts.md#computation-instantiation-modes)
+англ. *Argument instantiation modes* (также *modes*, *mode system*) · `computation.instantiation_modes` · [Режимы связанности аргументов](concepts.md#computation-instantiation-modes)
 
 Описание требуемой связанности аргументов до вызова и гарантируемой связанности после него, отдельно от типов значений.
 
@@ -1527,7 +1741,7 @@ publish: true
 
 ### Объявленная кратность решений { #computation-solution-cardinality }
 
-*Declared solution cardinality* · `computation.solution_cardinality` · [Объявленная кратность решений](concepts.md#computation-solution-cardinality)
+англ. *Declared solution cardinality* (также *determinism categories*) · `computation.solution_cardinality` · [Объявленная кратность решений](concepts.md#computation-solution-cardinality)
 
 Контракт количества успешных решений и допустимости неудачи для определённого режима вызова при его возврате.
 
@@ -1548,7 +1762,7 @@ publish: true
 
 ### Временная область модели { #computation-time-domain }
 
-*Model time domain* · `computation.time_domain` · [Временная область модели](concepts.md#computation-time-domain)
+англ. *Model time domain* (также *synchronous time*, *discrete-event simulation*, *hybrid systems*) · `computation.time_domain` · [Временная область модели](concepts.md#computation-time-domain)
 
 Встроенный смысл времени, относительно которого определены значения и изменения модели: логические такты, дискретные события, непрерывное время или их сочетание.
 
@@ -1570,7 +1784,7 @@ publish: true
 
 ### Направленность уравнений и присваиваний { #computation-equation-causality }
 
-*Equation and assignment causality* · `computation.equation_causality` · [Направленность уравнений и присваиваний](concepts.md#computation-equation-causality)
+англ. *Equation and assignment causality* (также *acausal modeling*, *equation-based modeling*) · `computation.equation_causality` · [Направленность уравнений и присваиваний](concepts.md#computation-equation-causality)
 
 Различие между направленным обновлением цели, определением выходного потока и ненаправленным отношением величин, решаемым совместно с другими уравнениями.
 
@@ -1590,7 +1804,7 @@ publish: true
 
 ### Планирование обновлений в HDL-симуляции { #computation-update-scheduling }
 
-*HDL simulation update scheduling* · `computation.update_scheduling` · [Планирование обновлений в HDL-симуляции](concepts.md#computation-update-scheduling)
+англ. *HDL simulation update scheduling* (также *blocking assignment*, *nonblocking assignment*) · `computation.update_scheduling` · [Планирование обновлений в HDL-симуляции](concepts.md#computation-update-scheduling)
 
 Момент применения изменения состояния относительно вычисления правой части и других событий в модели аппаратной симуляции.
 
@@ -1615,7 +1829,7 @@ publish: true
 
 ### Режим гарантии тотальности { #verification-totality }
 
-*Totality guarantee policy* · `verification.totality` · [Режим гарантии тотальности](concepts.md#verification-totality)
+англ. *Totality guarantee policy* (также *totality checking*, *termination checking*) · `verification.totality` · [Режим гарантии тотальности](concepts.md#verification-totality)
 
 Политика проверки того, что определение покрывает допустимые входы и завершается либо продуктивно выдаёт результат в принятой модели вычислений.
 
@@ -1638,7 +1852,7 @@ publish: true
 
 ### Поведенческие контракты { #verification-behavioral-contracts }
 
-*Behavioral contracts* · `verification.behavioral_contracts` · [Поведенческие контракты](concepts.md#verification-behavioral-contracts)
+англ. *Behavioral contracts* (также *design by contract*, *preconditions and postconditions*, *contract assertions*) · `verification.behavioral_contracts` · [Поведенческие контракты](concepts.md#verification-behavioral-contracts)
 
 Предикаты допустимого входа, результата, изменения состояния и инвариантов, которыми описывается наблюдаемое поведение программного компонента.
 
@@ -1653,4 +1867,83 @@ publish: true
 
 **Различающие примеры:** [Eiffel: контракт сильнее сигнатуры](../concepts/examples/index.md#eiffel)
 
-**Источники:** [Eiffel — Design by Contract: assertions, old and monitoring](https://www.eiffel.org/doc/eiffel/ET-_Design_by_Contract_(tm),_Assertions_and_Exceptions); [Ada 2012 RM §6.1.1 — preconditions, postconditions and assertion policy](https://www.adaic.org/resources/add_content/standards/12rm/html/RM-6-1-1.html); [SPARK User's Guide — language subset, contracts and GNATprove boundaries](https://docs.adacore.com/spark2014-docs/html/ug/en/spark_2014.html)
+**Источники:** [Semantics with Applications: A Formal Introduction](sources.md#nielson-semantics); [An Axiomatic Basis for Computer Programming](sources.md#hoare-1969); [Eiffel — Design by Contract: assertions, old and monitoring](https://www.eiffel.org/doc/eiffel/ET-_Design_by_Contract_(tm),_Assertions_and_Exceptions); [Ada 2012 RM §6.1.1 — preconditions, postconditions and assertion policy](https://www.adaic.org/resources/add_content/standards/12rm/html/RM-6-1-1.html); [SPARK User's Guide — language subset, contracts and GNATprove boundaries](https://docs.adacore.com/spark2014-docs/html/ug/en/spark_2014.html)
+
+**Справочники:** [cppreference.com](sources.md#cppreference): C++: [Contract assertions (C++26)](https://cppreference.com/cpp/language/contracts)
+
+
+## Инструменты построения языковых процессоров { #tooling }
+
+### Способ построения синтаксического анализатора { #tooling-parser-construction }
+
+англ. *Parser construction* (также *parser generator*, *compiler-compiler*, *hand-written parser*, *parser combinators*) · `tooling.parser_construction` · [Способ построения синтаксического анализатора](concepts.md#tooling-parser-construction)
+
+Способ, которым получен синтаксический анализатор языковой реализации — написан вручную, сгенерирован инструментом по грамматике, собран из функций-комбинаторов или построен интерпретацией описания грамматики во время выполнения.
+
+**Пример.** Парсер PostgreSQL генерируется bison из `gram.y`; GCC с версий 3.4 (C++) и 4.1 (C) перешёл на рукописный рекурсивный спуск; в практикуме курса грамматика ANTLR превращается в Python-код, а Lark разбирает по грамматике без генерации кода.
+
+**Граница понятия.** Это свойство реализации, а не языка — у одного языка бывают разные анализаторы. Способ построения не определяет алгоритм разбора — рукописный и сгенерированный парсеры бывают нисходящими.
+
+**Связи:**
+
+- Полезный контраст: [Алгоритм синтаксического анализа](glossary.md#tooling-parsing-algorithm) — Кто строит анализатор и каким методом он разбирает — разные вопросы; рукописный рекурсивный спуск и ANTLR оба нисходящие.
+- Помогает изучить: [Языковой верстак](glossary.md#tooling-language-workbench) — Сначала разобраться, что даёт генератор парсеров, затем — чем верстак отличается от него.
+
+**В языках:** [C](c.md#tooling-parser-construction), [SQL](sql.md#tooling-parser-construction), [C++](cpp.md#tooling-parser-construction), [Haskell](haskell.md#tooling-parser-construction), [Python](python.md#tooling-parser-construction), [Go](go.md#tooling-parser-construction)
+
+**Слайды лекций:** [06. Построение синтаксического анализатора](../lectures/html/06-postroenie-sintaksicheskogo-analizatora.html), [09. Построение компилятора с помощью ANTLR](../lectures/html/09-postroenie-kompilyatora-s-pomoschyu-antlr.html)
+
+**Люди:** [Теренс Парр](people.md#parr)
+
+**Источники:** [Monadic Parsing in Haskell](sources.md#hutton-meijer-1998); [PEP 617 — New PEG parser for CPython](sources.md#pep-617); [Lark](sources.md#lark); [Megaparsec](sources.md#megaparsec); [textX](sources.md#textx)
+
+**Справочники:** [ANTLR](sources.md#antlr): [ANTLR](https://www.antlr.org/) · [Lark](sources.md#lark): [Lark documentation](https://lark-parser.readthedocs.io/en/latest/) · [GNU Bison](sources.md#bison): [Bison manual](https://www.gnu.org/software/bison/manual/) · [Tree-sitter](sources.md#tree-sitter): [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) · [PEP 617](sources.md#pep-617): Python: [PEP 617 — New PEG parser for CPython](https://peps.python.org/pep-0617/)
+
+### Алгоритм синтаксического анализа { #tooling-parsing-algorithm }
+
+англ. *Parsing algorithm* (также *LL(k)*, *ALL(*)*, *LALR(1)*, *GLR*, *Earley*, *PEG*, *packrat*) · `tooling.parsing_algorithm` · [Алгоритм синтаксического анализа](concepts.md#tooling-parsing-algorithm)
+
+Метод, которым анализатор строит вывод цепочки в грамматике, определяющий класс принимаемых грамматик, обработку левой рекурсии и неоднозначности, а также сложность разбора.
+
+**Пример.** Для `1 - 2 - 3` LALR(1) принимает леворекурсивное правило `e : e '-' t`, PEG-генератор Peggy отвергает его как левую рекурсию, а Earley в Lark на неоднозначной грамматике может вернуть оба дерева.
+
+**Граница понятия.** Отсутствие конфликтов у PEG-грамматики не доказывает её однозначность — упорядоченный выбор молча выбирает первую подходящую альтернативу.
+
+**Связи:**
+
+- Полезный контраст: [Способ построения синтаксического анализатора](glossary.md#tooling-parser-construction) — Кто строит анализатор и каким методом он разбирает — разные вопросы; рукописный рекурсивный спуск и ANTLR оба нисходящие.
+- Связано с: [Границы синтаксических групп](glossary.md#syntax-blocks) — Значимые отступы не описываются КС-грамматикой напрямую и требуют лексера с состоянием (INDENT/DEDENT) или внешнего сканера.
+
+**В языках:** [C](c.md#tooling-parsing-algorithm), [SQL](sql.md#tooling-parsing-algorithm), [C++](cpp.md#tooling-parsing-algorithm), [Haskell](haskell.md#tooling-parsing-algorithm), [Python](python.md#tooling-parsing-algorithm), [Go](go.md#tooling-parsing-algorithm)
+
+**Слайды лекций:** [04. Регулярные грамматики](../lectures/html/04-regulyarnye-grammatiki.html), [05. Контекстно-свободные грамматики](../lectures/html/05-kontekstno-svobodnye-grammatiki.html), [06. Построение синтаксического анализатора](../lectures/html/06-postroenie-sintaksicheskogo-analizatora.html)
+
+**Люди:** [Теренс Парр](people.md#parr), [Брайан Форд](people.md#ford)
+
+**Источники:** [Adaptive LL(*) Parsing: The Power of Dynamic Analysis](sources.md#parr-allstar-2014); [Parsing Expression Grammars: A Recognition-Based Syntactic Foundation](sources.md#ford-peg-2004); [Packrat Parsing: Simple, Powerful, Lazy, Linear Time](sources.md#ford-packrat-2002); [Packrat Parsers Can Support Left Recursion](sources.md#warth-left-recursion-2008); [PEP 617 — New PEG parser for CPython](sources.md#pep-617); [Lark](sources.md#lark); [GNU Bison](sources.md#bison); [pest](sources.md#pest)
+
+**Справочники:** [Adaptive LL(*) Parsing: The Power of Dynamic Analysis](sources.md#parr-allstar-2014): [Adaptive LL(*) Parsing (tech report)](https://www.antlr.org/papers/allstar-techreport.pdf) · [Parsing Expression Grammars: A Recognition-Based Syntactic Foundation](sources.md#ford-peg-2004): [Parsing Expression Grammars](https://bford.info/pub/lang/peg.pdf) · [Lark](sources.md#lark): [Lark — Parsers: Earley, LALR(1), CYK](https://lark-parser.readthedocs.io/en/latest/parsers.html) · [GNU Bison](sources.md#bison): [Bison — LR Table Construction](https://www.gnu.org/software/bison/manual/html_node/LR-Table-Construction.html)
+
+### Языковой верстак { #tooling-language-workbench }
+
+англ. *Language workbench* (также *language oriented programming*, *projectional editor*, *DSL workbench*) · `tooling.language_workbench` · [Языковой верстак](concepts.md#tooling-language-workbench)
+
+Инструмент для определения языков, в котором по описанию абстрактного синтаксиса, редакторов и генераторов или интерпретаторов получается среда работы с языком — редактор с проверками, разрешение имён, трансляция.
+
+**Пример.** В Freon язык задаётся файлами `.ast`, `.edit`, `.scope`, `.type` и `.valid`, из которых генерируется проекционный web-редактор; в Langium из грамматики получаются типизированный AST и языковой сервер LSP.
+
+**Граница понятия.** Генератор парсеров даёт только анализатор, а внутренний DSL — только API базового языка; верстак отвечает за весь инструментарий языка. Проекционный редактор — частый, но не обязательный признак верстака.
+
+**Связи:**
+
+- Сначала полезно изучить: [Способ построения синтаксического анализатора](glossary.md#tooling-parser-construction) — Сначала разобраться, что даёт генератор парсеров, затем — чем верстак отличается от него.
+- Связано с: [Нотация исходной программы](glossary.md#syntax-program-representation) — Проекционный верстак хранит программу как модель, а текст или диаграмма — лишь её проекции.
+- Связано с: [Метапрограммирование](glossary.md#syntax-metaprogramming) — Верстак и макросы — два пути к language oriented programming: внешний инструмент против средств самого языка.
+
+**Слайды лекций:** [03. Проектирование процедурного языка программирования](../lectures/html/03-proektirovanie-procedurnogo-yazyka-programmirovaniya.html), [40. Текущие направления развития языковых процессоров](../lectures/html/40-tekuschie-napravleniya-razvitiya-yazykovyh-processorov.html)
+
+**Люди:** [Мартин Фаулер](people.md#fowler), [Маркус Фёльтер](people.md#voelter), [Йос Вармер](people.md#warmer), [Аннеке Клеппе](people.md#kleppe)
+
+**Источники:** [Domain-Specific Languages](sources.md#fowler-dsl-2010); [DSL Engineering: Designing, Implementing and Using Domain-Specific Languages](sources.md#voelter-dsl-engineering); [Language Workbenches: The Killer-App for Domain Specific Languages?](sources.md#fowler-lw-2005); [A Language Workbench in Action — MPS](sources.md#fowler-mps-2005); [The State of the Art in Language Workbenches: Conclusions from the Language Workbench Challenge](sources.md#erdweg-lwc-2013); [Evaluating and comparing language workbenches: Existing results and benchmarks for the future](sources.md#erdweg-lwc-2015); [Towards User-Friendly Projectional Editors](sources.md#voelter-projectional-2014); [Efficient development of consistent projectional editors using grammar cells](sources.md#voelter-grammar-cells-2016); [textX](sources.md#textx); [JetBrains MPS](sources.md#jetbrains-mps); [Eclipse Xtext](sources.md#xtext); [Eclipse Langium](sources.md#langium); [Spoofax](sources.md#spoofax); [Rascal MPL](sources.md#rascal); [Racket](sources.md#racket); [Freon](sources.md#freon); [LionWeb — Language Interfaces on the Web](sources.md#lionweb)
+
+**Справочники:** [Language Workbenches: The Killer-App for Domain Specific Languages?](sources.md#fowler-lw-2005): [Language Workbenches: The Killer-App for Domain Specific Languages?](https://martinfowler.com/articles/languageWorkbench.html) · [The State of the Art in Language Workbenches: Conclusions from the Language Workbench Challenge](sources.md#erdweg-lwc-2013): [The State of the Art in Language Workbenches (preprint)](https://homepages.cwi.nl/~storm/publications/lwc13paper.pdf) · [Freon](sources.md#freon): [Freon](https://www.freon4dsl.dev/)

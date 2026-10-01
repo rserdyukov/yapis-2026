@@ -83,6 +83,131 @@ sources:
     lectures: ["09"]
     labs: [2, 3]
 
+  - id: plai
+    kind: book
+    authors: [Shriram Krishnamurthi]
+    title: "Programming Languages: Application and Interpretation, 3rd ed."
+    year: 2022
+    url: https://www.plai.org/
+    note: "Свободный учебник: окружения, замыкания, состояние и типы объясняются через написание интерпретаторов и проверки типов. Опора для ЛР 4 и для понятий онтологии."
+    lectures: ["02", "07"]
+    labs: [4]
+    concepts: [scope.resolution, subprograms.closures, typing.checking, evaluation.strategy]
+
+  - id: eopl3
+    kind: book
+    authors: [Daniel P. Friedman, Mitchell Wand]
+    title: "Essentials of Programming Languages, 3rd ed."
+    year: 2008
+    venue: "MIT Press"
+    url: https://github.com/mwand/eopl3
+    note: "Классический учебник о связывании, окружениях, продолжениях и выводе типов, где каждое понятие реализуется маленьким интерпретатором. По ссылке — код к книге."
+    lectures: ["07", "12"]
+    labs: [4]
+    concepts: [scope.resolution, typing.inference, control.continuation_extent]
+
+  - id: meyer-itpl
+    kind: book
+    authors: [Bertrand Meyer]
+    title: Introduction to the Theory of Programming Languages
+    year: 1991
+    venue: "Prentice Hall; свободная электронная версия 2022"
+    url: https://bertrandmeyer.com/itpl/
+    note: "Свободный учебник о формальном описании семантики: операционная, денотационная, аксиоматическая и трансляционная. Продолжение лекции о синтаксически управляемой трансляции."
+    lectures: ["02", "07", "12"]
+
+  - id: nielson-program-analysis
+    kind: book
+    authors: [Flemming Nielson, Hanne Riis Nielson]
+    title: Program Analysis (an Appetizer)
+    year: 2020
+    url: https://arxiv.org/abs/2012.10086
+    note: "Короткий свободный учебник по анализу потоков данных на графах программ — основа оптимизаций и статических проверок."
+    lectures: ["07", "11"]
+
+  - id: inside-python-vm
+    kind: book
+    authors: [Obi Ike-Nwosu]
+    title: Inside The Python Virtual Machine
+    venue: Leanpub
+    url: https://leanpub.com/insidethepythonvirtualmachine/read
+    note: "Устройство компилятора и интерпретатора CPython: code- и frame-объекты, цикл ceval. Для варианта ЛР 5 с байткодом CPython; опкоды описаны до версии 3.11 и частично устарели."
+    languages: [python]
+    lectures: ["10"]
+    labs: [5]
+
+  - id: nielson-semantics
+    kind: book
+    authors: [Hanne Riis Nielson, Flemming Nielson]
+    title: "Semantics with Applications: A Formal Introduction"
+    year: 1992
+    venue: "Wiley; переработанное издание — Semantics with Applications: An Appetizer, Springer 2007"
+    doi: 10.1007/978-1-84628-692-6
+    url: http://www.cs.ru.nl/~herman/onderwijs/semantics2019/wiley.pdf
+    note: "Операционная (small-step и big-step), денотационная и аксиоматическая семантики языка While с доказательствами их согласованности; теорема о неподвижной точке для цикла. Издание 1992 года автор разрешает скачивать для личного изучения; DOI — у издания 2007 года."
+    lectures: ["07"]
+    concepts: [verification.behavioral_contracts]
+
+  - id: winskel-1993
+    kind: book
+    authors: [Glynn Winskel]
+    title: "The Formal Semantics of Programming Languages: An Introduction"
+    year: 1993
+    venue: "MIT Press"
+    doi: 10.7551/mitpress/3054.001.0001
+    note: "Классический учебник: операционная и денотационная семантики IMP, аксиоматическая семантика и её полнота, домены, рекурсивные типы."
+    lectures: ["07"]
+
+  - id: software-foundations
+    kind: book
+    authors: [Benjamin C. Pierce et al.]
+    title: "Software Foundations, vol. 1–2: Logical Foundations, Programming Language Foundations"
+    url: https://softwarefoundations.cis.upenn.edu/
+    note: "Свободный учебник в Rocq (Coq): язык Imp, small-step-семантика и логика Хоара с машинной проверкой каждого доказательства."
+    lectures: ["07"]
+
+  - id: concrete-semantics
+    kind: book
+    authors: [Tobias Nipkow, Gerwin Klein]
+    title: "Concrete Semantics with Isabelle/HOL"
+    year: 2014
+    venue: "Springer; свободный PDF"
+    url: http://concrete-semantics.org/
+    note: "Семантики IMP в Isabelle/HOL: big-step и small-step, корректность компилятора в стековую машину, денотационная семантика, логика Хоара, абстрактная интерпретация."
+    lectures: ["07", "11"]
+
+  - id: iverson-1962
+    kind: book
+    people: [iverson]
+    title: A Programming Language
+    year: 1962
+    venue: "Wiley"
+    url: https://softwarepreservation.computerhistory.org/apl/book/APROGRAMMINGLANGUAGE.pdf
+    note: "Книга, в которой введена нотация, ставшая APL; первоисточник к карточке APL."
+    languages: [apl]
+
+  - id: fowler-dsl-2010
+    kind: book
+    people: [fowler]
+    authors: [Rebecca Parsons]
+    title: Domain-Specific Languages
+    year: 2010
+    venue: "Addison-Wesley"
+    url: https://martinfowler.com/books/dsl.html
+    note: "Внешние и внутренние DSL, семантическая модель, приёмы разбора и генерации кода; языковые верстаки — одна из тем книги."
+    lectures: ["03"]
+    concepts: [tooling.language_workbench]
+
+  - id: voelter-dsl-engineering
+    kind: book
+    people: [voelter]
+    title: "DSL Engineering: Designing, Implementing and Using Domain-Specific Languages"
+    year: 2013
+    url: http://voelter.de/books.html
+    note: "Проектирование DSL и их реализация на трёх верстаках — MPS, Xtext и Spoofax. PDF доступен бесплатно, автор просит пожертвование."
+    lectures: ["03", "40"]
+    concepts: [tooling.language_workbench]
+
   # --- статьи
   - id: perlis-epigrams
     kind: article
@@ -370,6 +495,754 @@ sources:
     languages: [zig]
     concepts: [syntax.metaprogramming]
 
+  - id: cppreference
+    kind: documentation
+    topic: Языки каталога
+    title: cppreference.com — справочник по языкам C и C++
+    url: https://cppreference.com/
+    note: "Вики-справочник по ядру языков и стандартным библиотекам C и C++ с пометками версий стандарта (C11, C++20 и т. д.). Нормативным текстом не является: спорные утверждения сверяйте с проектами стандартов WG14/WG21. Названия страниц — устоявшиеся английские термины; ссылки на конкретные страницы даны у понятий в словаре и на карточках C и C++."
+    languages: [c, cpp]
+
+  - id: landin-1966
+    kind: article
+    authors: [Peter J. Landin]
+    title: The Next 700 Programming Languages
+    year: 1966
+    venue: "Communications of the ACM 9(3)"
+    doi: 10.1145/365230.365257
+    url: https://www.cs.cmu.edu/~crary/819-f09/Landin66.pdf
+    note: "Язык как общее ядро плюс предметная часть и синтаксический сахар; семейство ISWIM и правило отступов, повлиявшие на ML, Haskell и Python."
+    lectures: ["02", "03"]
+    languages: [haskell, python]
+    concepts: [syntax.blocks]
+
+  - id: felleisen-1991
+    kind: article
+    authors: [Matthias Felleisen]
+    title: On the Expressive Power of Programming Languages
+    year: 1991
+    venue: "Science of Computer Programming 17(1–3)"
+    doi: 10.1016/0167-6423(91)90036-W
+    note: "Формальный критерий: когда конструкция добавляет языку выразительность, а когда это синтаксический сахар. Доступное введение — доклад Ш. Кришнамурти на PWLConf 2019."
+    lectures: ["03", "20"]
+
+  - id: gabriel-worse-is-better
+    kind: article
+    people: [gabriel]
+    title: The Rise of "Worse is Better"
+    year: 1991
+    url: https://www.dreamsongs.com/RiseOfWorseIsBetter.html
+    note: "Эссе о компромиссе между простотой реализации и корректностью интерфейса на примере C/Unix и Lisp; материал для обсуждения критериев оценки языков."
+    lectures: ["20"]
+    languages: [c, common-lisp]
+
+  - id: dijkstra-ewd667
+    kind: article
+    authors: [Edsger W. Dijkstra]
+    title: On the foolishness of "natural language programming" (EWD 667)
+    year: 1978
+    url: https://www.cs.utexas.edu/~EWD/transcriptions/EWD06xx/EWD667.html
+    note: "Короткое эссе о том, почему формальная нотация незаменима. Повод для дискуссии о программировании на естественном языке и LLM."
+    lectures: ["02", "40"]
+
+  - id: lindsey-algol68
+    kind: article
+    authors: [C. H. Lindsey]
+    title: A History of ALGOL 68
+    year: 1996
+    venue: "HOPL II"
+    doi: 10.1145/234286.1057810
+    note: "История ALGOL 68 от участника: ортогональность, двухуровневые грамматики ван Вейнгаардена и уроки проектирования языка комитетом."
+    lectures: ["02", "05", "20"]
+
+  - id: van-roy-paradigms
+    kind: article
+    authors: [Peter Van Roy]
+    title: "Programming Paradigms for Dummies: What Every Programmer Should Know"
+    year: 2009
+    venue: "New Computational Paradigms for Computer Music, IRCAM/Delatour"
+    url: https://webperso.info.ucl.ac.be/~pvr/VanRoyChapter.pdf
+    note: "Парадигмы как наборы базовых концепций (состояние, конкурентность, недетерминизм); таксономия связана с ядерными языками. Основа раздела онтологии о парадигмах."
+    lectures: ["02", "20"]
+    concepts: [paradigm.supported, evaluation.data_availability]
+
+  - id: felleisen-programmable-2018
+    kind: article
+    authors: [Matthias Felleisen, Robert Bruce Findler, Matthew Flatt, Shriram Krishnamurthi, Eli Barzilay, Jay McCarthy, Sam Tobin-Hochstadt]
+    title: A Programmable Programming Language
+    year: 2018
+    venue: "Communications of the ACM 61(3)"
+    doi: 10.1145/3127323
+    url: https://cs.brown.edu/people/sk/Publications/Papers/Published/fffkbmt-programmable-prog-lang/paper.pdf
+    note: "Language-oriented programming на Racket: создание DSL и гигиенических макросов как обычная инженерная практика."
+    lectures: ["01", "40"]
+    concepts: [syntax.metaprogramming, syntax.macro_hygiene]
+
+  - id: pereira-energy-2017
+    kind: article
+    authors: [Rui Pereira, Marco Couto, Francisco Ribeiro, Rui Rua, Jácome Cunha, João Paulo Fernandes, João Saraiva]
+    title: "Energy Efficiency across Programming Languages: How Do Energy, Time, and Memory Relate?"
+    year: 2017
+    venue: "SLE 2017"
+    doi: 10.1145/3136014.3136031
+    url: https://greenlab.di.uminho.pt/wp-content/uploads/2017/10/sleFinal.pdf
+    note: "Измерения энергии, времени и памяти для 27 языков на задачах Benchmarks Game — материал к критерию «стоимость»; обсуждайте вместе с ограничениями методики."
+    lectures: ["20"]
+    languages: [c, cpp, rust, go, java, csharp, python, javascript, typescript, haskell, erlang, lua]
+
+  - id: xu-copy-and-patch
+    kind: article
+    authors: [Haoran Xu, Fredrik Kjolstad]
+    title: "Copy-and-Patch Compilation: A Fast Compilation Algorithm for High-Level Languages and Bytecode"
+    year: 2021
+    venue: "Proc. ACM Program. Lang. 5, OOPSLA"
+    doi: 10.1145/3485513
+    url: https://arxiv.org/abs/2011.13127
+    note: "Генерация машинного кода склейкой заранее скомпилированных шаблонов; техника используется в JIT CPython 3.13."
+    lectures: ["10", "40"]
+    languages: [python]
+
+  - id: thomson-static-analysis
+    kind: article
+    authors: [Patrick Thomson]
+    title: "Static Analysis: An Introduction"
+    year: 2021
+    venue: "ACM Queue 19(4)"
+    doi: 10.1145/3487019.3487021
+    url: https://queue.acm.org/detail.cfm?id=3487021
+    note: "Доступное введение в статический анализ: AST, графы потока управления, абстрактная интерпретация и её пределы."
+    lectures: ["07", "11"]
+    labs: [4]
+
+  - id: clem-thomson-github
+    kind: article
+    authors: [Timothy Clem, Patrick Thomson]
+    title: Static Analysis at GitHub
+    year: 2021
+    venue: "ACM Queue 19(4)"
+    doi: 10.1145/3487019.3487022
+    url: https://queue.acm.org/detail.cfm?id=3487022
+    note: "Как промышленная система разрешает имена в десятке языков на основе Tree-sitter и scope graphs; пример семантического анализа вне компилятора."
+    lectures: ["07", "40"]
+    concepts: [scope.resolution]
+
+  - id: kelly-ub-2021
+    kind: article
+    authors: [Terence Kelly]
+    title: "Schrödinger's Code: Undefined Behavior in Theory and Practice"
+    year: 2021
+    venue: "ACM Queue 19(2)"
+    doi: 10.1145/3466132.3468263
+    url: https://queue.acm.org/detail.cfm?id=3468263
+    note: "Что такое неопределённое поведение в C и C++, откуда распространённые заблуждения и как оптимизатор использует UB."
+    lectures: ["11", "20"]
+    languages: [c, cpp]
+    concepts: [evaluation.undefined_behavior]
+
+  - id: jung-ub-2021
+    kind: article
+    authors: [Ralf Jung]
+    title: Undefined Behavior deserves a better reputation
+    year: 2021
+    venue: "SIGPLAN Blog"
+    url: https://blog.sigplan.org/2021/11/18/undefined-behavior-deserves-a-better-reputation/
+    note: "UB как контракт между программистом и оптимизатором — взгляд исследователя семантики Rust; дополняет статью Kelly."
+    lectures: ["11", "20"]
+    languages: [c, cpp, rust]
+    concepts: [evaluation.undefined_behavior]
+
+  - id: tratt-specifications
+    kind: article
+    authors: [Laurence Tratt]
+    title: Why Aren't Programming Language Specifications Comprehensive?
+    year: 2023
+    url: https://tratt.net/laurie/blog/2023/why_arent_programming_language_specifications_comprehensive.html
+    note: "Спецификация и реализация языка: зачем стандарты оставляют implementation-defined и undefined behavior и почему реализации расходятся."
+    lectures: ["01", "02"]
+    concepts: [evaluation.undefined_behavior]
+
+  - id: tratt-compiled-interpreted
+    kind: article
+    authors: [Laurence Tratt]
+    title: "Compiled and Interpreted Languages: Two Ways of Saying Tomato"
+    year: 2023
+    url: https://tratt.net/laurie/blog/2023/compiled_and_interpreted_languages_two_ways_of_saying_tomato.html
+    note: "Компиляция и интерпретация — спектр реализаций, а не свойство языка; к лекции о языковых процессорах."
+    lectures: ["01", "10"]
+
+  - id: cox-memory-models
+    kind: article
+    authors: [Russ Cox]
+    title: Programming Language Memory Models
+    year: 2021
+    url: https://research.swtch.com/plmm
+    note: "Как Java, C++, JavaScript, Rust и Go определяют семантику разделяемой памяти и атомарных операций и почему это трудно."
+    lectures: ["40"]
+    languages: [java, cpp, javascript, rust, go]
+    concepts: [memory.concurrency_model, resources.concurrency]
+
+  - id: bendersky-type-inference
+    kind: article
+    authors: [Eli Bendersky]
+    title: Type inference
+    year: 2018
+    url: https://eli.thegreenplace.net/2018/type-inference/
+    note: "Вывод типов через генерацию уравнений и унификацию с кодом на Python, который можно повторить в семантическом анализаторе ЛР 4."
+    lectures: ["07"]
+    labs: [4]
+    concepts: [typing.inference]
+
+  - id: cockx-binding-representations
+    kind: article
+    authors: [Jesper Cockx]
+    title: 1001 Representations of Syntax with Binding
+    year: 2021
+    url: https://jesper.sikanda.be/posts/1001-syntax-representations.html
+    note: "Способы представлять имена и связывание в AST: строки, индексы де Брёйна, locally nameless, HOAS. К таблице символов в ЛР 4."
+    lectures: ["07"]
+    labs: [4]
+    concepts: [bindings.introduction, scope.resolution]
+
+  - id: marr-dynamic-languages
+    kind: article
+    authors: [Stefan Marr]
+    title: An Introduction to Efficient and Safe Implementations of Dynamic Languages
+    year: 2020
+    url: https://stefan-marr.de/2020/06/efficient-and-safe-implementations-of-dynamic-languages/
+    note: "Обзор техник реализации динамических языков: AST- и байткод-интерпретаторы, inline caches, hidden classes, JIT."
+    lectures: ["10", "11", "40"]
+    languages: [python, javascript]
+
+  - id: purdy-concatenative
+    kind: article
+    authors: [Jon Purdy]
+    title: Why Concatenative Programming Matters
+    year: 2012
+    url: https://evincarofautumn.blogspot.com/2012/02/why-concatenative-programming-matters.html
+    note: "Короткое введение в конкатенативную парадигму (композиция вместо применения) и её связь с комбинаторной логикой; фон к карточке Forth."
+    lectures: ["02"]
+    languages: [forth]
+    concepts: [paradigm.supported]
+
+  - id: ross-ur-languages
+    kind: article
+    authors: [Frederick J. Ross]
+    title: The seven programming ur-languages
+    year: 2022
+    url: https://madhadron.com/programming/seven_ur_languages.html
+    note: "Семь семейств-«праязыков» (ALGOL, Lisp, ML, Self, Forth, APL, Prolog) с характерными приёмами мышления — рамка для каталога языков."
+    lectures: ["02"]
+    labs: [1]
+    languages: [apl, forth, prolog, smalltalk, common-lisp, haskell, c]
+
+  - id: hume-comparing-compilers
+    kind: article
+    authors: [Tristan Hume]
+    title: Comparing the Same Project in Rust, Haskell, C++, Python, Scala and OCaml
+    year: 2019
+    url: https://thume.ca/2019/04/29/comparing-compilers-in-rust-haskell-c-and-python/
+    note: "Один и тот же учебный компилятор, написанный командами на шести языках: объём кода, генераторы парсеров, представление AST. К выбору языка и архитектуры в ЛР."
+    lectures: ["20"]
+    labs: [2, 3, 4, 5]
+    languages: [rust, haskell, cpp, python]
+
+  - id: vogel-c500
+    kind: article
+    authors: [Theia Vogel]
+    title: Writing a C compiler in 500 lines of Python
+    year: 2023
+    url: https://vgel.me/posts/c500/
+    note: "Однопроходный компилятор подмножества C в WebAssembly (WAT) на Python — компактный образец для ЛР 5. Есть перевод на Хабре (habr.com/ru/companies/cloud4y/articles/760400)."
+    lectures: ["10", "12"]
+    labs: [5]
+    languages: [python, c]
+
+  - id: xortator-optimizing-compilers
+    kind: article
+    authors: [xortator]
+    title: "Поговорим об оптимизирующих компиляторах (цикл статей)"
+    year: 2023
+    venue: "Хабр"
+    url: https://habr.com/ru/articles/735152/
+    note: "Русскоязычный цикл разработчика LLVM: SSA-форма, доминирование, UB и оптимизации, удаление общих подвыражений, вынос инвариантов цикла."
+    lectures: ["10", "11"]
+    concepts: [evaluation.undefined_behavior]
+
+  - id: dziworski-enkel
+    kind: article
+    authors: [Jakub Dziworski]
+    title: "Creating JVM language: Enkel (20-part series)"
+    year: 2016
+    url: https://jakubdziworski.github.io/enkel/2016/03/10/enkel_first.html
+    note: "Двадцать шагов создания языка: грамматика ANTLR 4, visitor, генерация JVM-байткода через ASM. Образец для цепочки ЛР 2–5 на Java."
+    lectures: ["09", "10"]
+    labs: [2, 3, 4, 5]
+    languages: [java]
+
+  - id: tomassetti-langsandbox
+    kind: article
+    authors: [Federico Tomassetti]
+    title: "LangSandbox: how to create a programming language"
+    year: 2016
+    url: https://github.com/ftomassetti/LangSandbox
+    note: "Код к серии статей о языке Sandy: лексер и парсер ANTLR, AST, валидация, генерация JVM-байткода — та же цепочка, что в ЛР 2–5."
+    lectures: ["09", "10"]
+    labs: [2, 3, 4, 5]
+
+  - id: tomassetti-dsl-guide
+    kind: article
+    authors: [Federico Tomassetti]
+    title: The complete guide to (external) Domain Specific Languages
+    url: https://tomassetti.me/domain-specific-languages/
+    note: "Практический обзор внешних DSL: примеры, выгоды и способы реализации. Помогает придумать язык по варианту в ЛР 1."
+    lectures: ["03", "09"]
+    labs: [1, 2]
+
+  - id: toal-language-design
+    kind: article
+    authors: [Ray Toal]
+    title: "Language Design: So you want to design a programming language"
+    url: https://cs.lmu.edu/~ray/notes/languagedesignnotes/
+    note: "Конспект-чек-лист проектирования языка: выбор возможностей, абстрактный и конкретный синтаксис, статическая семантика. К лекции 03 и ЛР 1."
+    lectures: ["03", "05", "20"]
+    labs: [1, 2]
+
+  - id: toal-syntax-design
+    kind: article
+    authors: [Ray Toal]
+    title: Syntax Design
+    url: https://cs.lmu.edu/~ray/notes/syntaxdesign/
+    note: "Одна и та же программа в разных вариантах конкретного синтаксиса: скобки, отступы, префиксная и постфиксная запись. Пособие к проектированию синтаксиса в ЛР 1–2."
+    lectures: ["03", "05"]
+    labs: [1, 2]
+    concepts: [syntax.blocks, syntax.statement_terminator]
+
+  - id: aosa-ghc
+    kind: article
+    people: [peyton-jones]
+    authors: [Simon Marlow]
+    title: The Glasgow Haskell Compiler
+    year: 2012
+    venue: "The Architecture of Open Source Applications, Vol. 2"
+    url: https://aosabook.org/en/v2/ghc.html
+    note: "Архитектура промышленного компилятора от его авторов: фазы, промежуточный язык Core, оптимизации и рантайм."
+    lectures: ["01", "10", "11"]
+    languages: [haskell]
+
+  - id: fowler-lw-2005
+    kind: article
+    people: [fowler]
+    title: "Language Workbenches: The Killer-App for Domain Specific Languages?"
+    year: 2005
+    url: https://martinfowler.com/articles/languageWorkbench.html
+    note: "Статья, в которой введены термины language workbench и language oriented programming: внешние и внутренние DSL, символический барьер, семантическая модель, проекционное редактирование."
+    lectures: ["03", "40"]
+    concepts: [tooling.language_workbench, syntax.program_representation]
+
+  - id: fowler-mps-2005
+    kind: article
+    people: [fowler]
+    title: "A Language Workbench in Action — MPS"
+    year: 2005
+    url: https://martinfowler.com/articles/mpsAgree.html
+    note: "Тот же автор строит DSL в JetBrains MPS: схема из концептов, редактор из ячеек, генератор на шаблонах — три части определения языка в верстаке."
+    concepts: [tooling.language_workbench]
+
+  - id: erdweg-lwc-2013
+    kind: article
+    people: [voelter]
+    authors: [Sebastian Erdweg, Tijs van der Storm, et al.]
+    title: "The State of the Art in Language Workbenches: Conclusions from the Language Workbench Challenge"
+    year: 2013
+    venue: "SLE 2013, LNCS 8225"
+    doi: 10.1007/978-3-319-02654-1_11
+    url: https://homepages.cwi.nl/~storm/publications/lwc13paper.pdf
+    note: "Десять верстаков решают одну задачу; модель признаков: нотация, семантика, редактор, проверки, тестирование, композиция. Препринт в открытом доступе."
+    lectures: ["40"]
+    concepts: [tooling.language_workbench]
+
+  - id: erdweg-lwc-2015
+    kind: article
+    people: [voelter]
+    authors: [Sebastian Erdweg, Tijs van der Storm, Laurence Tratt, et al.]
+    title: "Evaluating and comparing language workbenches: Existing results and benchmarks for the future"
+    year: 2015
+    venue: "Computer Languages, Systems & Structures 44"
+    doi: 10.1016/j.cl.2015.08.007
+    url: https://ir.cwi.nl/pub/23990/23990B.pdf
+    note: "Расширенная версия обзора 2013 года с набором задач-бенчмарков для верстаков: нотация, эволюция и повторное использование, редактирование."
+    concepts: [tooling.language_workbench]
+
+  - id: voelter-projectional-2014
+    kind: article
+    people: [voelter]
+    authors: [Janet Siegmund, Thorsten Berger, Bernd Kolb]
+    title: Towards User-Friendly Projectional Editors
+    year: 2014
+    venue: "SLE 2014, LNCS 8706"
+    doi: 10.1007/978-3-319-11245-9_3
+    url: https://voelter.de/data/pub/projectionalEditing-sle2014.pdf
+    note: "Плюсы проекционного редактирования (любые нотации, композиция языков) и перечень проблем удобства с приёмами их смягчения в MPS."
+    concepts: [tooling.language_workbench, syntax.program_representation]
+
+  - id: voelter-grammar-cells-2016
+    kind: article
+    people: [voelter]
+    authors: [Tamás Szabó, Sascha Lisson, Bernd Kolb, Sebastian Erdweg, Thorsten Berger]
+    title: Efficient development of consistent projectional editors using grammar cells
+    year: 2016
+    venue: "SLE 2016"
+    doi: 10.1145/2997364.2997365
+    url: https://voelter.de/data/pub/SLE2016-GrammarCells.pdf
+    note: "Grammar cells — декларативный способ получить в проекционном редакторе привычное текстовое редактирование."
+    concepts: [tooling.language_workbench]
+
+  - id: parr-allstar-2014
+    kind: article
+    people: [parr]
+    authors: [Sam Harwell, Kathleen Fisher]
+    title: "Adaptive LL(*) Parsing: The Power of Dynamic Analysis"
+    year: 2014
+    venue: "OOPSLA 2014"
+    doi: 10.1145/2660193.2660202
+    url: https://www.antlr.org/papers/allstar-techreport.pdf
+    note: "Алгоритм ALL(*), на котором работает ANTLR 4: анализ грамматики переносится во время разбора, прямая левая рекурсия переписывается автоматически."
+    lectures: ["06", "09"]
+    concepts: [tooling.parsing_algorithm]
+
+  - id: ford-peg-2004
+    kind: article
+    people: [ford]
+    title: "Parsing Expression Grammars: A Recognition-Based Syntactic Foundation"
+    year: 2004
+    venue: "POPL 2004"
+    doi: 10.1145/964001.964011
+    url: https://bford.info/pub/lang/peg.pdf
+    note: "Определение PEG: упорядоченный выбор вместо неоднозначных альтернатив и грамматика как описание распознавателя."
+    lectures: ["05", "06"]
+    concepts: [tooling.parsing_algorithm]
+
+  - id: ford-packrat-2002
+    kind: article
+    people: [ford]
+    title: "Packrat Parsing: Simple, Powerful, Lazy, Linear Time"
+    year: 2002
+    venue: "ICFP 2002"
+    doi: 10.1145/581478.581483
+    url: https://bford.info/pub/lang/packrat-icfp02.pdf
+    note: "Мемоизация результатов рекурсивного спуска с возвратами даёт линейное время разбора — основа PEG-генераторов."
+    concepts: [tooling.parsing_algorithm]
+
+  - id: warth-left-recursion-2008
+    kind: article
+    authors: [Alessandro Warth, James R. Douglass, Todd Millstein]
+    title: Packrat Parsers Can Support Left Recursion
+    year: 2008
+    venue: "PEPM 2008"
+    doi: 10.1145/1328408.1328424
+    note: "Как поддержать прямую и косвенную левую рекурсию в packrat-разборе; на этот подход ссылается PEP 617 (pegen)."
+    concepts: [tooling.parsing_algorithm]
+
+  - id: hutton-meijer-1998
+    kind: article
+    authors: [Graham Hutton, Erik Meijer]
+    title: Monadic Parsing in Haskell
+    year: 1998
+    venue: "Journal of Functional Programming 8(4)"
+    doi: 10.1017/S0956796898003050
+    url: https://people.cs.nott.ac.uk/pszgmh/pearl.pdf
+    note: "Короткое введение в парсер-комбинаторы: анализатор как функция, из которой операторами собираются большие анализаторы."
+    languages: [haskell]
+    concepts: [tooling.parser_construction]
+
+  - id: pep-617
+    kind: article
+    authors: [Guido van Rossum, Pablo Galindo, Lysandros Nikolaou]
+    title: "PEP 617 — New PEG parser for CPython"
+    year: 2020
+    url: https://peps.python.org/pep-0617/
+    note: "Почему CPython 3.9 заменил LL(1)-парсер на PEG-парсер, сгенерированный pegen: ограничения LL(1), левая рекурсия, AST без промежуточного дерева."
+    languages: [python]
+    lectures: ["06"]
+    concepts: [tooling.parser_construction, tooling.parsing_algorithm]
+
+  # --- формальная семантика
+  - id: floyd-1967
+    kind: article
+    authors: [Robert W. Floyd]
+    title: Assigning Meanings to Programs
+    year: 1967
+    venue: "Mathematical Aspects of Computer Science, Proc. Symp. Applied Math. 19, AMS"
+    doi: 10.1090/psapm/019/0235771
+    note: "Утверждения на рёбрах блок-схемы как основа доказательства корректности и завершения программ — предшественник логики Хоара."
+    lectures: ["07"]
+
+  - id: hoare-1969
+    kind: article
+    authors: [C. A. R. Hoare]
+    title: An Axiomatic Basis for Computer Programming
+    year: 1969
+    venue: "Communications of the ACM 12(10)"
+    doi: 10.1145/363235.363259
+    note: "Тройки {P} S {Q} и правила вывода для присваивания, последовательности и цикла — аксиоматическая семантика."
+    lectures: ["07"]
+    concepts: [verification.behavioral_contracts]
+
+  - id: scott-strachey
+    kind: article
+    authors: [Dana Scott, Christopher Strachey]
+    title: Toward a Mathematical Semantics for Computer Languages
+    year: 1971
+    venue: "Technical Monograph PRG-6, Oxford University Computing Laboratory"
+    url: https://www.cs.ox.ac.uk/files/3228/PRG06.pdf
+    note: "Программа как математический объект — функция на состояниях; основа денотационной семантики."
+    lectures: ["07"]
+
+  - id: dijkstra-1975
+    kind: article
+    authors: [Edsger W. Dijkstra]
+    title: "Guarded Commands, Nondeterminacy and Formal Derivation of Programs"
+    year: 1975
+    venue: "Communications of the ACM 18(8)"
+    doi: 10.1145/360933.360975
+    url: https://www.cs.utexas.edu/~EWD/transcriptions/EWD04xx/EWD418.html
+    note: "Слабейшее предусловие wp(S, R) превращает правила Хоара в вычисление; охраняемые команды."
+    lectures: ["07"]
+
+  - id: cook-1978
+    kind: article
+    authors: [Stephen A. Cook]
+    title: Soundness and Completeness of an Axiom System for Program Verification
+    year: 1978
+    venue: "SIAM Journal on Computing 7(1)"
+    doi: 10.1137/0207005
+    note: "Логика Хоара корректна и относительно полна: истинная тройка выводима, если выводимы нужные утверждения о данных."
+
+  - id: plotkin-sos
+    kind: article
+    authors: [Gordon D. Plotkin]
+    title: A Structural Approach to Operational Semantics
+    year: 2004
+    venue: "Journal of Logic and Algebraic Programming 60–61 (перепечатка отчёта Aarhus University, 1981)"
+    doi: 10.1016/j.jlap.2004.05.001
+    url: https://homepages.inf.ed.ac.uk/gdp/publications/sos_jlap.pdf
+    note: "Структурная операционная семантика (small-step): вычисление как переходы конфигураций, заданные правилами по структуре программы."
+    lectures: ["07"]
+
+  - id: kahn-natural
+    kind: article
+    authors: [Gilles Kahn]
+    title: Natural Semantics
+    year: 1987
+    venue: "STACS 87, LNCS"
+    doi: 10.1007/BFb0039592
+    note: "Естественная (big-step) семантика: отношение «программа в состоянии завершается в состоянии», выводимое деревом правил."
+    lectures: ["07"]
+
+  - id: leroy-compcert-2009
+    kind: article
+    authors: [Xavier Leroy]
+    title: Formal Verification of a Realistic Compiler
+    year: 2009
+    venue: "Communications of the ACM 52(7)"
+    doi: 10.1145/1538788.1538814
+    url: https://compcert.org/
+    note: "Компилятор C CompCert с машинно проверенным доказательством того, что код сохраняет семантику исходной программы; цепочка промежуточных языков с формальной семантикой у каждого."
+    languages: [c]
+    lectures: ["10", "11"]
+
+  - id: ellison-rosu-c-2012
+    kind: article
+    authors: [Chucky Ellison, Grigore Roşu]
+    title: An Executable Formal Semantics of C with Applications
+    year: 2012
+    venue: "POPL '12"
+    doi: 10.1145/2103656.2103719
+    note: "Исполняемая формальная семантика C в K-framework; находит неопределённое поведение, которое пропускают компиляторы."
+    languages: [c]
+    concepts: [evaluation.undefined_behavior]
+
+  - id: kjs-2015
+    kind: article
+    authors: [Daejun Park, Andrei Ştefănescu, Grigore Roşu]
+    title: "KJS: A Complete Formal Semantics of JavaScript"
+    year: 2015
+    venue: "PLDI '15"
+    doi: 10.1145/2737924.2737991
+    note: "Полная исполняемая семантика ECMAScript 5.1 в K-framework, проверенная на тестах test262."
+    languages: [javascript]
+
+  - id: k-java-2015
+    kind: article
+    authors: [Denis Bogdanas, Grigore Roşu]
+    title: "K-Java: A Complete Semantics of Java"
+    year: 2015
+    venue: "POPL '15"
+    doi: 10.1145/2676726.2676982
+    note: "Исполняемая формальная семантика Java 1.4 в K-framework."
+    languages: [java]
+
+  - id: watt-wasm-2018
+    kind: article
+    authors: [Conrad Watt]
+    title: Mechanising and Verifying the WebAssembly Specification
+    year: 2018
+    venue: "CPP 2018"
+    doi: 10.1145/3167082
+    note: "Правила редукции спецификации WebAssembly перенесены в Isabelle/HOL; доказана типобезопасность и найдены ошибки в спецификации."
+    labs: [5]
+
+  # --- устройство компиляторов
+  - id: gcc-internals
+    kind: documentation
+    topic: Устройство промышленных компиляторов
+    title: GNU Compiler Collection Internals
+    url: https://gcc.gnu.org/onlinedocs/gccint/
+    note: "Конвейер GCC: GENERIC, GIMPLE и SSA, RTL, описания машин в .md-файлах, DSL match.pd для упрощения выражений, распределители IRA и LRA."
+    languages: [c, cpp]
+    lectures: ["10", "11"]
+
+  - id: clang-internals
+    kind: documentation
+    topic: Устройство промышленных компиляторов
+    title: Clang Internals Manual
+    url: https://clang.llvm.org/docs/InternalsManual.html
+    note: "Рукописный лексер и парсер рекурсивного спуска, Sema, строящая AST во время разбора, CodeGen в LLVM IR, диагностики на TableGen."
+    languages: [c, cpp]
+    lectures: ["07", "10"]
+
+  - id: llvm-codegen
+    kind: documentation
+    topic: Устройство промышленных компиляторов
+    title: The LLVM Target-Independent Code Generator
+    url: https://llvm.org/docs/CodeGenerator.html
+    note: "Выбор инструкций (SelectionDAG, GlobalISel), распределение регистров, описания целей на TableGen — как LLVM IR становится машинным кодом."
+    lectures: ["10", "11"]
+    labs: [5]
+
+  - id: rustc-dev-guide
+    kind: documentation
+    topic: Устройство промышленных компиляторов
+    title: Rust Compiler Development Guide
+    url: https://rustc-dev-guide.rust-lang.org/overview.html
+    note: "Конвейер rustc: AST, HIR, THIR, MIR, система запросов с мемоизацией, проверка заимствований на MIR, бэкенды LLVM, Cranelift и GCC."
+    languages: [rust]
+    lectures: ["07", "10", "11"]
+
+  - id: go-compile-readme
+    kind: documentation
+    topic: Устройство промышленных компиляторов
+    title: "Introduction to the Go compiler (cmd/compile/README.md)"
+    url: https://go.dev/src/cmd/compile/README.md
+    note: "Фазы gc: рукописный парсер, types2, Unified IR, SSA; оптимизации и выбор инструкций записаны DSL-правилами _gen/*.rules, из которых генерируется код."
+    languages: [go]
+    lectures: ["10", "11"]
+
+  - id: cpython-internals
+    kind: documentation
+    topic: Устройство промышленных компиляторов
+    title: CPython InternalDocs
+    url: https://github.com/python/cpython/tree/main/InternalDocs
+    note: "Парсер pegen, AST на ASDL, таблица символов, CFG-оптимизатор, интерпретатор, сгенерированный из DSL bytecodes.c, специализация и экспериментальный JIT."
+    languages: [python]
+    lectures: ["07", "10"]
+    labs: [5]
+
+  - id: lua-50-impl
+    kind: article
+    authors: [Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes]
+    title: The Implementation of Lua 5.0
+    year: 2005
+    venue: "Journal of Universal Computer Science 11(7)"
+    url: https://www.lua.org/doc/jucs05.pdf
+    note: "Однопроходный компилятор без AST и регистровая виртуальная машина; почему авторы отказались от yacc в пользу рукописного парсера."
+    languages: [lua]
+    lectures: ["10"]
+
+  - id: v8-leaving-son
+    kind: article
+    authors: [Darius Mercadier]
+    title: "Land ahoy: leaving the Sea of Nodes"
+    year: 2025
+    venue: "V8 blog"
+    url: https://v8.dev/blog/leaving-the-sea-of-nodes
+    note: "Почему оптимизирующий компилятор V8 ушёл от IR «море узлов» к графу потока управления Turboshaft: промахи кэша, сложность, время компиляции."
+    languages: [javascript]
+    lectures: ["10", "11"]
+
+  - id: nanopass-2013
+    kind: article
+    authors: [Andrew W. Keep, R. Kent Dybvig]
+    title: A Nanopass Framework for Commercial Compiler Development
+    year: 2013
+    venue: "ICFP '13"
+    doi: 10.1145/2500365.2500618
+    note: "Компилятор как много маленьких проходов между формально описанными промежуточными языками; опыт переписывания Chez Scheme."
+    lectures: ["10"]
+
+  - id: poletto-sarkar-1999
+    kind: article
+    authors: [Massimiliano Poletto, Vivek Sarkar]
+    title: Linear Scan Register Allocation
+    year: 1999
+    venue: "ACM TOPLAS 21(5)"
+    doi: 10.1145/330249.330250
+    note: "Распределение регистров за один линейный проход по интервалам жизни — альтернатива раскраске графа для JIT и быстрых компиляторов."
+    lectures: ["10"]
+
+  - id: chaitin-1982
+    kind: article
+    authors: [Gregory J. Chaitin]
+    title: Register Allocation & Spilling via Graph Coloring
+    year: 1982
+    venue: "SIGPLAN '82 Symposium on Compiler Construction"
+    doi: 10.1145/872726.806984
+    note: "Распределение регистров раскраской графа интерференции; основа распределителей GCC (IRA) и C2 HotSpot."
+    lectures: ["10"]
+
+  - id: egg-2021
+    kind: article
+    authors: [Max Willsey, Chandrakana Nandi, Yisu Remy Wang, Oliver Flatt, Zachary Tatlock, Pavel Panchekha]
+    title: "egg: Fast and Extensible Equality Saturation"
+    year: 2021
+    venue: "Proc. ACM Program. Lang. 5, POPL"
+    doi: 10.1145/3434304
+    note: "E-графы и насыщение равенствами: все переписывания применяются сразу, лучший вариант выбирается потом; основа среднего уровня Cranelift."
+    lectures: ["11"]
+
+  - id: kildall-1973
+    kind: article
+    authors: [Gary A. Kildall]
+    title: A Unified Approach to Global Program Optimization
+    year: 1973
+    venue: "POPL '73"
+    doi: 10.1145/512927.512945
+    note: "Анализ потока данных как итерация до неподвижной точки на решётке — общая схема для распространения констант, живых переменных и доступных выражений."
+    lectures: ["11"]
+
+  - id: jastadd-ekman-2007
+    kind: article
+    authors: [Torbjörn Ekman, Görel Hedin]
+    title: The JastAdd Extensible Java Compiler
+    year: 2007
+    venue: "OOPSLA '07"
+    doi: 10.1145/1297027.1297029
+    url: https://extendj.org/
+    note: "Компилятор Java, в котором разрешение имён, типы и генерация байт-кода заданы ссылочными атрибутными грамматиками вместо Visitor'ов."
+    languages: [java]
+    lectures: ["07", "12"]
+
+  - id: statix-2018
+    kind: article
+    authors: [Hendrik van Antwerpen, Casper Bach Poulsen, Arjen Rouvoet, Eelco Visser]
+    title: Scopes as Types
+    year: 2018
+    venue: "Proc. ACM Program. Lang. 2, OOPSLA"
+    doi: 10.1145/3276484
+    note: "Statix — метаязык статической семантики на графах областей видимости: разрешение имён и проверка типов задаются ограничениями, а не кодом."
+    lectures: ["07"]
+    concepts: [scope.resolution]
+
   # --- конференции
   - id: hopl
     kind: conference
@@ -415,6 +1288,77 @@ sources:
     note: Показывает, во что компилируется код на разных языках и платформах.
     labs: [5]
 
+  - id: stanford-cs143
+    kind: site
+    topic: Учебные курсы
+    title: "Stanford CS143: Compilers"
+    url: https://web.stanford.edu/class/archive/cs/cs143/cs143.1128/
+    note: "Открытый курс компиляторов: конспекты и четыре задания (лексер, парсер, семантический анализ, генерация кода), структура близка к лекциям 04–12 и ЛР 2–5."
+    lectures: ["04", "05", "06", "07", "10"]
+    labs: [2, 3, 4, 5]
+
+  - id: umd-cmsc430
+    kind: site
+    topic: Учебные курсы
+    title: "UMD CMSC 430: Design and Implementation of Programming Languages"
+    url: https://www.cs.umd.edu/class/fall2022/cmsc430/
+    note: "Компилятор в x86-64 собирается по шагам через серию учебных языков — от констант до замыканий и хвостовых вызовов; образец для ЛР 5."
+    lectures: ["10", "11"]
+    labs: [5]
+
+  - id: ispras-compilers
+    kind: site
+    topic: Учебные курсы
+    title: "ИСП РАН: Конструирование компиляторов"
+    url: https://compilers.ispras.ru/
+    note: "Русскоязычный курс для ВМК МГУ и МФТИ/ВШЭ: анализ потока данных, SSA, оптимизации, выбор команд и распределение регистров; практикум на бэкенде QBE."
+    lectures: ["10", "11", "40"]
+    labs: [5]
+
+  - id: mit-6s050
+    kind: site
+    topic: Учебные курсы
+    title: "MIT 6.S050: Programming Language Design"
+    url: https://people.csail.mit.edu/feser/pld-s23/
+    note: "Курс о дизайне, а не реализации языков: синтаксис, связывание, управление, типы, память; кейсы на разных языках. Опора для онтологии понятий."
+    lectures: ["03", "20"]
+    concepts: [scope.resolution, evaluation.strategy, memory.management]
+
+  - id: petricek-nprg075
+    kind: site
+    topic: Учебные курсы
+    title: "Charles University NPRG075: Programming Language Design"
+    url: https://d3s.mff.cuni.cz/teaching/nprg075/
+    note: "Курс Т. Петричека о языке как интерфейсе для программиста (HCI, история, семантика); слайды и видео, другие курсы автора — в github.com/tpetricek/Teaching."
+    lectures: ["02", "03", "20"]
+
+  - id: grossman-programming-languages
+    kind: site
+    topic: Учебные курсы
+    title: "Dan Grossman: Programming Languages (Coursera, University of Washington)"
+    url: https://www.coursera.org/learn/programming-languages
+    note: "Вводный курс по понятиям языков на SML, Racket и Ruby: связывание, замыкания, вывод типов, статическая и динамическая типизация."
+    lectures: ["02", "07", "20"]
+    concepts: [scope.resolution, subprograms.closures, typing.checking]
+
+  - id: plzoo
+    kind: site
+    topic: Учебные курсы
+    title: The Programming Languages Zoo
+    url: https://plzoo.andrej.com/
+    note: "Миниатюрные полные реализации языков, каждая показывает одну технику: парсер, проверку и вывод типов, стратегии вычисления, компиляцию в абстрактную машину."
+    lectures: ["07", "10", "12"]
+    labs: [2, 4, 5]
+    concepts: [typing.inference, evaluation.strategy]
+
+  - id: nuprl-10pl
+    kind: site
+    topic: Учебные курсы
+    title: "10PL: 10 papers every PL PhD student ought to know"
+    url: https://github.com/nuprl/10PL
+    note: "Курируемый список классических статей по языкам программирования — откуда брать первоисточники для углублённого чтения."
+    lectures: ["07", "11", "20", "40"]
+
   # --- инструменты практикума
   - id: antlr
     kind: tool
@@ -440,6 +1384,179 @@ sources:
     url: https://github.com/antlr/grammars-v4
     note: Справочник по стилю грамматик; не источник для копирования в лабораторную работу.
     labs: [2]
+
+  - id: antlr-python-target
+    kind: documentation
+    topic: ANTLR
+    title: "ANTLR 4: Python 3 target"
+    url: https://github.com/antlr/antlr4/blob/master/doc/python-target.md
+    note: "Официальная инструкция по генерации и использованию парсеров ANTLR на Python: runtime, listener и visitor. Основа ЛР 2–4 на Python."
+    languages: [python]
+    lectures: ["09"]
+    labs: [2, 3, 4]
+
+  - id: tree-sitter
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: Tree-sitter
+    url: https://tree-sitter.github.io/tree-sitter/
+    note: "Генератор GLR-парсеров с инкрементальным разбором и восстановлением после ошибок; используется в редакторах и в анализе кода GitHub. Контраст к ANTLR."
+    lectures: ["06", "08", "40"]
+
+  - id: flex
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: "flex: The Fast Lexical Analyzer"
+    url: https://github.com/westes/flex
+    note: "Классический генератор сканеров по регулярным выражениям — путь «регулярное выражение → ДКА → лексер» на практике."
+    lectures: ["04"]
+
+  - id: lark
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: Lark
+    url: https://lark-parser.readthedocs.io/en/latest/
+    note: "Библиотека разбора на чистом Python: алгоритмы Earley (любая КС-грамматика, явная неоднозначность) и LALR(1), EBNF-грамматика, автоматическое дерево и Transformer. Второй фронтенд учебного компилятора FSM."
+    languages: [python]
+    lectures: ["06", "09"]
+    labs: [2, 3, 4]
+    concepts: [tooling.parser_construction, tooling.parsing_algorithm]
+
+  - id: bison
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: GNU Bison
+    url: https://www.gnu.org/software/bison/
+    note: "Наследник yacc: LALR(1), IELR(1), канонический LR(1) и GLR, семантические действия на C, C++, Java и D, восстановление токеном error."
+    languages: [c, cpp]
+    lectures: ["06"]
+    concepts: [tooling.parsing_algorithm]
+
+  - id: menhir
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: Menhir
+    url: https://gallium.inria.fr/~fpottier/menhir/
+    note: "LR(1)-генератор для OCaml; сообщения об ошибках задаются по состояниям автомата в файлах .messages, есть верифицированный бэкенд для Rocq."
+    lectures: ["06", "08"]
+
+  - id: lalrpop
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: LALRPOP
+    url: https://lalrpop.github.io/lalrpop/
+    note: "LR(1)/LALR(1)-генератор для Rust с макросами грамматики; используется, например, в RustPython."
+    languages: [rust]
+
+  - id: pest
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: pest
+    url: https://pest.rs/
+    note: "PEG-генератор для Rust; левую рекурсию запрещает, для выражений предлагает Pratt-парсер."
+    languages: [rust]
+    concepts: [tooling.parsing_algorithm]
+
+  - id: ohm
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: Ohm
+    url: https://ohmjs.org/
+    note: "PEG-библиотека для JavaScript и TypeScript: грамматика без семантических действий, семантика задаётся отдельно; левая рекурсия и онлайн-редактор с визуализацией разбора."
+    languages: [javascript, typescript]
+
+  - id: peggy
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: Peggy
+    url: https://peggyjs.org/
+    note: "PEG-генератор для JavaScript, наследник PEG.js; семантические действия в грамматике, генерация типов TypeScript."
+    languages: [javascript]
+
+  - id: megaparsec
+    kind: tool
+    topic: Другие генераторы анализаторов
+    title: Megaparsec
+    url: https://hackage.haskell.org/package/megaparsec
+    note: "Промышленная библиотека монадических парсер-комбинаторов для Haskell с восстановлением после ошибок."
+    languages: [haskell]
+    concepts: [tooling.parser_construction]
+
+  - id: textx
+    kind: tool
+    topic: Языковые верстаки
+    title: textX
+    url: https://textx.github.io/textX/
+    note: "Python-инструмент в духе Xtext: из одной грамматики строятся метамодель (классы Python), парсер и модель с разрешёнными ссылками."
+    languages: [python]
+    concepts: [tooling.language_workbench, tooling.parser_construction]
+
+  - id: jetbrains-mps
+    kind: tool
+    topic: Языковые верстаки
+    title: JetBrains MPS
+    url: https://www.jetbrains.com/mps/
+    note: "Проекционный верстак: язык задаётся концептами, редакторами из ячеек, системой типов и генераторами; поддерживает таблицы, формулы и диаграммы в одном редакторе."
+    concepts: [tooling.language_workbench]
+
+  - id: xtext
+    kind: tool
+    topic: Языковые верстаки
+    title: Eclipse Xtext
+    url: https://eclipse.dev/Xtext/
+    note: "Текстовый верстак: из грамматики получаются парсер (ANTLR), EMF-метамодель, связывание, проверки и редактор для Eclipse и LSP."
+    languages: [java]
+    concepts: [tooling.language_workbench]
+
+  - id: langium
+    kind: tool
+    topic: Языковые верстаки
+    title: Eclipse Langium
+    url: https://langium.org/
+    note: "Наследник идей Xtext на TypeScript: грамматика → типизированный AST и языковой сервер LSP для VS Code, Theia и браузера."
+    languages: [typescript]
+    concepts: [tooling.language_workbench]
+
+  - id: spoofax
+    kind: tool
+    topic: Языковые верстаки
+    title: Spoofax
+    url: https://spoofax.dev/
+    note: "Верстак TU Delft с декларативными мета-языками: SDF3 для синтаксиса, Statix для типов и связывания имён, Stratego для трансформаций."
+    concepts: [tooling.language_workbench]
+
+  - id: rascal
+    kind: tool
+    topic: Языковые верстаки
+    title: Rascal MPL
+    url: https://www.rascal-mpl.org/
+    note: "Язык метапрограммирования для анализа и трансформации кода и создания DSL: грамматики, конкретный синтаксис в образцах, обход деревьев, LSP."
+    concepts: [tooling.language_workbench]
+
+  - id: racket
+    kind: tool
+    topic: Языковые верстаки
+    title: Racket
+    url: https://racket-lang.org/
+    note: "Язык для создания языков: #lang, макросы и расширения читателя позволяют писать каждый модуль на своём языке."
+    concepts: [tooling.language_workbench, syntax.metaprogramming]
+
+  - id: freon
+    kind: tool
+    topic: Языковые верстаки
+    title: Freon
+    url: https://www.freon4dsl.dev/
+    note: "Проекционный верстак для веба на TypeScript: из файлов .ast, .edit, .scope, .type, .valid генерируется редактор в браузере со связыванием имён, типами и проверками."
+    languages: [typescript]
+    concepts: [tooling.language_workbench]
+
+  - id: lionweb
+    kind: documentation
+    topic: Языковые верстаки
+    title: LionWeb — Language Interfaces on the Web
+    url: https://lionweb.io/
+    note: "Открытые формат и протокол обмена моделями и определениями языков между верстаками и редакторами; снижает зависимость от одного инструмента."
+    concepts: [tooling.language_workbench]
 
   # --- документация целевых платформ (ЛР 5)
   - id: jvm-spec

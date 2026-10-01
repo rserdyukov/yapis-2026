@@ -347,3 +347,25 @@ concepts:
       note: "«Unconstrained numeric» хранит значения любой длины до пределов реализации (до 131072 цифр до точки) и не приводит их к фиксированному масштабу — отклонение от стандартного масштаба 0."
       sources:
         - {url: "https://www.postgresql.org/docs/current/datatype-numeric.html", title: "PostgreSQL — Arbitrary Precision Numbers"}
+  tooling.parser_construction:
+    - value: generated
+      layer: implementation
+      profile: postgresql
+      note: "Грамматика gram.y и лексер scan.l собираются bison и flex."
+      sources:
+        - {url: "https://www.postgresql.org/docs/current/parser-stage.html", title: "PostgreSQL — The Parser Stage"}
+    - value: generated
+      layer: implementation
+      profile: sqlite
+      note: "SQL-парсер SQLite генерируется собственным LALR(1)-генератором Lemon."
+      sources:
+        - {url: "https://www.sqlite.org/lemon.html", title: "The Lemon LALR(1) Parser Generator"}
+  tooling.parsing_algorithm:
+    - value: lr
+      layer: implementation
+      profile: postgresql
+      note: "LALR(1) Bison."
+    - value: lr
+      layer: implementation
+      profile: sqlite
+      note: "LALR(1) Lemon."

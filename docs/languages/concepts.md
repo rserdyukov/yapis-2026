@@ -27,13 +27,13 @@ publish: true
 | Категория | Покрыто | Ожидают языков |
 |---|---|---|
 | Имена и связывание | 11/11 (100%) | — |
-| Области видимости | 15/15 (100%) | — |
+| Области видимости | 19/19 (100%) | — |
 | Типизация | 20/25 (80%) | typing.value_dependency.indexed_families; typing.value_dependency.dependent_functions; typing.value_dependency.dependent_pairs; typing.abstract_type_identity.transparent; typing.abstract_type_identity.opaque_fresh |
 | Управление потоком | 13/15 (87%) | control.continuation_extent.undelimited; control.continuation_extent.delimited |
-| Подпрограммы и абстракция | 12/16 (75%) | subprograms.parameter_passing.by_result; subprograms.parameter_passing.by_value_result; subprograms.parameter_passing.by_name; subprograms.generic_mechanism.dictionary_passing |
+| Подпрограммы и абстракция | 14/20 (70%) | subprograms.parameter_passing.by_result; subprograms.parameter_passing.by_value_result; subprograms.parameter_passing.by_name; subprograms.generic_mechanism.dictionary_passing; subprograms.overload_resolution.exact_signature; subprograms.overload_resolution.arity |
 | Полиморфизм и организация | 14/15 (93%) | abstraction.modules.module_functors |
-| Вычисление и эффекты | 8/12 (67%) | evaluation.effects.effect_handlers; evaluation.result_protocol.goal_directed; evaluation.data_availability.needed_information; evaluation.data_availability.all_inputs |
-| Память и владение | 11/14 (79%) | memory.reference_permissions.mutable_aliases; memory.reference_permissions.read_only_view; memory.reference_permissions.identity_only |
+| Вычисление и эффекты | 18/22 (82%) | evaluation.effects.effect_handlers; evaluation.result_protocol.goal_directed; evaluation.data_availability.needed_information; evaluation.data_availability.all_inputs |
+| Память и владение | 21/25 (84%) | memory.reference_permissions.mutable_aliases; memory.reference_permissions.read_only_view; memory.reference_permissions.identity_only; memory.value_categories.places_values |
 | Каналы ошибок | 9/9 (100%) | — |
 | Ресурсы и взаимодействие | 17/18 (94%) | resources.receive_selection.head_only |
 | Синтаксис и метапрограммирование | 16/18 (89%) | syntax.macro_hygiene.hygienic; syntax.program_representation.graphical_graph |
@@ -41,6 +41,7 @@ publish: true
 | Семантика данных | 7/7 (100%) | — |
 | Правила вычисления и модели времени | 1/19 (5%) | computation.rule_semantics.goal_search; computation.rule_semantics.committed_rewriting; computation.instantiation_modes.ground_to_ground; computation.instantiation_modes.free_to_ground; computation.instantiation_modes.declared_transition; computation.solution_cardinality.det; computation.solution_cardinality.semidet; computation.solution_cardinality.multi; computation.solution_cardinality.nondet; computation.time_domain.logical_ticks; computation.time_domain.discrete_simulation; computation.time_domain.continuous; computation.time_domain.hybrid; computation.equation_causality.directed_assignment; computation.equation_causality.directed_equation; computation.equation_causality.acausal_equation; computation.update_scheduling.blocking_update; computation.update_scheduling.deferred_nonblocking |
 | Проверяемые свойства программ | 0/7 (0%) | verification.totality.checked_required; verification.totality.checked_opt_in; verification.totality.unchecked_escape; verification.totality.partial_allowed; verification.behavioral_contracts.preconditions; verification.behavioral_contracts.postconditions; verification.behavioral_contracts.invariants |
+| Инструменты построения языковых процессоров | 5/12 (42%) | tooling.parser_construction.combinators; tooling.parser_construction.interpreted_grammar; tooling.parsing_algorithm.adaptive_ll; tooling.parsing_algorithm.generalized; tooling.language_workbench.free_form_text; tooling.language_workbench.projectional; tooling.language_workbench.graphical |
 
 ## Имена и связывание { #bindings }
 
@@ -54,7 +55,7 @@ publish: true
 
 ### Введение связывания { #bindings-introduction }
 
-*Binding introduction*
+англ. *Binding introduction* (также *declaration*, *name binding*)
 
 Установление связи между именем и сущностью программы — значением, местом хранения, функцией или логической переменной. Конструкция введения имени не определяет, нужно ли писать его тип.
 
@@ -69,7 +70,7 @@ publish: true
 
 ### Изменяемость связывания { #bindings-mutation }
 
-*Binding mutability*
+англ. *Binding mutability* (также *rebinding*, *immutable binding*, *const qualification*)
 
 Правила, определяющие, можно ли после введения связывания менять обозначаемое им значение или содержимое соответствующей переменной. Эти правила задаются отдельно от изменяемости достижимого объекта.
 
@@ -85,7 +86,7 @@ publish: true
 
 ### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms*
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*)
 
 Семейство операций обновления мест хранения и установления связей со значениями. Для сравнения различаются присваивание одной цели, распаковка, неизменяемое определение и унификация, а не объявляются одной операцией.
 
@@ -104,10 +105,11 @@ publish: true
 | [Конструкции областей видимости](#scope-constructs) | [Подпрограмма (layer: language, profile: iso13751); Модуль (layer: implementation, profile: dyalog, implementation: Dyalog APL) *](apl.md#scope-constructs) |  | [Блок (layer: language, profile: c17); Подпрограмма (layer: language, profile: c17, applies_to: метки функции) *](c.md#scope-constructs) | [Логическая клауза (layer: language, profile: iso); Модуль (layer: implementation, profile: swi, implementation: SWI-Prolog) *](prolog.md#scope-constructs) | [Подпрограмма (layer: language, profile: st80, applies_to: метод); Блок (layer: language, profile: st80); Класс (layer: language, profile: st80) *](smalltalk.md#scope-constructs) | [Блок (layer: language, profile: iso2023, applies_to: запрос и подзапрос (FROM, WHERE, SELECT)); Форма связывания let/where (layer: language, profile: iso2023, applies_to: WITH) *](sql.md#scope-constructs) | [Блок (layer: language, profile: cpp23); Класс (layer: language, profile: cpp23)](cpp.md#scope-constructs) | [Форма связывания let/where (layer: language, profile: ansi); Подпрограмма (layer: language, profile: ansi, applies_to: параметры функций) *](common-lisp.md#scope-constructs) | [Логическая клауза (layer: language, profile: otp); Генераторная конструкция (layer: language, profile: otp); Подпрограмма (layer: language, profile: otp, applies_to: `fun`-выражения) *](erlang.md#scope-constructs) | [Модуль (layer: language, profile: haskell2010); Форма связывания let/where (layer: language, profile: haskell2010); Генераторная конструкция (layer: language, profile: haskell2010); Подпрограмма (layer: language, profile: haskell2010, applies_to: параметры и образцы уравнений функций) *](haskell.md#scope-constructs) | [Подпрограмма (layer: language, profile: python314); Модуль (layer: language, profile: python314); Класс (layer: language, profile: python314); Генераторная конструкция (layer: language, profile: python314) *](python.md#scope-constructs) | [Блок (layer: language, profile: lua54); Подпрограмма (layer: language, profile: lua54) *](lua.md#scope-constructs) | [Подпрограмма (layer: language, profile: java21); Блок (layer: language, profile: java21); Класс (layer: language, profile: java21)](java.md#scope-constructs) | [Подпрограмма (layer: language, profile: es2024); Блок (layer: language, profile: es2024); Модуль (layer: language, profile: es2024); Класс (layer: language, profile: es2024) *](javascript.md#scope-constructs) |  | [Блок (layer: language, profile: go127); Модуль (layer: language, profile: go127, applies_to: блок пакета и блок файла) *](go.md#scope-constructs) | [Подпрограмма (layer: language, profile: rust2024); Модуль (layer: language, profile: rust2024); Блок (layer: language, profile: rust2024) *](rust.md#scope-constructs) | [Блок (layer: language, profile: ts5_strict); Подпрограмма (layer: language, profile: ts5_strict); Модуль (layer: language, profile: ts5_strict); Класс (layer: language, profile: ts5_strict)](typescript.md#scope-constructs) | [Блок (layer: language, profile: zig016); Модуль (layer: language, profile: zig016) *](zig.md#scope-constructs) |
 | [Связывания верхнего уровня](#scope-globals) | [Глобальные переменные (layer: language, profile: iso13751) *](apl.md#scope-globals) | [Глобальные переменные (layer: language, profile: forth2012) *](forth.md#scope-globals) | [Глобальные переменные (layer: language, profile: c17) *](c.md#scope-globals) | [Имена модуля (layer: implementation, profile: swi, implementation: SWI-Prolog, applies_to: имена предикатов) *](prolog.md#scope-globals) | [Глобальные переменные (layer: language, profile: st80) *](smalltalk.md#scope-globals) |  |  | [Глобальные переменные (layer: language, profile: ansi) *](common-lisp.md#scope-globals) |  | [Имена модуля (layer: language, profile: haskell2010) *](haskell.md#scope-globals) | [Имена модуля (layer: language, profile: python314) *](python.md#scope-globals) | [Глобальные переменные (layer: language, profile: lua54) *](lua.md#scope-globals) | [Статические члены типов (layer: language, profile: java21) *](java.md#scope-globals) | [Глобальные переменные (layer: language, profile: es2024); Имена модуля (layer: language, profile: es2024) *](javascript.md#scope-globals) |  |  | [Имена модуля (layer: language, profile: rust2024) *](rust.md#scope-globals) |  |  |
 | [Сокрытие имён](#scope-shadowing) | [Во вложенной области (layer: language, profile: iso13751) *](apl.md#scope-shadowing) | [Новое связывание в той же области (layer: language, profile: forth2012) *](forth.md#scope-shadowing) | [Во вложенной области (layer: language, profile: c17) *](c.md#scope-shadowing) |  |  | [Во вложенной области (layer: language, profile: iso2023) *](sql.md#scope-shadowing) |  | [Во вложенной области (layer: language, profile: ansi) *](common-lisp.md#scope-shadowing) |  | [Во вложенной области (layer: language, profile: haskell2010) *](haskell.md#scope-shadowing) | [Во вложенной области (layer: language, profile: python314) *](python.md#scope-shadowing) | [Во вложенной области (layer: language, profile: lua54); Новое связывание в той же области (layer: language, profile: lua54) *](lua.md#scope-shadowing) | [Запрет сокрытия локальных в охватывающем блоке (layer: language, profile: java21, applies_to: локальные переменные); Во вложенной области (layer: language, profile: java21, applies_to: поля и параметры) *](java.md#scope-shadowing) | [Во вложенной области (layer: language, profile: es2024) *](javascript.md#scope-shadowing) | [Запрет сокрытия локальных в охватывающем блоке (layer: language, profile: csharp12) *](csharp.md#scope-shadowing) | [Во вложенной области (layer: language, profile: go127) *](go.md#scope-shadowing) | [Во вложенной области (layer: language, profile: rust2024); Новое связывание в той же области (layer: language, profile: rust2024) *](rust.md#scope-shadowing) |  | [Запрет сокрытия локальных в охватывающем блоке (layer: language, profile: zig016) *](zig.md#scope-shadowing) |
+| [Связывание имён между единицами трансляции](#scope-linkage) |  |  | [Внешнее связывание (layer: language, profile: c17); Внутреннее связывание единицы трансляции (layer: language, profile: c17); Без связывания (layer: language, profile: c17) *](c.md#scope-linkage) |  |  |  | [Внешнее связывание (layer: language, profile: cpp23); Внутреннее связывание единицы трансляции (layer: language, profile: cpp23); Связывание в пределах модуля (layer: language, profile: cpp23); Без связывания (layer: language, profile: cpp23) *](cpp.md#scope-linkage) |  |  |  |  |  |  |  |  |  |  |  |  |
 
 ### Правило разрешения имён { #scope-resolution }
 
-*Name resolution*
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*)
 
 Правило выбора связывания для конкретного вхождения имени. Лексическое разрешение использует структуру программы, динамическое — активные связывания в ходе выполнения.
 
@@ -120,7 +122,7 @@ publish: true
 
 ### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs*
+англ. *Scoping constructs* (также *scope*, *block scope*)
 
 Синтаксические конструкции, создающие области, внутри которых действуют определённые связывания имён и правила их видимости.
 
@@ -138,7 +140,7 @@ publish: true
 
 ### Связывания верхнего уровня { #scope-globals }
 
-*Top-level bindings*
+англ. *Top-level bindings* (также *global variables*, *file scope*, *namespace scope*)
 
 Формы доступности и организации связываний вне локального вызова — глобальная среда, пространство модуля или статические члены типа.
 
@@ -152,7 +154,7 @@ publish: true
 
 ### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing*
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*)
 
 Введение нового связывания с тем же именем, из-за которого часть вхождений перестаёт обозначать прежнее связывание.
 
@@ -163,6 +165,21 @@ publish: true
 - `allowed` — **Во вложенной области** (*nested-scope shadowing*)
 - `forbidden_in_block` — **Запрет сокрытия локальных в охватывающем блоке** (*enclosing-local shadowing forbidden*)
 - `allowed_same_scope` — **Новое связывание в той же области** (*new binding in the same scope*)
+
+### Связывание имён между единицами трансляции { #scope-linkage }
+
+англ. *Linkage* (также *external linkage*, *internal linkage*, *one definition rule*)
+
+Правило, по которому одинаковые имена из разных областей видимости или единиц трансляции обозначают одну сущность либо разные. Внешнее связывание объединяет объявления всей программы, внутреннее — объявления одной единицы трансляции, отсутствие связывания делает каждое объявление отдельной сущностью.
+
+[Пример, границы понятия и связи](glossary.md#scope-linkage)
+
+Linkage определяет, обозначают ли одинаковые имена из разных областей или единиц трансляции одну сущность. Это не область видимости: имя с внешним связыванием может быть невидимо без объявления. Не путать с «связыванием» имени и значения (binding) — в русском одно слово для двух терминов. ODR требует единственного определения сущности с внешним связыванием; нарушение без диагностики — отдельная категория (IFNDR).
+
+- `external` — **Внешнее связывание** (*external linkage*)
+- `internal` — **Внутреннее связывание единицы трансляции** (*internal linkage*)
+- `module` — **Связывание в пределах модуля** (*module linkage*)
+- `none` — **Без связывания** (*no linkage*)
 
 ## Типизация { #typing }
 
@@ -181,7 +198,7 @@ publish: true
 
 ### Проверка типов { #typing-checking }
 
-*Type checking* · также: статическая типизация, динамическая типизация
+англ. *Type checking* (также *static typing*, *dynamic typing*) · также: статическая типизация, динамическая типизация
 
 Проверка допустимости операций и сочетаний значений по правилам типов. Статическая выполняется до соответствующего выполнения программы, динамическая — при выполнении; gradual-система описывает взаимодействие статически и динамически типизированных частей.
 
@@ -193,7 +210,7 @@ publish: true
 
 ### Аннотации типов { #typing-annotations }
 
-*Type annotations*
+англ. *Type annotations* (также *type declarations*, *type signatures*)
 
 Записанная автором программы информация о типе выражения, связывания, параметра или результата. Роль аннотации зависит от языка и проверяющего инструмента.
 
@@ -205,7 +222,7 @@ publish: true
 
 ### Вывод статических типов { #typing-inference }
 
-*Static type inference*
+англ. *Type inference* (также *type deduction*)
 
 Выведение статического типа из структуры программы, ограничений и контекста без полной записи типа программистом.
 
@@ -218,7 +235,7 @@ publish: true
 
 ### Преобразования типов { #typing-conversions }
 
-*Type conversions*
+англ. *Type conversions* (также *type coercion*, *type casting*)
 
 Правила перехода от значения или представления одного типа к другому, явно запрошенного или вставленного неявно. Преобразование может требовать вычисления, проверки и сопровождаться потерей информации.
 
@@ -231,7 +248,7 @@ publish: true
 
 ### Совместимость типов { #typing-compatibility }
 
-*Type compatibility*
+англ. *Type compatibility* (также *type equivalence*, *nominal typing*, *structural typing*, *duck typing*)
 
 Условия, при которых значение или выражение допустимо использовать там, где требуется определённый тип или набор операций. Основанием могут быть имена типов, структура или фактически поддержанные операции.
 
@@ -243,7 +260,7 @@ publish: true
 
 ### Типы-суммы { #typing-sum-types }
 
-*Sum types*
+англ. *Sum types* (также *tagged unions*, *variant types*, *discriminated unions*)
 
 Описание значения как одной из альтернатив типов или вариантов. Конкретная система определяет, как альтернативы различаются, пересекаются и проверяются при использовании.
 
@@ -255,7 +272,7 @@ publish: true
 
 ### Типы-произведения { #typing-product-types }
 
-*Product types*
+англ. *Product types* (также *tuples*, *records*, *structs*)
 
 Составной тип, значение которого содержит компоненты всех заданных типов одновременно; позиции или имена различают компоненты.
 
@@ -266,7 +283,7 @@ publish: true
 
 ### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value*
+англ. *Nullability* (также *null reference*, *option type*)
 
 Способ выразить отсутствие полезного значения и ограничить места, где такое отсутствие допустимо: специальное значение, nullable-тип либо явная обёртка с вариантами.
 
@@ -279,7 +296,7 @@ publish: true
 
 ### Зависимость типа от значения { #typing-value-dependency }
 
-*Value-dependent types*
+англ. *Dependent types* (также *value-dependent types*)
 
 Зависимость структуры типа от значения параметра, позволяющая выражать отношения между данными в типе функции или семейства типов.
 
@@ -295,7 +312,7 @@ publish: true
 
 ### Идентичность абстрактных типов модулей { #typing-abstract-type-identity }
 
-*Abstract module type identity*
+англ. *Abstract module type identity* (также *opaque types*, *type generativity*)
 
 Правила сохранения или создания идентичности типового компонента при абстракции модулей и скрытии его представления.
 
@@ -325,7 +342,7 @@ publish: true
 
 ### Условный выбор { #control-selection }
 
-*Conditional selection*
+англ. *Conditional selection* (также *selection statement*, *conditional expression*)
 
 Выбор ветви вычисления по условию или условиям. Выбор может быть оператором, выражением со значением или набором охранных условий.
 
@@ -337,7 +354,7 @@ publish: true
 
 ### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection*
+англ. *Switch statement* (также *case statement*, *multiway branch*)
 
 Специализированный многовариантный выбор по проверяемому значению и меткам вариантов, с правилами совпадения и переходов конкретного языка.
 
@@ -349,7 +366,7 @@ publish: true
 
 ### Сопоставление с образцом { #control-pattern-matching }
 
-*Pattern matching*
+англ. *Pattern matching*
 
 Сопоставление значения с описанием допустимой формы, литерала или конструктора с возможным извлечением частей и связыванием имён.
 
@@ -361,7 +378,7 @@ publish: true
 
 ### Цикл до истинности условия { #control-until }
 
-*Until loop*
+англ. *Until loop* (также *repeat-until loop*)
 
 Повторение до истинности условия остановки. Проверка перед телом допускает ноль выполнений, после тела — требует хотя бы одного.
 
@@ -377,7 +394,7 @@ publish: true
 
 ### Цикл do-while с постусловием { #control-do-while }
 
-*Post-test do-while loop*
+англ. *Do-while loop* (также *post-test loop*)
 
 Конструкция цикла, сначала выполняющая тело и затем проверяющая условие продолжения для следующей итерации.
 
@@ -389,7 +406,7 @@ publish: true
 
 ### Формы итерации { #control-iteration }
 
-*Iteration forms*
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*)
 
 Способ систематически повторять вычисление — по условию и шагу, элементам последовательности, через генераторную конструкцию или функцию обхода.
 
@@ -402,7 +419,7 @@ publish: true
 
 ### Логический поиск решений { #control-logic-search }
 
-*Logic search*
+англ. *Logic search* (также *backtracking*, *SLD resolution*, *constraint solving*)
 
 Механизмы построения решений логических целей — перебор альтернатив с возвратом, сохранение результатов подцелей или распространение ограничений.
 
@@ -414,7 +431,7 @@ publish: true
 
 ### Граница захвата продолжения { #control-continuation-extent }
 
-*Continuation capture boundary*
+англ. *Continuation capture boundary* (также *first-class continuations*, *call/cc*, *delimited continuations*)
 
 Граница контекста вычисления, представленного захваченным продолжением: весь текущий остаток вычисления либо его часть до ограничителя.
 
@@ -441,12 +458,13 @@ publish: true
 | [Реализация параметрического полиморфизма](#subprograms-generic-mechanism) |  |  |  |  |  |  |  |  |  |  |  |  | [Стирание типов (с Java SE 5 включительно, layer: language, profile: java21)](java.md#subprograms-generic-mechanism) |  | [Параметры типов во время выполнения (layer: implementation, profile: dotnet8, implementation: .NET 8 / CLR) *](csharp.md#subprograms-generic-mechanism) |  | [Мономорфизация (layer: implementation, profile: rust2024, implementation: rustc)](rust.md#subprograms-generic-mechanism) | [Стирание типов (layer: language, profile: ts5_strict) *](typescript.md#subprograms-generic-mechanism) | [Мономорфизация (layer: language, profile: zig016) *](zig.md#subprograms-generic-mechanism) |
 | [Аргументы по умолчанию](#subprograms-default-args) | [да (layer: implementation, profile: dyalog, implementation: Dyalog APL, applies_to: левый аргумент dfn) *](apl.md#subprograms-default-args) |  |  |  |  | [да (layer: implementation, profile: postgresql, implementation: PostgreSQL, applies_to: CREATE FUNCTION … DEFAULT) *](sql.md#subprograms-default-args) |  | [да (layer: language, profile: ansi) *](common-lisp.md#subprograms-default-args) |  |  | [да (layer: language, profile: python314) *](python.md#subprograms-default-args) | [нет (layer: language, profile: lua54) *](lua.md#subprograms-default-args) | [нет (layer: language, profile: java21) *](java.md#subprograms-default-args) | [да (layer: language, profile: es2024) *](javascript.md#subprograms-default-args) |  | [нет (layer: language, profile: go127) *](go.md#subprograms-default-args) | [нет (layer: language, profile: rust2024) *](rust.md#subprograms-default-args) |  |  |
 | [Именованные аргументы](#subprograms-named-args) | [нет (layer: language, profile: iso13751) *](apl.md#subprograms-named-args) |  |  |  | [нет (layer: language, profile: st80) *](smalltalk.md#subprograms-named-args) | [да (layer: implementation, profile: postgresql, implementation: PostgreSQL, applies_to: вызов функций с именованными параметрами) *](sql.md#subprograms-named-args) |  | [да (layer: language, profile: ansi) *](common-lisp.md#subprograms-named-args) |  |  | [да (layer: language, profile: python314)](python.md#subprograms-named-args) | [нет (layer: language, profile: lua54) *](lua.md#subprograms-named-args) | [нет (layer: language, profile: java21) *](java.md#subprograms-named-args) |  |  | [нет (layer: language, profile: go127) *](go.md#subprograms-named-args) | [нет (layer: language, profile: rust2024) *](rust.md#subprograms-named-args) |  |  |
+| [Разрешение перегрузки](#subprograms-overload-resolution) |  |  | [неприменимо (n/a) (layer: language, profile: c17) *](c.md#subprograms-overload-resolution) |  |  |  | [Ранжирование неявных преобразований аргументов (layer: language, profile: cpp23); Поиск кандидатов по типам аргументов (layer: language, profile: cpp23) *](cpp.md#subprograms-overload-resolution) |  |  |  |  |  | [Ранжирование неявных преобразований аргументов (layer: language, profile: java21) *](java.md#subprograms-overload-resolution) |  |  |  |  |  |  |
 
 <a id="variants-7"></a>
 
 ### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading*
+англ. *Function overloading* (также *overloading*, *operator overloading*)
 
 Использование одного имени для нескольких сигнатур подпрограмм с выбором применимой сигнатуры по правилам языка и контексту вызова.
 
@@ -458,7 +476,7 @@ publish: true
 
 ### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing*
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*)
 
 Правила связывания фактических аргументов с формальными параметрами, определяющие доступ к значениям, переменным вызывающей стороны или отложенным вычислениям.
 
@@ -479,7 +497,7 @@ publish: true
 
 ### Место определения подпрограмм { #subprograms-placement }
 
-*Subprogram definition placement*
+англ. *Subprogram definition placement* (также *top-level function*, *member function*, *local function*)
 
 Допустимые структурные места определения подпрограммы в программе: верхний уровень, выделенная область объявлений, член типа или локальная область.
 
@@ -492,7 +510,7 @@ publish: true
 
 ### Вложенные именованные подпрограммы { #subprograms-nesting }
 
-*Nested named subprograms*
+англ. *Nested functions* (также *nested subprograms*)
 
 Возможность определять именованную подпрограмму внутри области другой подпрограммы или локальной связывающей конструкции.
 
@@ -502,7 +520,7 @@ publish: true
 
 ### Захват окружения { #subprograms-closures }
 
-*Closure capture*
+англ. *Closures* (также *lambda capture*, *captured variables*)
 
 Сохранение функции вместе с доступом к необходимым связываниям окружающей лексической среды. Способ захвата значений, переменных и владения определяется языком.
 
@@ -512,7 +530,7 @@ publish: true
 
 ### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions*
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*)
 
 Конструкция создания функции как выражения без обязательного отдельного именованного определения.
 
@@ -522,7 +540,7 @@ publish: true
 
 ### Параметрический полиморфизм { #subprograms-generics }
 
-*Parametric polymorphism*
+англ. *Parametric polymorphism* (также *generics*, *templates*)
 
 Параметризация типов или подпрограмм типовыми параметрами, позволяющая описать семейство применений без отдельной ручной реализации для каждого конкретного типа.
 
@@ -532,7 +550,7 @@ publish: true
 
 ### Реализация параметрического полиморфизма { #subprograms-generic-mechanism }
 
-*Generic implementation mechanism*
+англ. *Generic implementation mechanism* (также *monomorphization*, *type erasure*, *template instantiation*)
 
 Механизмы реализации обобщённого кода и его ограничений — специализированные экземпляры, стирание параметров, их сохранение во время исполнения или передача наборов операций.
 
@@ -545,7 +563,7 @@ publish: true
 
 ### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments*
+англ. *Default arguments* (также *optional parameters*)
 
 Правила получения аргумента, который вызывающий код не передал явно, из заданного определения или выражения по умолчанию.
 
@@ -555,13 +573,28 @@ publish: true
 
 ### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments*
+англ. *Named arguments* (также *keyword arguments*)
 
 Сопоставление фактического аргумента с параметром по имени, а не только по позиции в списке вызова.
 
 [Пример, границы понятия и связи](glossary.md#subprograms-named-args)
 
 - да / нет
+
+### Разрешение перегрузки { #subprograms-overload-resolution }
+
+англ. *Overload resolution* (также *best viable function*, *argument-dependent lookup*)
+
+Процедура выбора одной функции из набора одноимённых кандидатов по аргументам вызова. Она включает поиск кандидатов, отбор применимых и сравнение необходимых преобразований аргументов; при равных кандидатах вызов неоднозначен.
+
+[Пример, границы понятия и связи](glossary.md#subprograms-overload-resolution)
+
+Как из набора одноимённых кандидатов выбирается вызываемая функция. Наличие перегрузки (subprograms.overloading) не определяет правила выбора: ранжирование преобразований, поиск кандидатов и неоднозначность описываются здесь. Выбор во время выполнения по динамическим типам — abstraction.dispatch.
+
+- `conversion_ranking` — **Ранжирование неявных преобразований аргументов** (*implicit conversion ranking*)
+- `exact_signature` — **Точное совпадение типов без ранжирования** (*exact signature match*)
+- `argument_dependent_lookup` — **Поиск кандидатов по типам аргументов** (*argument-dependent lookup*)
+- `arity` — **По числу аргументов** (*by arity*)
 
 ## Полиморфизм и организация { #abstraction }
 
@@ -574,7 +607,7 @@ publish: true
 
 ### Контракты полиморфизма { #abstraction-contracts }
 
-*Polymorphic contracts*
+англ. *Polymorphic contracts* (также *interfaces*, *traits*, *type classes*, *protocols*)
 
 Требования к доступным операциям типа или значения, через которые код использует разные реализации единообразно: интерфейсы, traits, type classes или протоколы.
 
@@ -587,7 +620,7 @@ publish: true
 
 ### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch*
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*)
 
 Выбор реализации вызываемой операции по статической информации или динамическим характеристикам одного либо нескольких аргументов.
 
@@ -599,7 +632,7 @@ publish: true
 
 ### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance*
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*)
 
 Получение реализации или состояния типа из одного либо нескольких родительских типов с правилами дополнения и переопределения.
 
@@ -611,7 +644,7 @@ publish: true
 
 ### Модульность { #abstraction-modules }
 
-*Modules*
+англ. *Modules* (также *module system*, *namespaces*, *packages*)
 
 Организация программы в единицы с контролируемыми именами, зависимостями и границами использования; конкретный механизм определяет импорт, экспорт и параметризацию.
 
@@ -633,10 +666,13 @@ publish: true
 | [Поднятие операций по рангу массива](#evaluation-rank-lifting) | [Распространение скаляра на элементы массива (layer: language, profile: iso13751); Применение к ячейкам выбранного ранга (layer: implementation, profile: dyalog, implementation: Dyalog APL) *](apl.md#evaluation-rank-lifting) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 | [Протокол выдачи и возобновления результатов](#evaluation-result-protocol) |  |  |  |  |  |  |  |  |  |  |  | [Обычный возврат результата вызова (layer: language, profile: lua54); Явное возобновление генератора или корутины (layer: standard_library, profile: lua54) *](lua.md#evaluation-result-protocol) |  |  |  |  |  |  |  |
 | [Ожидание доступности данных](#evaluation-data-availability) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+| [Порядок вычисления подвыражений](#evaluation-order) |  |  | [Не задан стандартом (layer: language, profile: c17); Задан для отдельных операций (layer: language, profile: c17) *](c.md#evaluation-order) |  |  |  | [Не задан стандартом (layer: language, profile: cpp23); Задан для отдельных операций (layer: language, profile: cpp23) *](cpp.md#evaluation-order) |  |  |  | [Слева направо (layer: language, profile: python314) *](python.md#evaluation-order) |  | [Слева направо (layer: language, profile: java21) *](java.md#evaluation-order) |  |  |  | [Слева направо (layer: language, profile: rust2024) *](rust.md#evaluation-order) |  |  |
+| [Неопределённое поведение](#evaluation-undefined-behavior) |  |  | [Неопределённое поведение (layer: language, profile: c17); Неуточнённое поведение (layer: language, profile: c17); Определяемое реализацией (layer: language, profile: c17) *](c.md#evaluation-undefined-behavior) |  |  |  | [Неопределённое поведение (layer: language, profile: cpp23); Неуточнённое поведение (layer: language, profile: cpp23); Определяемое реализацией (layer: language, profile: cpp23) *](cpp.md#evaluation-undefined-behavior) |  |  |  | [Нарушение правил обнаруживается и даёт определённый результат (layer: language, profile: python314) *](python.md#evaluation-undefined-behavior) |  | [Нарушение правил обнаруживается и даёт определённый результат (layer: language, profile: java21) *](java.md#evaluation-undefined-behavior) |  |  |  | [Нарушение правил обнаруживается и даёт определённый результат (layer: language, profile: safe); Неопределённое поведение (layer: language, profile: rust2024, applies_to: unsafe-блоки и функции) *](rust.md#evaluation-undefined-behavior) |  |  |
+| [Вычисления во время компиляции](#evaluation-compile-time) |  |  | [Константные выражения из ограниченного набора операций (layer: language, profile: c17) *](c.md#evaluation-compile-time) |  |  |  | [Константные выражения из ограниченного набора операций (layer: language, profile: cpp23); Функции (layer: language, profile: cpp23); Функции (layer: language, profile: cpp23) *](cpp.md#evaluation-compile-time) |  |  |  |  |  | [Константные выражения из ограниченного набора операций (layer: language, profile: java21) *](java.md#evaluation-compile-time) |  |  |  | [Константные выражения из ограниченного набора операций (layer: language, profile: rust2024); Функции (layer: language, profile: rust2024) *](rust.md#evaluation-compile-time) |  |  |
 
 ### Стратегия вычисления { #evaluation-strategy }
 
-*Evaluation strategy*
+англ. *Evaluation strategy* (также *eager evaluation*, *lazy evaluation*)
 
 Правила востребованности вычислений: требует ли операция значения аргумента до своего выполнения или может получить результат без вычисления некоторых аргументов.
 
@@ -649,7 +685,7 @@ publish: true
 
 ### Контроль эффектов { #evaluation-effects }
 
-*Effect control*
+англ. *Effect control* (также *effect system*, *purity*)
 
 Способы выражения и контроля наблюдаемых действий помимо получения обычного значения — изменения состояния, ввода-вывода и других эффектов.
 
@@ -661,7 +697,7 @@ publish: true
 
 ### Гарантированное устранение хвостовых вызовов { #evaluation-tail-calls }
 
-*Guaranteed tail-call elimination*
+англ. *Tail-call elimination* (также *proper tail calls*, *tail-call optimization*)
 
 Гарантия, что хвостовой вызов не требует сохранения дополнительного контекста возврата и не вызывает неограниченного роста такого контекста в цепочке хвостовых вызовов.
 
@@ -671,7 +707,7 @@ publish: true
 
 ### Поднятие операций по рангу массива { #evaluation-rank-lifting }
 
-*Array rank lifting*
+англ. *Array rank lifting* (также *rank polymorphism*, *scalar extension*)
 
 Автоматическое применение операции к ячейкам массива выбранной размерности с правилами объединения результатов и согласования аргументов.
 
@@ -686,7 +722,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Протокол выдачи и возобновления результатов { #evaluation-result-protocol }
 
-*Result and resumption protocol*
+англ. *Result and resumption protocol* (также *generators*, *coroutines*, *goal-directed evaluation*)
 
 Правила выдачи результатов и инициирования следующего результата: обычный возврат, явное возобновление или автоматический поиск альтернатив при неудаче.
 
@@ -702,7 +738,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Ожидание доступности данных { #evaluation-data-availability }
 
-*Data availability suspension*
+англ. *Data availability suspension* (также *dataflow variables*, *dataflow execution*)
 
 Приостановка или запуск вычисления в зависимости от наличия необходимой информации на входах или в логических переменных.
 
@@ -715,6 +751,49 @@ Shape — размеры осей, rank — их число; cell — подма
 - `needed_information` — **Ожидание необходимой операции информации** (*suspension on needed information*)
 - `all_inputs` — **Готовность по всем входам узла** (*all-input node readiness*)
 
+### Порядок вычисления подвыражений { #evaluation-order }
+
+англ. *Order of evaluation* (также *sequencing*, *sequence points*, *sequenced-before*)
+
+Правила, определяющие, в какой последовательности вычисляются операнды одного выражения и аргументы вызова и когда становятся видны их побочные эффекты.
+
+[Пример, границы понятия и связи](glossary.md#evaluation-order)
+
+В каком порядке вычисляются операнды одного выражения и аргументы вызова. Ось независима от приоритета и ассоциативности операций: `f() + g() * h()` группируется однозначно, а порядок вызовов может быть не задан. Не путать со strictness (evaluation.strategy): строгая стратегия требует вычислить аргументы до вызова, но не задаёт их взаимный порядок. Непоследовательные модификации одного объекта в C и C++ дают неопределённое поведение.
+
+- `left_to_right` — **Слева направо** (*left-to-right*)
+- `unspecified` — **Не задан стандартом** (*unspecified*)
+- `partially_sequenced` — **Задан для отдельных операций** (*sequenced for specific operators*)
+
+### Неопределённое поведение { #evaluation-undefined-behavior }
+
+англ. *Undefined behavior* (также *UB*, *unspecified behavior*, *implementation-defined behavior*)
+
+Способ, которым спецификация языка описывает выполнение программ, нарушающих её правила или зависящих от выбора реализации. Различают поведение, определяемое реализацией, неуточнённое и неопределённое; для последнего стандарт не накладывает никаких требований.
+
+[Пример, границы понятия и связи](glossary.md#evaluation-undefined-behavior)
+
+Как спецификация описывает программы, нарушающие её правила или зависящие от выбора реализации. Implementation-defined — реализация выбирает и документирует; unspecified — выбор из допустимых вариантов без документирования; undefined — стандарт не накладывает требований на всё выполнение, а компилятор вправе оптимизировать, считая UB невозможным. Это не синоним ошибки времени выполнения: гарантированное исключение или паника — определённое поведение (errors.model).
+
+- `undefined` — **Неопределённое поведение** (*undefined behavior*)
+- `unspecified` — **Неуточнённое поведение** (*unspecified behavior*)
+- `implementation_defined` — **Определяемое реализацией** (*implementation-defined behavior*)
+- `checked` — **Нарушение правил обнаруживается и даёт определённый результат** (*checked with defined outcome*)
+
+### Вычисления во время компиляции { #evaluation-compile-time }
+
+англ. *Constant evaluation* (также *compile-time evaluation*, *constant expressions*, *constexpr*)
+
+Гарантированное языком вычисление значений при трансляции программы, а также правила, какие выражения и функции для этого допустимы и где такое значение обязательно.
+
+[Пример, границы понятия и связи](glossary.md#evaluation-compile-time)
+
+Какие вычисления язык требует или разрешает выполнить при трансляции и где результат обязателен (размер массива, аргумент шаблона). Ось уже syntax.metaprogramming: там описано порождение кода, здесь — вычисление значений. Оптимизирующее свёртывание констант компилятором без гарантии языка сюда не относится.
+
+- `constant_expressions` — **Константные выражения из ограниченного набора операций** (*restricted constant expressions*)
+- `compile_time_functions` — **Функции** (*compile-time-evaluable functions*)
+- `mandatory_compile_time` — **Функции** (*compile-time-only functions*)
+
 ## Память и владение { #memory }
 
 | Концепция | [APL](apl.md) | [Forth](forth.md) | [C](c.md) | [Prolog](prolog.md) | [Smalltalk](smalltalk.md) | [SQL](sql.md) | [C++](cpp.md) | [Common Lisp](common-lisp.md) | [Erlang](erlang.md) | [Haskell](haskell.md) | [Python](python.md) | [Lua](lua.md) | [Java](java.md) | [JavaScript](javascript.md) | [C#](csharp.md) | [Go](go.md) | [Rust](rust.md) | [TypeScript](typescript.md) | [Zig](zig.md) |
@@ -722,10 +801,13 @@ Shape — размеры осей, rank — их число; cell — подма
 | [Освобождение памяти](#memory-management) |  | [Ручное (layer: language, profile: forth2012) *](forth.md#memory-management) | [Ручное (layer: standard_library, profile: c17, applies_to: динамически выделенная память) *](c.md#memory-management) | [Трассирующая сборка мусора (layer: implementation, profile: swi, implementation: SWI-Prolog) *](prolog.md#memory-management) | [Подсчёт ссылок (layer: implementation, profile: st80, implementation: Blue Book virtual machine); Трассирующая сборка мусора (layer: implementation, profile: pharo, implementation: Pharo VM) *](smalltalk.md#memory-management) |  | [Ручное (layer: language, profile: cpp23); Владение и время жизни (layer: standard_library, profile: cpp23, applies_to: std::unique_ptr и владеющие контейнеры); Подсчёт ссылок (layer: standard_library, profile: cpp23, applies_to: std::shared_ptr) *](cpp.md#memory-management) |  | [Трассирующая сборка мусора (layer: implementation, profile: otp, implementation: ERTS/BEAM) *](erlang.md#memory-management) | [Трассирующая сборка мусора (layer: implementation, profile: ghc, implementation: GHC) *](haskell.md#memory-management) | [Подсчёт ссылок (layer: implementation, profile: python314, implementation: CPython); Трассирующая сборка мусора (layer: implementation, profile: python314, implementation: CPython) *](python.md#memory-management) | [Трассирующая сборка мусора (layer: language, profile: lua54) *](lua.md#memory-management) | [Трассирующая сборка мусора (layer: language, profile: java21) *](java.md#memory-management) |  | [Трассирующая сборка мусора (layer: implementation, profile: dotnet8, implementation: .NET 8 / CLR) *](csharp.md#memory-management) | [Трассирующая сборка мусора (layer: language, profile: go127) *](go.md#memory-management) | [Владение и время жизни (layer: language, profile: safe); Подсчёт ссылок (layer: standard_library, profile: rust2024, applies_to: разделяемое владение) *](rust.md#memory-management) |  | [Ручное (layer: language, profile: zig016) *](zig.md#memory-management) |
 | [Передача и разделение владения](#memory-transfer) |  |  | [Копирование значения (layer: language, profile: c17) *](c.md#memory-transfer) |  |  |  | [Копирование значения (layer: language, profile: cpp23); Перемещение владения (layer: language, profile: cpp23, applies_to: типы с перемещающими операциями) *](cpp.md#memory-transfer) |  | [Копирование значения (layer: language, profile: otp, applies_to: сообщения между процессами) *](erlang.md#memory-transfer) |  | [Разделяемая ссылка на объект (layer: language, profile: python314)](python.md#memory-transfer) |  | [Копирование значения (layer: language, profile: java21); Разделяемая ссылка на объект (layer: language, profile: java21, applies_to: объекты ссылочных типов) *](java.md#memory-transfer) | [Разделяемая ссылка на объект (layer: language, profile: es2024, applies_to: объекты) *](javascript.md#memory-transfer) | [Копирование значения (layer: language, profile: csharp12, applies_to: значимые типы при передаче и присваивании по значению); Разделяемая ссылка на объект (layer: language, profile: csharp12, applies_to: значения ссылочных типов) *](csharp.md#memory-transfer) |  | [Копирование значения (layer: language, profile: rust2024, applies_to: типы Copy, включая &T, но не &mut T); Перемещение владения (layer: language, profile: rust2024, applies_to: передача принадлежащего вызывающему значения не-Copy типа); Разделяемое заимствование (layer: language, profile: safe); Исключительное заимствование (layer: language, profile: safe) *](rust.md#memory-transfer) | [Разделяемая ссылка на объект (layer: language, profile: ts5_strict, applies_to: объектные значения) *](typescript.md#memory-transfer) |  |
 | [Права ссылок и ограничения алиасов](#memory-reference-permissions) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | [Разделяемый неизменяемый объект (layer: language, profile: rust2024, applies_to: разделяемые ссылки &T); Изолированный доступ (layer: language, profile: rust2024, applies_to: изменяемые ссылки &mut T) *](rust.md#memory-reference-permissions) |  |  |
+| [Длительность хранения и время жизни объекта](#memory-storage-duration) |  |  | [Автоматическая (layer: language, profile: c17); Статическая (layer: language, profile: c17); Поточная (layer: language, profile: c17); Динамическая (layer: standard_library, profile: c17) *](c.md#memory-storage-duration) |  |  |  | [Автоматическая (layer: language, profile: cpp23); Статическая (layer: language, profile: cpp23); Поточная (layer: language, profile: cpp23); Динамическая (layer: language, profile: cpp23) *](cpp.md#memory-storage-duration) |  |  |  |  |  |  |  |  |  |  |  |  |
+| [Категории значений выражений](#memory-value-categories) |  |  | [Два вида — lvalue и rvalue (layer: language, profile: c17) *](c.md#memory-value-categories) |  |  |  | [По идентичности и возможности перемещения (layer: language, profile: cpp23) *](cpp.md#memory-value-categories) |  |  |  |  |  |  |  |  |  |  |  |  |
+| [Модель памяти для параллельного доступа](#memory-concurrency-model) |  |  | [Гонка данных — неопределённое поведение (layer: language, profile: c17); Явно выбираемое упорядочивание атомарных операций (layer: language, profile: c17, applies_to: _Atomic и stdatomic.h) *](c.md#memory-concurrency-model) |  |  |  | [Гонка данных — неопределённое поведение (layer: language, profile: cpp23); Явно выбираемое упорядочивание атомарных операций (layer: standard_library, profile: cpp23, applies_to: std::atomic и std::memory_order) *](cpp.md#memory-concurrency-model) |  |  |  |  |  | [Гонка данных имеет ограниченную определённую семантику (layer: language, profile: java21); Явно выбираемое упорядочивание атомарных операций (layer: standard_library, profile: java21, applies_to: VarHandle) *](java.md#memory-concurrency-model) |  |  |  | [Гонки данных исключены статически (layer: language, profile: safe); Явно выбираемое упорядочивание атомарных операций (layer: standard_library, profile: rust2024, applies_to: std::sync::atomic) *](rust.md#memory-concurrency-model) |  |  |
 
 ### Освобождение памяти { #memory-management }
 
-*Memory reclamation*
+англ. *Memory management* (также *memory reclamation*, *garbage collection*, *reference counting*)
 
 Политика определения момента и ответственного за освобождение памяти объектов: явный вызов, анализ достижимости, подсчёт ссылок или правила владения и времени жизни.
 
@@ -738,7 +820,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Передача и разделение владения { #memory-transfer }
 
-*Ownership transfer and sharing*
+англ. *Ownership transfer and sharing* (также *move semantics*, *copy semantics*, *borrowing*)
 
 Правила копирования значений, перемещения владения и разделения доступа к объектам, включая заимствования с ограниченным временем использования.
 
@@ -752,7 +834,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Права ссылок и ограничения алиасов { #memory-reference-permissions }
 
-*Reference permissions and alias restrictions*
+англ. *Reference permissions and alias restrictions* (также *reference capabilities*, *aliasing control*)
 
 Права конкретной ссылки на чтение и изменение объекта и ограничения на одновременное существование других ссылок к нему.
 
@@ -768,6 +850,50 @@ Shape — размеры осей, rank — их число; cell — подма
 - `read_only_view` — **Представление только для чтения** (*read-only view*)
 - `identity_only` — **Только идентичность без чтения состояния** (*identity-only access*)
 
+### Длительность хранения и время жизни объекта { #memory-storage-duration }
+
+англ. *Storage duration* (также *object lifetime*, *automatic storage*, *static storage*, *dynamic storage*)
+
+Категория, определяющая, когда выделяется и освобождается память объекта, и связанные правила начала и окончания его времени жизни.
+
+[Пример, границы понятия и связи](glossary.md#memory-storage-duration)
+
+Когда выделяется и освобождается память объекта и в какие моменты объект жив. Время жизни относится к объекту, область видимости — к имени: объект с динамической длительностью переживает область имени указателя, а статический локальный объект невидим вне функции. Способ освобождения динамической памяти (сборка мусора, ручное) — memory.management.
+
+- `automatic` — **Автоматическая** (*automatic*)
+- `static` — **Статическая** (*static*)
+- `thread` — **Поточная** (*thread*)
+- `dynamic` — **Динамическая** (*dynamic*)
+
+### Категории значений выражений { #memory-value-categories }
+
+англ. *Value categories* (также *lvalue*, *rvalue*, *glvalue*, *prvalue*, *xvalue*)
+
+Классификация выражений по тому, обозначают ли они объект с идентичностью или только значение, и можно ли использовать их ресурсы. От категории зависят присваивание, взятие адреса, связывание ссылок и выбор перемещения.
+
+[Пример, границы понятия и связи](glossary.md#memory-value-categories)
+
+Классификация выражений по тому, обозначают ли они объект с идентичностью (место хранения) или только значение, и можно ли забрать их ресурсы. Категория — свойство выражения, а не типа и не объекта: имя переменной типа `T&&` само по себе lvalue. Используется для правил присваивания, взятия адреса, связывания ссылок и выбора перемещения (memory.transfer).
+
+- `lvalue_rvalue` — **Два вида — lvalue и rvalue** (*lvalue/rvalue*)
+- `identity_movability` — **По идентичности и возможности перемещения** (*identity and movability (glvalue/prvalue/xvalue)*)
+- `places_values` — **Выражения-места и выражения-значения** (*place and value expressions*)
+
+### Модель памяти для параллельного доступа { #memory-concurrency-model }
+
+англ. *Memory model* (также *data race*, *happens-before*, *memory ordering*, *atomics*)
+
+Правила, определяющие, какие значения может прочитать поток при одновременном доступе нескольких потоков к памяти, что считается гонкой данных и какие гарантии упорядочивания дают синхронизация и атомарные операции.
+
+[Пример, границы понятия и связи](glossary.md#memory-concurrency-model)
+
+Какие значения может прочитать поток при одновременном доступе к памяти и какие гарантии упорядочивания дают атомарные операции и синхронизация. Ось независима от механизма запуска потоков (resources.concurrency): модель определяет смысл общих данных, а не способ создания потока. Гонка данных в C, C++ и unsafe Rust — неопределённое поведение, в Java — определённое, но слабо упорядоченное.
+
+- `data_race_undefined` — **Гонка данных — неопределённое поведение** (*data races are undefined behavior*)
+- `data_race_defined` — **Гонка данных имеет ограниченную определённую семантику** (*data races have bounded defined semantics*)
+- `races_prevented` — **Гонки данных исключены статически** (*data races statically prevented*)
+- `explicit_ordering` — **Явно выбираемое упорядочивание атомарных операций** (*explicit atomic memory ordering*)
+
 ## Каналы ошибок { #errors }
 
 | Концепция | [APL](apl.md) | [Forth](forth.md) | [C](c.md) | [Prolog](prolog.md) | [Smalltalk](smalltalk.md) | [SQL](sql.md) | [C++](cpp.md) | [Common Lisp](common-lisp.md) | [Erlang](erlang.md) | [Haskell](haskell.md) | [Python](python.md) | [Lua](lua.md) | [Java](java.md) | [JavaScript](javascript.md) | [C#](csharp.md) | [Go](go.md) | [Rust](rust.md) | [TypeScript](typescript.md) | [Zig](zig.md) |
@@ -778,7 +904,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation*
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*)
 
 Каналы представления и передачи неуспешного исхода или исключительной ситуации: значение, исключение, condition/restart, логическая неудача или аварийный механизм.
 
@@ -797,7 +923,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Проверяемые исключения { #errors-checked-exceptions }
 
-*Checked exceptions*
+англ. *Checked exceptions* (также *exception specifications*)
 
 Статическое требование обработать определённые классы исключений или объявить возможность их распространения в контракте подпрограммы.
 
@@ -809,7 +935,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Диагностика неиспользованного результата { #errors-must-use }
 
-*Unused-result diagnostics*
+англ. *Unused-result diagnostics* (также *nodiscard*, *must_use*, *warn_unused_result*)
 
 Диагностика отбрасывания результата, который помечен как требующий внимания вызывающего кода. Уровень диагностики и допустимые способы отбрасывания зависят от профиля.
 
@@ -835,7 +961,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup*
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*)
 
 Правила выполнения освобождающих действий при завершении работы с ресурсом или выходе из области, включая обычные и исключительные пути.
 
@@ -854,7 +980,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Интерфейс ввода-вывода { #resources-io }
 
-*I/O interface*
+англ. *Input/output* (также *I/O library*)
 
 Уровень и форма предоставления операций обмена с внешним окружением — встроенная операция, стандартная библиотека, макрос или API конкретной среды.
 
@@ -866,7 +992,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Конкурентное выполнение { #resources-concurrency }
 
-*Concurrency*
+англ. *Concurrency* (также *threads*, *async/await*, *actors*)
 
 Возможность организовать несколько вычислений с перекрывающимся временем жизни и правила их продвижения и взаимодействия.
 
@@ -880,7 +1006,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Синхронизация отправки и приёма { #resources-communication-coupling }
 
-*Send and receive coupling*
+англ. *Send and receive coupling* (также *asynchronous message passing*, *rendezvous*, *synchronous channels*)
 
 Степень зависимости завершения отправки от готовности получателя: независимое помещение сообщения в очередь или согласованная встреча отправителя и получателя.
 
@@ -895,7 +1021,7 @@ Shape — размеры осей, rank — их число; cell — подма
 
 ### Выбор сообщения из очереди { #resources-receive-selection }
 
-*Message selection from a queue*
+англ. *Message selection from a queue* (также *selective receive*)
 
 Правило выбора доступного сообщения из очереди получателя — например, только голова либо первое сообщение, подходящее под образец.
 
@@ -923,7 +1049,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries*
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*)
 
 Способ обозначения границ синтаксических групп — разделителями, значимыми отступами или структурой читаемых форм.
 
@@ -935,7 +1061,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries*
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*)
 
 Правила распознавания границ операторов и определений: терминатор, разделитель, перевод строки либо структура формы.
 
@@ -949,7 +1075,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Чувствительность имён к регистру { #syntax-case-sensitive }
 
-*Identifier case sensitivity*
+англ. *Case sensitivity* (также *identifier case sensitivity*)
 
 Правило различения идентификаторов по регистру после предусмотренных языком шагов чтения и нормализации.
 
@@ -959,7 +1085,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Метапрограммирование { #syntax-metaprogramming }
 
-*Metaprogramming*
+англ. *Metaprogramming* (также *macros*, *reflection*, *compile-time evaluation*)
 
 Средства, с помощью которых программа анализирует, создаёт или преобразует код либо его представление на определённой стадии обработки.
 
@@ -974,7 +1100,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Гигиена макросов { #syntax-macro-hygiene }
 
-*Macro hygiene*
+англ. *Macro hygiene* (также *hygienic macros*, *variable capture*)
 
 Сохранение корректных связей имён при раскрытии макроса, предотвращающее непреднамеренный захват между введёнными именами и контекстом использования.
 
@@ -989,7 +1115,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Нотация исходной программы { #syntax-program-representation }
 
-*Source program notation*
+англ. *Source program notation* (также *visual programming language*)
 
 Форма, в которой автор задаёт исходную программу для исполнения или трансляции: текст либо структурный граф с узлами и связями.
 
@@ -1010,7 +1136,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms*
+англ. *Programming paradigms* (также *supported paradigms*)
 
 Устойчивые способы организации вычислений и программных абстракций, поддержанные механизмами языка и его практикой использования.
 
@@ -1034,7 +1160,7 @@ Selective receive ищет первое подходящее сообщение,
 
 ### Кратность элементов коллекции { #data-collection-multiplicity }
 
-*Collection multiplicity*
+англ. *Collection multiplicity* (также *set semantics*, *bag semantics*, *multiset*)
 
 Правила учёта повторных элементов и их позиций в конкретной коллекции или результате операции: присутствие, число вхождений либо позиционные вхождения.
 
@@ -1050,7 +1176,7 @@ Set хранит присутствие элемента, bag — число в�
 
 ### Основание числового представления { #data-numeric-radix }
 
-*Numeric representation radix*
+англ. *Numeric representation radix* (также *binary floating point*, *decimal arithmetic*)
 
 Основание представления и арифметики числового типа или поля, например двоичное либо десятичное.
 
@@ -1065,7 +1191,7 @@ Binary/decimal относится к представлению и арифме�
 
 ### Ограничение числовой точности { #data-numeric-precision }
 
-*Numeric precision bound*
+англ. *Numeric precision bound* (также *arbitrary-precision arithmetic*, *bignum*, *fixed-width integers*)
 
 Ограничение количества значащих разрядов, задаваемое типом, полем или настраиваемым контекстом вычисления.
 
@@ -1091,7 +1217,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Смысл применения правил { #computation-rule-semantics }
 
-*Rule application semantics*
+англ. *Rule application semantics* (также *fixpoint semantics*, *constraint handling rules*)
 
 Смысл применения правил к состоянию задачи: поиск ответа на цель, построение замыкания фактов либо преобразование хранилища с фиксацией выбора.
 
@@ -1107,7 +1233,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Режимы связанности аргументов { #computation-instantiation-modes }
 
-*Argument instantiation modes*
+англ. *Argument instantiation modes* (также *modes*, *mode system*)
 
 Описание требуемой связанности аргументов до вызова и гарантируемой связанности после него, отдельно от типов значений.
 
@@ -1123,7 +1249,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Объявленная кратность решений { #computation-solution-cardinality }
 
-*Declared solution cardinality*
+англ. *Declared solution cardinality* (также *determinism categories*)
 
 Контракт количества успешных решений и допустимости неудачи для определённого режима вызова при его возврате.
 
@@ -1140,7 +1266,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Временная область модели { #computation-time-domain }
 
-*Model time domain*
+англ. *Model time domain* (также *synchronous time*, *discrete-event simulation*, *hybrid systems*)
 
 Встроенный смысл времени, относительно которого определены значения и изменения модели: логические такты, дискретные события, непрерывное время или их сочетание.
 
@@ -1157,7 +1283,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Направленность уравнений и присваиваний { #computation-equation-causality }
 
-*Equation and assignment causality*
+англ. *Equation and assignment causality* (также *acausal modeling*, *equation-based modeling*)
 
 Различие между направленным обновлением цели, определением выходного потока и ненаправленным отношением величин, решаемым совместно с другими уравнениями.
 
@@ -1173,7 +1299,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Планирование обновлений в HDL-симуляции { #computation-update-scheduling }
 
-*HDL simulation update scheduling*
+англ. *HDL simulation update scheduling* (также *blocking assignment*, *nonblocking assignment*)
 
 Момент применения изменения состояния относительно вычисления правой части и других событий в модели аппаратной симуляции.
 
@@ -1195,7 +1321,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Режим гарантии тотальности { #verification-totality }
 
-*Totality guarantee policy*
+англ. *Totality guarantee policy* (также *totality checking*, *termination checking*)
 
 Политика проверки того, что определение покрывает допустимые входы и завершается либо продуктивно выдаёт результат в принятой модели вычислений.
 
@@ -1212,7 +1338,7 @@ Fixed precision ограничивает число разрядов выбра�
 
 ### Поведенческие контракты { #verification-behavioral-contracts }
 
-*Behavioral contracts*
+англ. *Behavioral contracts* (также *design by contract*, *preconditions and postconditions*, *contract assertions*)
 
 Предикаты допустимого входа, результата, изменения состояния и инвариантов, которыми описывается наблюдаемое поведение программного компонента.
 
@@ -1225,6 +1351,61 @@ Fixed precision ограничивает число разрядов выбра�
 - `preconditions` — **Предусловия** (*preconditions*)
 - `postconditions` — **Постусловия** (*postconditions*)
 - `invariants` — **Инварианты объектов** (*object invariants*)
+
+## Инструменты построения языковых процессоров { #tooling }
+
+Свойства реализаций и инструментов, а не семантики языка: значения в карточках указываются со слоем implementation или tooling.
+
+| Концепция | [APL](apl.md) | [Forth](forth.md) | [C](c.md) | [Prolog](prolog.md) | [Smalltalk](smalltalk.md) | [SQL](sql.md) | [C++](cpp.md) | [Common Lisp](common-lisp.md) | [Erlang](erlang.md) | [Haskell](haskell.md) | [Python](python.md) | [Lua](lua.md) | [Java](java.md) | [JavaScript](javascript.md) | [C#](csharp.md) | [Go](go.md) | [Rust](rust.md) | [TypeScript](typescript.md) | [Zig](zig.md) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| [Способ построения синтаксического анализатора](#tooling-parser-construction) |  |  | [Рукописный анализатор (layer: implementation, profile: c17, implementation: GCC 4.1+) *](c.md#tooling-parser-construction) |  |  | [Генератор по грамматике (layer: implementation, profile: postgresql); Генератор по грамматике (layer: implementation, profile: sqlite) *](sql.md#tooling-parser-construction) | [Рукописный анализатор (layer: implementation, profile: cpp23, implementation: GCC 3.4+, Clang) *](cpp.md#tooling-parser-construction) |  |  | [Генератор по грамматике (layer: implementation, profile: haskell2010, implementation: GHC) *](haskell.md#tooling-parser-construction) | [Генератор по грамматике (с Python 3.9 включительно, layer: implementation, profile: python314, implementation: CPython) *](python.md#tooling-parser-construction) |  |  |  |  | [Рукописный анализатор (layer: implementation, profile: go127, implementation: gc (cmd/compile), go/parser) *](go.md#tooling-parser-construction) |  |  |  |
+| [Алгоритм синтаксического анализа](#tooling-parsing-algorithm) |  |  | [Нисходящий LL(k) и рекурсивный спуск (layer: implementation, profile: c17, implementation: GCC 4.1+, Clang) *](c.md#tooling-parsing-algorithm) |  |  | [Восходящий LR(1) / LALR(1) / IELR(1) (layer: implementation, profile: postgresql); Восходящий LR(1) / LALR(1) / IELR(1) (layer: implementation, profile: sqlite) *](sql.md#tooling-parsing-algorithm) | [Нисходящий LL(k) и рекурсивный спуск (layer: implementation, profile: cpp23, implementation: GCC 3.4+, Clang) *](cpp.md#tooling-parsing-algorithm) |  |  | [Восходящий LR(1) / LALR(1) / IELR(1) (layer: implementation, profile: haskell2010, implementation: GHC) *](haskell.md#tooling-parsing-algorithm) | [Грамматики разбирающих выражений с упорядоченным выбором (с Python 3.9 включительно, layer: implementation, profile: python314, implementation: CPython) *](python.md#tooling-parsing-algorithm) |  |  |  |  | [Нисходящий LL(k) и рекурсивный спуск (layer: implementation, profile: go127, implementation: gc (cmd/compile), go/parser)](go.md#tooling-parsing-algorithm) |  |  |  |
+| [Языковой верстак](#tooling-language-workbench) |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+
+### Способ построения синтаксического анализатора { #tooling-parser-construction }
+
+англ. *Parser construction* (также *parser generator*, *compiler-compiler*, *hand-written parser*, *parser combinators*)
+
+Способ, которым получен синтаксический анализатор языковой реализации — написан вручную, сгенерирован инструментом по грамматике, собран из функций-комбинаторов или построен интерпретацией описания грамматики во время выполнения.
+
+[Пример, границы понятия и связи](glossary.md#tooling-parser-construction)
+
+Как получен анализатор: написан вручную, сгенерирован по грамматике, собран из функций-комбинаторов или построен интерпретацией грамматики во время выполнения. Ось независима от алгоритма разбора (tooling.parsing_algorithm): рукописный рекурсивный спуск и сгенерированный ANTLR-парсер оба нисходящие. Для языка из каталога значение описывает конкретную реализацию (layer: implementation), а не язык.
+
+- `hand_written` — **Рукописный анализатор** (*hand-written parser*)
+- `generated` — **Генератор по грамматике** (*parser generator*)
+- `combinators` — **Парсер-комбинаторы** (*parser combinators*)
+- `interpreted_grammar` — **Грамматика интерпретируется во время выполнения** (*runtime grammar interpretation*)
+
+### Алгоритм синтаксического анализа { #tooling-parsing-algorithm }
+
+англ. *Parsing algorithm* (также *LL(k)*, *ALL(*)*, *LALR(1)*, *GLR*, *Earley*, *PEG*, *packrat*)
+
+Метод, которым анализатор строит вывод цепочки в грамматике, определяющий класс принимаемых грамматик, обработку левой рекурсии и неоднозначности, а также сложность разбора.
+
+[Пример, границы понятия и связи](glossary.md#tooling-parsing-algorithm)
+
+Класс алгоритма определяет, какие грамматики принимаются без переписывания (левая рекурсия, неоднозначность), как сообщаются конфликты и какую сложность ожидать. PEG задаёт упорядоченный выбор и поэтому не бывает неоднозначной, но может молча отбросить альтернативу; GLR и Earley принимают любую КС-грамматику и могут вернуть лес разборов. Способ получения анализатора — tooling.parser_construction.
+
+- `ll` — **Нисходящий LL(k) и рекурсивный спуск** (*LL(k) / recursive descent*)
+- `adaptive_ll` — **Адаптивный LL(*) с анализом во время разбора** (*adaptive LL(*) (ALL(*))*)
+- `lr` — **Восходящий LR(1) / LALR(1) / IELR(1)** (*LR(1) / LALR(1)*)
+- `generalized` — **Обобщённый разбор любой КС-грамматики (GLR, Earley)** (*generalized parsing (GLR, Earley)*)
+- `peg` — **Грамматики разбирающих выражений с упорядоченным выбором** (*PEG / packrat*)
+
+### Языковой верстак { #tooling-language-workbench }
+
+англ. *Language workbench* (также *language oriented programming*, *projectional editor*, *DSL workbench*)
+
+Инструмент для определения языков, в котором по описанию абстрактного синтаксиса, редакторов и генераторов или интерпретаторов получается среда работы с языком — редактор с проверками, разрешение имён, трансляция.
+
+[Пример, границы понятия и связи](glossary.md#tooling-language-workbench)
+
+Инструмент, в котором язык задаётся схемой (абстрактным синтаксисом), редакторами и генераторами или интерпретаторами, а среда разработки для языка получается из этих определений. Термин ввёл М. Фаулер (2005). Значения — способ редактирования программ на создаваемом языке; один верстак может поддерживать несколько. Генератор парсеров даёт только анализатор, а не редактор, разрешение имён, проверки и генерацию кода.
+
+- `free_form_text` — **Текстовое редактирование с разбором** (*free-form textual editing*)
+- `projectional` — **Проекционное редактирование дерева** (*projectional editing*)
+- `graphical` — **Графические диаграммы** (*graphical notation*)
 
 ## Оценка по критериям лекции 20 { #assessment }
 

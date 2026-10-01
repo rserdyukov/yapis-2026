@@ -51,6 +51,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
+from urllib.parse import urlparse
 
 import yaml
 
@@ -234,8 +235,15 @@ class Ontology:
                 text(c.get("ru"), f"ontology.{cid}.ru")
                 optional_texts(c, ("en", "note"), f"ontology.{cid}")
                 validate_sources(c, f"ontology.{cid}")
-                for alias in sequence(c.get("aliases", []), f"ontology.{cid}.aliases"):
-                    text(alias, f"ontology.{cid}.aliases[]")
+                for key in ("aliases", "en_aliases"):
+                    for alias in sequence(c.get(key, []), f"ontology.{cid}.{key}"):
+                        text(alias, f"ontology.{cid}.{key}[]")
+                for ref in sequence(c.get("references", []), f"ontology.{cid}.references"):
+                    ref = mapping(ref, f"ontology.{cid}.references[]")
+                    for key in ("source", "url", "title"):
+                        text(ref.get(key), f"ontology.{cid}.references[].{key}")
+                    for lid in sequence(ref.get("languages", []), f"ontology.{cid}.references[].languages"):
+                        text(lid, f"ontology.{cid}.references[].languages[]")
                 if cid in concepts:
                     report.error(f"ontology: концепция {cid} объявлена дважды")
                 c["category"] = cat["id"]
@@ -881,6 +889,7 @@ class Registry:
     lecture_numbers: set[str] = field(default_factory=set)               # все колоды, включая черновики
     examples: dict[str, list[tuple[str, str]]] = field(default_factory=dict)  # понятие → [(заголовок, якорь)]
     articles: list[dict] = field(default_factory=list)  # опубликованные статьи сада: title, file, languages, concepts
+    referenced: dict[str, list[str]] = field(default_factory=dict)  # источник → понятия со ссылками references
 
     def articles_of(self, key: str, value: str) -> list[dict]:
         return [a for a in self.articles if value in a.get(key, [])]
@@ -1053,6 +1062,23 @@ def load_registry(data_dir: Path, onto: Ontology, langs: list[Language], report:
         check_refs(source, where)
         reg.sources[sid] = source
 
+    # Ссылки понятий на страницы справочников (ontology.yaml → references):
+    # источник обязан быть в sources.yaml, адрес — на том же сайте.
+    for cid, concept in onto.concepts.items():
+        for ref in concept.get("references", []):
+            where = f"ontology.{cid}.references[{ref['source']}]"
+            source = reg.sources.get(ref["source"])
+            if source is None:
+                report.error(f"{where}: неизвестный источник {ref['source']}")
+                continue
+            if source.get("url") and urlparse(ref["url"]).netloc != urlparse(source["url"]).netloc:
+                report.error(f"{where}: {ref['url']} не относится к сайту {source['url']}")
+            for lid in ref.get("languages", []):
+                if lid not in lang_ids:
+                    report.error(f"{where}: неизвестный язык {lid}")
+            if cid not in reg.referenced.setdefault(ref["source"], []):
+                reg.referenced[ref["source"]].append(cid)
+
     # Автор языка в meta.designers должен быть и в people.yaml со связью
     # на язык: иначе карточка и страница «Люди» расходятся.
     by_name = {p["name"]: p for p in reg.people.values()}
@@ -1108,6 +1134,38 @@ def concept_link(onto: Ontology, cid: str, page: str = "glossary.md") -> str:
     return f"[{concept['ru']}]({page}#{concept['slug']})"
 
 
+def english_term(c: dict) -> str:
+    """Англоязычный термин понятия и устоявшиеся синонимы (en, en_aliases)."""
+    if not c.get("en"):
+        return ""
+    line = f"англ. *{c['en']}*"
+    if c.get("en_aliases"):
+        line += " (также " + ", ".join(f"*{a}*" for a in c["en_aliases"]) + ")"
+    return line
+
+
+def concept_references(c: dict, reg: Registry, names: dict[str, str],
+                       lang_id: str | None = None, page: str = "sources.md") -> str:
+    """Ссылки на страницы справочников, сгруппированные по источнику.
+
+    names — id языка → отображаемое имя; lang_id оставляет только ссылки,
+    относящиеся к этому языку (карточка языка), без префикса языка.
+    """
+    groups: dict[str, list[str]] = {}
+    for ref in c.get("references", []):
+        langs = ref.get("languages", [])
+        if lang_id is not None and lang_id not in langs:
+            continue
+        prefix = "" if lang_id is not None or not langs else ", ".join(names.get(l, l) for l in langs) + ": "
+        groups.setdefault(ref["source"], []).append(f"{prefix}[{ref['title']}]({ref['url']})")
+    parts = []
+    for sid, links in groups.items():
+        source = reg.sources.get(sid)
+        label = f"[{source['title'].split(' — ')[0]}]({page}#{sid})" if source else sid
+        parts.append(f"{label}: " + "; ".join(links))
+    return " · ".join(parts)
+
+
 def concept_lectures(cid: str, guide: dict, reg: Registry) -> list[str]:
     """Лекции, где разбирается понятие (concept-guide.definitions[].lectures).
 
@@ -1120,6 +1178,7 @@ def build_glossary(onto: Ontology, guide: dict, reg: Registry | None = None,
                    langs: list[Language] | None = None) -> str:
     reg = reg or Registry()
     langs = langs or []
+    names = {l.id: l.raw["meta"]["ru"] for l in langs}
     out = [GENERATED_NOTICE, "", "# Понятия", "",
            "Словарь онтологии. Определения описывают понятия, а не приписывают свойства всем языкам. "
            "У каждого понятия — отношения с другими понятиями и переходы к языкам, "
@@ -1127,6 +1186,11 @@ def build_glossary(onto: Ontology, guide: dict, reg: Registry | None = None,
            "[людям](people.md) и [источникам](sources.md). "
            "[Сравнение языков](concepts.md) содержит конкретные контекстные утверждения; "
            "[проверочные вопросы](questions.md) показывают применение словаря и пробелы данных.", "",
+           "Рядом с названием понятия указан англоязычный термин: по нему ищут в стандартах, "
+           "документации и справочниках. Если общепринятого короткого термина нет, английское "
+           "название описательное, а устоявшиеся названия частных механизмов перечислены как синонимы. "
+           "Ссылки «Справочники» ведут на страницы, где понятие описано для конкретного языка, "
+           "например на [cppreference.com](sources.md#cppreference) для C и C++.", "",
            "## Как читать связи { #relations }", "",
            "- **Частный случай:** A → B означает, что механизм A рассматривается как частный случай B, не наоборот.",
            "- **Полезный контраст:** два понятия сравниваются по явно указанному признаку; это не запрет их совместного использования.",
@@ -1145,8 +1209,9 @@ def build_glossary(onto: Ontology, guide: dict, reg: Registry | None = None,
         for c in cat["concepts"]:
             cid = c["id"]
             definition = guide["definitions"][cid]
-            out += [f"### {c['ru']} {{ #{c['slug']} }}", "",
-                    f"*{c.get('en', '')}* · `{cid}` · " + concept_link(onto, cid, "concepts.md"), "",
+            head = " · ".join(p for p in (english_term(c), f"`{cid}`",
+                                          concept_link(onto, cid, "concepts.md")) if p)
+            out += [f"### {c['ru']} {{ #{c['slug']} }}", "", head, "",
                     definition["definition"], "", "**Пример.** " + definition["example"], "",
                     "**Граница понятия.** " + definition["distinction"], "", "**Связи:**", ""]
             for edge in guide["relations"]:
@@ -1184,6 +1249,9 @@ def build_glossary(onto: Ontology, guide: dict, reg: Registry | None = None,
                 if c.get("sources"):
                     parts.append(render_sources(c["sources"]))
                 out += ["", "**Источники:** " + "; ".join(parts)]
+            refs = concept_references(c, reg, names)
+            if refs:
+                out += ["", "**Справочники:** " + refs]
             out.append("")
     return "\n".join(out)
 
@@ -1257,6 +1325,9 @@ def build_sources(onto: Ontology, reg: Registry, langs: list[Language]) -> str:
                 links.append("языки: " + ", ".join(f"[{l.raw['meta']['ru']}]({lang_page(l)})" for l in ls))
             if s.get("concepts"):
                 links.append("понятия: " + ", ".join(concept_link(onto, cid) for cid in s["concepts"]))
+            if reg.referenced.get(s["id"]):
+                links.append("страницы у понятий: " + ", ".join(
+                    concept_link(onto, cid) for cid in reg.referenced[s["id"]]))
             lectures = [n for n in s.get("lectures", []) if n in reg.lectures]
             if lectures:
                 links.append("лекции: " + ", ".join(lecture_link(reg, n) for n in lectures))
@@ -1393,8 +1464,11 @@ def build_language(lang: Language, onto: Ontology, langs: list[Language],
             entries = concepts[c["id"]]
             out += legacy_anchors(c)
             out += [f"#### {c['ru']} {{ #{c['slug']} }}", ""]
-            out.append(f"*{c.get('en', '')}* · [в онтологии](concepts.md#{c['slug']})")
+            out.append(" · ".join(p for p in (english_term(c), f"[в онтологии](concepts.md#{c['slug']})") if p))
             out.append("")
+            refs = concept_references(c, reg, {}, lang_id=lang.id)
+            if refs:
+                out += ["Справочник: " + refs, ""]
             for e in entries:
                 line = f"- **{value_label(onto, c['id'], e, lang)}**"
                 extras = []
@@ -1642,7 +1716,7 @@ def build_concepts(langs: list[Language], onto: Ontology, report: Report, guide:
         for c in cat.get("concepts", []):
             out += legacy_anchors(c)
             out += [f"### {c['ru']} {{ #{c['slug']} }}", ""]
-            desc = f"*{c.get('en', '')}*"
+            desc = english_term(c)
             if c.get("aliases"):
                 desc += " · также: " + ", ".join(c["aliases"])
             out += [desc, ""]

@@ -309,11 +309,48 @@ people:
     name: Terence Parr
     ru: Теренс Парр
     wikidata: Q7701985
-    summary: Автор генератора анализаторов ANTLR.
+    summary: Автор генератора анализаторов ANTLR и алгоритма разбора ALL(*).
     lectures: ["09"]
+    concepts: [tooling.parser_construction, tooling.parsing_algorithm]
 
   - id: nystrom
     name: Robert Nystrom
     ru: Роберт Нистром
     wikidata: Q120652994
     summary: Автор книги «Crafting Interpreters» о реализации интерпретаторов.
+
+  - id: fowler
+    name: Martin Fowler
+    ru: Мартин Фаулер
+    wikidata: Q74894
+    summary: Ввёл термины language workbench и language oriented programming (2005); автор книги Domain-Specific Languages (2010).
+    concepts: [tooling.language_workbench]
+
+  - id: voelter
+    name: Markus Völter
+    ru: Маркус Фёльтер
+    wikidata: Q27831986
+    summary: Автор книги DSL Engineering (2013) и исследований удобства проекционных редакторов на JetBrains MPS; соавтор обзора Language Workbench Challenge.
+    concepts: [tooling.language_workbench]
+
+  - id: warmer
+    name: Jos Warmer
+    ru: Йос Вармер
+    wikidata: Q130554580
+    summary: Соавтор языка ограничений OCL для UML и соавтор языкового верстака Freon.
+    concepts: [tooling.language_workbench]
+
+  - id: kleppe
+    name: Anneke Kleppe
+    ru: Аннеке Клеппе
+    wikidata: Q123116897
+    summary: Соавтор книг о языке ограничений OCL и о создании DSL на основе метамоделей; соавтор языкового верстака Freon.
+    concepts: [tooling.language_workbench]
+
+  - id: ford
+    name: Bryan Ford
+    ru: Брайан Форд
+    wikidata: Q113253777
+    summary: Предложил грамматики разбирающих выражений (PEG, 2004) и packrat-разбор за линейное время (2002).
+    concepts: [tooling.parsing_algorithm]
+

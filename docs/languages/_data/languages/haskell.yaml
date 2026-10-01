@@ -202,3 +202,15 @@ concepts:
   paradigm.supported:
     - value: functional
     - value: declarative
+  tooling.parser_construction:
+    - value: generated
+      layer: implementation
+      implementation: GHC
+      note: "Парсер GHC генерируется Happy — LALR-генератором для Haskell — из GHC/Parser.y."
+      sources:
+        - {url: "https://haskell-happy.readthedocs.io/en/latest/introduction.html", title: "Happy User Guide — Introduction"}
+  tooling.parsing_algorithm:
+    - value: lr
+      layer: implementation
+      implementation: GHC
+      note: "LALR(1)-таблицы Happy; правило отступов (layout) обрабатывается лексером и специальным правилом восстановления."

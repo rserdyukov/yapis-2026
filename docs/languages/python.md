@@ -11,7 +11,7 @@ publish: true
 
 Интерпретируемый язык с динамической проверкой типов и неявным маркером блока (отступы). Самый частый язык реализации компиляторов в практикуме курса и одна из целевых платформ (байт-код CPython).
 
-*Карточка полная: 50/74 понятий; пример, грамматика, оценка* — [как читать отметку](index.md#как-читать-карточку).
+*Карточка полная: 54/85 понятий; пример, грамматика, оценка* — [как читать отметку](index.md#как-читать-карточку).
 
 ## Метаданные { #meta }
 
@@ -32,13 +32,9 @@ publish: true
 |---|---|---|---|
 | Python 1.0 — первый выпуск | 1994-01-26 | выпуск | [Python documentation by version](https://www.python.org/doc/versions/) (получено 2026-09-18) |
 | Python 3.5 | 2015-09-13 | выпуск | [Wikidata P348 3.5.0](https://www.wikidata.org/wiki/Q28865) (получено 2026-09-18) |
+| Python 3.9 | 2020-10-05 | выпуск | [PEP 596 — Python 3.9 Release Schedule](https://peps.python.org/pep-0596/) (получено 2026-09-26) |
 | Python 3.10 | 2021-10-04 | выпуск | [What's New In Python 3.10](https://docs.python.org/3/whatsnew/3.10.html) (получено 2026-09-18) |
 | Python 3.14 — актуальная | 2025-10-07 | выпуск | [Wikidata P348 3.14.0](https://www.wikidata.org/wiki/Q28865) (получено 2026-09-18) |
-
-## Статьи { #articles }
-
-- [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md)
-- [Smalltalk: всё есть сообщение](../garden/smalltalk-messages.md)
 
 ## Люди { #people }
 
@@ -50,6 +46,18 @@ publish: true
 - Guido van Rossum. *[PEP 8 — Style Guide for Python Code](https://peps.python.org/pep-0008/)*. Python Enhancement Proposals, 2001.
 - Guido van Rossum, Jukka Lehtosalo, Łukasz Langa. *[PEP 484 — Type Hints](https://peps.python.org/pep-0484/)*. Python Enhancement Proposals, 2014.
 - Brandt Bucher, Guido van Rossum. *[PEP 634 — Structural Pattern Matching: Specification](https://peps.python.org/pep-0634/)*. Python Enhancement Proposals, 2020.
+- Obi Ike-Nwosu. [Inside The Python Virtual Machine](https://leanpub.com/insidethepythonvirtualmachine/read). Leanpub. Устройство компилятора и интерпретатора CPython: code- и frame-объекты, цикл ceval. Для варианта ЛР 5 с байткодом CPython; опкоды описаны до версии 3.11 и частично устарели. ([в источниках](sources.md#inside-python-vm))
+- Peter J. Landin. [The Next 700 Programming Languages](https://www.cs.cmu.edu/~crary/819-f09/Landin66.pdf). Communications of the ACM 9(3), 1966. DOI: [10.1145/365230.365257](https://doi.org/10.1145/365230.365257). Язык как общее ядро плюс предметная часть и синтаксический сахар; семейство ISWIM и правило отступов, повлиявшие на ML, Haskell и Python. ([в источниках](sources.md#landin-1966))
+- Rui Pereira, Marco Couto, Francisco Ribeiro, Rui Rua, Jácome Cunha, João Paulo Fernandes, João Saraiva. [Energy Efficiency across Programming Languages: How Do Energy, Time, and Memory Relate?](https://greenlab.di.uminho.pt/wp-content/uploads/2017/10/sleFinal.pdf). SLE 2017, 2017. DOI: [10.1145/3136014.3136031](https://doi.org/10.1145/3136014.3136031). Измерения энергии, времени и памяти для 27 языков на задачах Benchmarks Game — материал к критерию «стоимость»; обсуждайте вместе с ограничениями методики. ([в источниках](sources.md#pereira-energy-2017))
+- Haoran Xu, Fredrik Kjolstad. [Copy-and-Patch Compilation: A Fast Compilation Algorithm for High-Level Languages and Bytecode](https://arxiv.org/abs/2011.13127). Proc. ACM Program. Lang. 5, OOPSLA, 2021. DOI: [10.1145/3485513](https://doi.org/10.1145/3485513). Генерация машинного кода склейкой заранее скомпилированных шаблонов; техника используется в JIT CPython 3.13. ([в источниках](sources.md#xu-copy-and-patch))
+- Stefan Marr. [An Introduction to Efficient and Safe Implementations of Dynamic Languages](https://stefan-marr.de/2020/06/efficient-and-safe-implementations-of-dynamic-languages/). 2020. Обзор техник реализации динамических языков: AST- и байткод-интерпретаторы, inline caches, hidden classes, JIT. ([в источниках](sources.md#marr-dynamic-languages))
+- Tristan Hume. [Comparing the Same Project in Rust, Haskell, C++, Python, Scala and OCaml](https://thume.ca/2019/04/29/comparing-compilers-in-rust-haskell-c-and-python/). 2019. Один и тот же учебный компилятор, написанный командами на шести языках: объём кода, генераторы парсеров, представление AST. К выбору языка и архитектуры в ЛР. ([в источниках](sources.md#hume-comparing-compilers))
+- Theia Vogel. [Writing a C compiler in 500 lines of Python](https://vgel.me/posts/c500/). 2023. Однопроходный компилятор подмножества C в WebAssembly (WAT) на Python — компактный образец для ЛР 5. Есть перевод на Хабре (habr.com/ru/companies/cloud4y/articles/760400). ([в источниках](sources.md#vogel-c500))
+- Guido van Rossum, Pablo Galindo, Lysandros Nikolaou. [PEP 617 — New PEG parser for CPython](https://peps.python.org/pep-0617/). 2020. Почему CPython 3.9 заменил LL(1)-парсер на PEG-парсер, сгенерированный pegen: ограничения LL(1), левая рекурсия, AST без промежуточного дерева. ([в источниках](sources.md#pep-617))
+- [CPython InternalDocs](https://github.com/python/cpython/tree/main/InternalDocs). Парсер pegen, AST на ASDL, таблица символов, CFG-оптимизатор, интерпретатор, сгенерированный из DSL bytecodes.c, специализация и экспериментальный JIT. ([в источниках](sources.md#cpython-internals))
+- [ANTLR 4: Python 3 target](https://github.com/antlr/antlr4/blob/master/doc/python-target.md). Официальная инструкция по генерации и использованию парсеров ANTLR на Python: runtime, listener и visitor. Основа ЛР 2–4 на Python. ([в источниках](sources.md#antlr-python-target))
+- [Lark](https://lark-parser.readthedocs.io/en/latest/). Библиотека разбора на чистом Python: алгоритмы Earley (любая КС-грамматика, явная неоднозначность) и LALR(1), EBNF-грамматика, автоматическое дерево и Transformer. Второй фронтенд учебного компилятора FSM. ([в источниках](sources.md#lark))
+- [textX](https://textx.github.io/textX/). Python-инструмент в духе Xtext: из одной грамматики строятся метамодель (классы Python), парсер и модель с разрешёнными ссылками. ([в источниках](sources.md#textx))
 - [Модуль dis](https://docs.python.org/3/library/dis.html). Инструкции байт-кода CPython и дизассемблер. ([в источниках](sources.md#python-dis))
 
 ## Концепции { #concepts }
@@ -73,7 +81,7 @@ publish: true
 
 #### Введение связывания { #bindings-introduction }
 
-*Binding introduction* · [в онтологии](concepts.md#bindings-introduction)
+англ. *Binding introduction* (также *declaration*, *name binding*) · [в онтологии](concepts.md#bindings-introduction)
 
 - **Связывание присваиванием (layer: language, profile: python314)** — переменная появляется при первом присваивании; аннотация типа (с 3.6) необязательна и интерпретатором не проверяется
 - **Связывание образцом (с Python 3.10 включительно, layer: language, profile: python314, applies_to: захватывающие образцы match)**
@@ -84,7 +92,7 @@ publish: true
 
 #### Изменяемость связывания { #bindings-mutation }
 
-*Binding mutability* · [в онтологии](concepts.md#bindings-mutation)
+англ. *Binding mutability* (также *rebinding*, *immutable binding*, *const qualification*) · [в онтологии](concepts.md#bindings-mutation)
 
 - **Перепривязываемое (layer: language, profile: python314)** — повторное присваивание связывает то же имя с новым объектом, не создавая same-scope shadowing
 
@@ -92,7 +100,7 @@ publish: true
 
 #### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms* · [в онтологии](concepts.md#bindings-assignment)
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*) · [в онтологии](concepts.md#bindings-assignment)
 
 - **Одиночное присваивание (layer: language, profile: python314)**
 - **Распаковка при присваивании (layer: language, profile: python314)** — распаковка кортежа: `a, b = b, a`; правая часть вычисляется целиком до присваивания
@@ -105,7 +113,7 @@ publish: true
 
 #### Правило разрешения имён { #scope-resolution }
 
-*Name resolution* · [в онтологии](concepts.md#scope-resolution)
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*) · [в онтологии](concepts.md#scope-resolution)
 
 - **Лексическое (layer: language, profile: python314)** — область класса имеет особые правила и не служит замыкающим окружением методов
 
@@ -113,7 +121,7 @@ publish: true
 
 #### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs* · [в онтологии](concepts.md#scope-constructs)
+англ. *Scoping constructs* (также *scope*, *block scope*) · [в онтологии](concepts.md#scope-constructs)
 
 - **Подпрограмма (layer: language, profile: python314)**
 - **Модуль (layer: language, profile: python314)**
@@ -128,7 +136,7 @@ publish: true
 
 #### Связывания верхнего уровня { #scope-globals }
 
-*Top-level bindings* · [в онтологии](concepts.md#scope-globals)
+англ. *Top-level bindings* (также *global variables*, *file scope*, *namespace scope*) · [в онтологии](concepts.md#scope-globals)
 
 - **Имена модуля (layer: language, profile: python314)** — имена уровня модуля; для записи внутри функции — `global`
 
@@ -140,7 +148,7 @@ publish: true
 
 #### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing* · [в онтологии](concepts.md#scope-shadowing)
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*) · [в онтологии](concepts.md#scope-shadowing)
 
 - **Во вложенной области (layer: language, profile: python314)** — локальное имя вложенной функции может скрыть внешнее; повторное присваивание в одной области — перепривязка
 
@@ -148,20 +156,20 @@ publish: true
 
 #### Проверка типов { #typing-checking }
 
-*Type checking* · [в онтологии](concepts.md#typing-checking)
+англ. *Type checking* (также *static typing*, *dynamic typing*) · [в онтологии](concepts.md#typing-checking)
 
 - **Динамическая (layer: language, profile: runtime)**
 - **Постепенная (с Python 3.5 включительно, layer: tooling, profile: static_analysis)** — аннотации типов (PEP 484) проверяются внешними инструментами (mypy, pyright), не интерпретатором
 
 #### Аннотации типов { #typing-annotations }
 
-*Type annotations* · [в онтологии](concepts.md#typing-annotations)
+англ. *Type annotations* (также *type declarations*, *type signatures*) · [в онтологии](concepts.md#typing-annotations)
 
 - **Необязательны (layer: language, profile: python314)** — аннотации не обеспечивают проверку типов во время выполнения
 
 #### Вывод статических типов { #typing-inference }
 
-*Static type inference* · [в онтологии](concepts.md#typing-inference)
+англ. *Type inference* (также *type deduction*) · [в онтологии](concepts.md#typing-inference)
 
 - **нет (layer: language, profile: runtime)** — интерпретатор не выводит статические типы имён
 - **да (layer: tooling, profile: static_analysis)** — анализатор выводит типы из выражений и потока управления, учитывая аннотации
@@ -171,7 +179,7 @@ publish: true
 
 #### Преобразования типов { #typing-conversions }
 
-*Type conversions* · [в онтологии](concepts.md#typing-conversions)
+англ. *Type conversions* (также *type coercion*, *type casting*) · [в онтологии](concepts.md#typing-conversions)
 
 - **Явные (layer: language, profile: python314)** — вызов типа-конструктора: `int(s)`, `str(n)`
 - **Неявные (layer: language, profile: python314, applies_to: смешанная числовая арифметика)** — int → float при смешанной арифметике может терять точность или вызывать OverflowError. Проверка истинности — отдельный протокол, не перепривязка объекта к bool; строки и числа автоматически не складываются.
@@ -182,7 +190,7 @@ publish: true
 
 #### Совместимость типов { #typing-compatibility }
 
-*Type compatibility* · [в онтологии](concepts.md#typing-compatibility)
+англ. *Type compatibility* (также *type equivalence*, *nominal typing*, *structural typing*, *duck typing*) · [в онтологии](concepts.md#typing-compatibility)
 
 - **По доступным операциям во время выполнения (layer: language, profile: runtime)**
 - **Номинальная (layer: tooling, profile: static_analysis, applies_to: обычные классы)**
@@ -190,19 +198,19 @@ publish: true
 
 #### Типы-суммы { #typing-sum-types }
 
-*Sum types* · [в онтологии](concepts.md#typing-sum-types)
+англ. *Sum types* (также *tagged unions*, *variant types*, *discriminated unions*) · [в онтологии](concepts.md#typing-sum-types)
 
 - **Объединения типов (layer: tooling, profile: static_analysis)** — Union[T, U] или T | U описывают тип для анализатора, не проверяют значение при присваивании
 
 #### Типы-произведения { #typing-product-types }
 
-*Product types* · [в онтологии](concepts.md#typing-product-types)
+англ. *Product types* (также *tuples*, *records*, *structs*) · [в онтологии](concepts.md#typing-product-types)
 
 - **Кортежи (layer: language, profile: python314)**
 
 #### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value* · [в онтологии](concepts.md#typing-nullability)
+англ. *Nullability* (также *null reference*, *option type*) · [в онтологии](concepts.md#typing-nullability)
 
 - **Специальное значение (layer: language, profile: runtime)** — имя может быть связано с None, но операции над None могут быть недопустимы
 - **Явно nullable-типы (layer: tooling, profile: static_analysis)** — T | None / Optional[T] явно допускает None; при строгой проверке T сам по себе его не допускает
@@ -213,7 +221,7 @@ publish: true
 
 #### Условный выбор { #control-selection }
 
-*Conditional selection* · [в онтологии](concepts.md#control-selection)
+англ. *Conditional selection* (также *selection statement*, *conditional expression*) · [в онтологии](concepts.md#control-selection)
 
 - **Условный оператор (layer: language, profile: python314)**
 - **Условное выражение (layer: language, profile: python314)** — `a if condition else b`
@@ -224,13 +232,13 @@ publish: true
 
 #### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection* · [в онтологии](concepts.md#control-switch)
+англ. *Switch statement* (также *case statement*, *multiway branch*) · [в онтологии](concepts.md#control-switch)
 
 - **нет (layer: language, profile: python314)**
 
 #### Сопоставление с образцом { #control-pattern-matching }
 
-*Pattern matching* · [в онтологии](concepts.md#control-pattern-matching)
+англ. *Pattern matching* · [в онтологии](concepts.md#control-pattern-matching)
 
 - **нет (до Python 3.10 исключительно, layer: language, profile: python314)**
 - **да (с Python 3.10 включительно, layer: language, profile: python314)** — `match` — сопоставление с образцом (PEP 634), а не switch по константам
@@ -239,7 +247,7 @@ publish: true
 
 #### Цикл до истинности условия { #control-until }
 
-*Until loop* · [в онтологии](concepts.md#control-until)
+англ. *Until loop* (также *repeat-until loop*) · [в онтологии](concepts.md#control-until)
 
 - **Отдельная конструкция отсутствует (layer: language, profile: python314)** — Предусловие: `while not cond`; постусловие: `while True` с `if cond: break` после тела.
 
@@ -251,7 +259,7 @@ publish: true
 
 #### Цикл do-while с постусловием { #control-do-while }
 
-*Post-test do-while loop* · [в онтологии](concepts.md#control-do-while)
+англ. *Do-while loop* (также *post-test loop*) · [в онтологии](concepts.md#control-do-while)
 
 - **нет (layer: language, profile: python314)** — эквивалент — `while True` с `break` в конце тела
 
@@ -263,7 +271,7 @@ publish: true
 
 #### Формы итерации { #control-iteration }
 
-*Iteration forms* · [в онтологии](concepts.md#control-iteration)
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*) · [в онтологии](concepts.md#control-iteration)
 
 - **По последовательности или итератору (layer: language, profile: python314)** — счётный цикл — итерация по `range()`
 - **Генераторная конструкция (layer: language, profile: python314)**
@@ -278,7 +286,7 @@ publish: true
 
 #### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading* · [в онтологии](concepts.md#subprograms-overloading)
+англ. *Function overloading* (также *overloading*, *operator overloading*) · [в онтологии](concepts.md#subprograms-overloading)
 
 - **нет (layer: language, profile: python314)** — повторное `def` заменяет предыдущее; диспетчеризация по типу — `functools.singledispatch`
 
@@ -290,7 +298,7 @@ publish: true
 
 #### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing* · [в онтологии](concepts.md#subprograms-parameter-passing)
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*) · [в онтологии](concepts.md#subprograms-parameter-passing)
 
 - **Разделение объекта (layer: language, profile: python314)** — передаётся ссылка на объект: изменение изменяемого объекта видно вызывающему, перепривязка имени параметра — нет
 
@@ -302,7 +310,7 @@ publish: true
 
 #### Место определения подпрограмм { #subprograms-placement }
 
-*Subprogram definition placement* · [в онтологии](concepts.md#subprograms-placement)
+англ. *Subprogram definition placement* (также *top-level function*, *member function*, *local function*) · [в онтологии](concepts.md#subprograms-placement)
 
 - **Верхний уровень модуля (layer: language, profile: python314)**
 - **Член типа (layer: language, profile: python314)**
@@ -314,37 +322,37 @@ publish: true
 
 #### Вложенные именованные подпрограммы { #subprograms-nesting }
 
-*Nested named subprograms* · [в онтологии](concepts.md#subprograms-nesting)
+англ. *Nested functions* (также *nested subprograms*) · [в онтологии](concepts.md#subprograms-nesting)
 
 - **да (layer: language, profile: python314)**
 
 #### Захват окружения { #subprograms-closures }
 
-*Closure capture* · [в онтологии](concepts.md#subprograms-closures)
+англ. *Closures* (также *lambda capture*, *captured variables*) · [в онтологии](concepts.md#subprograms-closures)
 
 - **да (layer: language, profile: python314)**
 
 #### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions* · [в онтологии](concepts.md#subprograms-lambda)
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*) · [в онтологии](concepts.md#subprograms-lambda)
 
 - **да (layer: language, profile: python314)** — `lambda` — только одно выражение; многострочные замыкания — вложенный `def`
 
 #### Параметрический полиморфизм { #subprograms-generics }
 
-*Parametric polymorphism* · [в онтологии](concepts.md#subprograms-generics)
+англ. *Parametric polymorphism* (также *generics*, *templates*) · [в онтологии](concepts.md#subprograms-generics)
 
 - **да (с Python 3.5 включительно, layer: tooling, profile: static_analysis)** — `typing.Generic`, `TypeVar`; с 3.12 — синтаксис `def f[T](x: T)`; во время выполнения не проверяются
 
 #### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments* · [в онтологии](concepts.md#subprograms-default-args)
+англ. *Default arguments* (также *optional parameters*) · [в онтологии](concepts.md#subprograms-default-args)
 
 - **да (layer: language, profile: python314)** — значение по умолчанию вычисляется один раз при определении функции
 
 #### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments* · [в онтологии](concepts.md#subprograms-named-args)
+англ. *Named arguments* (также *keyword arguments*) · [в онтологии](concepts.md#subprograms-named-args)
 
 - **да (layer: language, profile: python314)**
 
@@ -352,26 +360,26 @@ publish: true
 
 #### Контракты полиморфизма { #abstraction-contracts }
 
-*Polymorphic contracts* · [в онтологии](concepts.md#abstraction-contracts)
+англ. *Polymorphic contracts* (также *interfaces*, *traits*, *type classes*, *protocols*) · [в онтологии](concepts.md#abstraction-contracts)
 
 - **Структурные протоколы (layer: tooling, profile: static_analysis, applies_to: typing.Protocol)**
 
 #### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch* · [в онтологии](concepts.md#abstraction-dispatch)
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*) · [в онтологии](concepts.md#abstraction-dispatch)
 
 - **По одному динамическому типу (layer: language, profile: python314, applies_to: поиск метода по классу получателя)**
 - **По одному динамическому типу (layer: standard_library, profile: python314, applies_to: functools.singledispatch по первому аргументу)**
 
 #### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance* · [в онтологии](concepts.md#abstraction-inheritance)
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*) · [в онтологии](concepts.md#abstraction-inheritance)
 
 - **Множественное (layer: language, profile: python314)**
 
 #### Модульность { #abstraction-modules }
 
-*Modules* · [в онтологии](concepts.md#abstraction-modules)
+англ. *Modules* (также *module system*, *namespaces*, *packages*) · [в онтологии](concepts.md#abstraction-modules)
 
 - **Пространства имён и пакеты (layer: language, profile: python314)**
 - **Модули как объекты времени выполнения (layer: language, profile: python314)**
@@ -380,34 +388,46 @@ publish: true
 
 #### Стратегия вычисления { #evaluation-strategy }
 
-*Evaluation strategy* · [в онтологии](concepts.md#evaluation-strategy)
+англ. *Evaluation strategy* (также *eager evaluation*, *lazy evaluation*) · [в онтологии](concepts.md#evaluation-strategy)
 
 - **Строгая (layer: language, profile: python314)** — аргументы функции вычисляются перед вызовом; генераторы откладывают выполнение собственного тела
 
 #### Контроль эффектов { #evaluation-effects }
 
-*Effect control* · [в онтологии](concepts.md#evaluation-effects)
+англ. *Effect control* (также *effect system*, *purity*) · [в онтологии](concepts.md#evaluation-effects)
 
 - **Без общего статического разделения эффектов (layer: language, profile: python314)**
 
 #### Гарантированное устранение хвостовых вызовов { #evaluation-tail-calls }
 
-*Guaranteed tail-call elimination* · [в онтологии](concepts.md#evaluation-tail-calls)
+англ. *Tail-call elimination* (также *proper tail calls*, *tail-call optimization*) · [в онтологии](concepts.md#evaluation-tail-calls)
 
 - **нет (layer: language, profile: python314)**
+
+#### Порядок вычисления подвыражений { #evaluation-order }
+
+англ. *Order of evaluation* (также *sequencing*, *sequence points*, *sequenced-before*) · [в онтологии](concepts.md#evaluation-order)
+
+- **Слева направо (layer: language, profile: python314)** — Выражения вычисляются слева направо; в присваивании правая часть вычисляется раньше левой. ([Python 3 Language Reference §6.16 Evaluation order](https://docs.python.org/3/reference/expressions.html#evaluation-order))
+
+#### Неопределённое поведение { #evaluation-undefined-behavior }
+
+англ. *Undefined behavior* (также *UB*, *unspecified behavior*, *implementation-defined behavior*) · [в онтологии](concepts.md#evaluation-undefined-behavior)
+
+- **Нарушение правил обнаруживается и даёт определённый результат (layer: language, profile: python314)** — Ошибки индексации, типов и арифметики порождают исключения. Детали, оставленные реализации (например, момент освобождения объекта), помечены в справочнике как CPython implementation detail.
 
 ### Память и владение { #memory }
 
 #### Освобождение памяти { #memory-management }
 
-*Memory reclamation* · [в онтологии](concepts.md#memory-management)
+англ. *Memory management* (также *memory reclamation*, *garbage collection*, *reference counting*) · [в онтологии](concepts.md#memory-management)
 
 - **Подсчёт ссылок (layer: implementation, profile: python314, implementation: CPython)** — подсчёт ссылок; детали отложенного освобождения и бессмертных объектов зависят от версии и сборки, это не гарантия языка Python
 - **Трассирующая сборка мусора (layer: implementation, profile: python314, implementation: CPython)** — дополнительный сборщик для циклических ссылок (модуль `gc`)
 
 #### Передача и разделение владения { #memory-transfer }
 
-*Ownership transfer and sharing* · [в онтологии](concepts.md#memory-transfer)
+англ. *Ownership transfer and sharing* (также *move semantics*, *copy semantics*, *borrowing*) · [в онтологии](concepts.md#memory-transfer)
 
 - **Разделяемая ссылка на объект (layer: language, profile: python314)**
 
@@ -415,7 +435,7 @@ publish: true
 
 #### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation* · [в онтологии](concepts.md#errors-model)
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*) · [в онтологии](concepts.md#errors-model)
 
 - **Исключения (layer: language, profile: python314)** — try / except / else / finally; исключения — классы, иерархия от BaseException
 
@@ -423,13 +443,13 @@ publish: true
 
 #### Проверяемые исключения { #errors-checked-exceptions }
 
-*Checked exceptions* · [в онтологии](concepts.md#errors-checked-exceptions)
+англ. *Checked exceptions* (также *exception specifications*) · [в онтологии](concepts.md#errors-checked-exceptions)
 
 - **нет (layer: language, profile: python314)**
 
 #### Диагностика неиспользованного результата { #errors-must-use }
 
-*Unused-result diagnostics* · [в онтологии](concepts.md#errors-must-use)
+англ. *Unused-result diagnostics* (также *nodiscard*, *must_use*, *warn_unused_result*) · [в онтологии](concepts.md#errors-must-use)
 
 - **Нет специальной диагностики (layer: language, profile: runtime)**
 
@@ -439,7 +459,7 @@ publish: true
 
 #### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup* · [в онтологии](concepts.md#resources-cleanup)
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*) · [в онтологии](concepts.md#resources-cleanup)
 
 - **Блок finally / unwind-protect (layer: language, profile: python314)**
 - **Контекстный менеджер (layer: language, profile: python314)** — with вызывает __exit__ при обычном выходе и исключении; аварийное завершение процесса может пропустить очистку
@@ -448,7 +468,7 @@ publish: true
 
 #### Интерфейс ввода-вывода { #resources-io }
 
-*I/O interface* · [в онтологии](concepts.md#resources-io)
+англ. *Input/output* (также *I/O library*) · [в онтологии](concepts.md#resources-io)
 
 - **Встроенные функции (layer: standard_library, profile: python314)** — `input()` и `print()` — встроенные функции, импорт не нужен
 
@@ -458,7 +478,7 @@ publish: true
 
 #### Конкурентное выполнение { #resources-concurrency }
 
-*Concurrency* · [в онтологии](concepts.md#resources-concurrency)
+англ. *Concurrency* (также *threads*, *async/await*, *actors*) · [в онтологии](concepts.md#resources-concurrency)
 
 - **Асинхронные корутины (с Python 3.5 включительно, layer: language, profile: python314)**
 - **Потоки (layer: standard_library, profile: python314)**
@@ -470,7 +490,7 @@ publish: true
 
 #### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries* · [в онтологии](concepts.md#syntax-blocks)
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*) · [в онтологии](concepts.md#syntax-blocks)
 
 - **Значимые отступы (layer: language, profile: python314)** — двоеточие и отступ; закрывающего символа нет
 
@@ -480,19 +500,19 @@ publish: true
 
 #### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries* · [в онтологии](concepts.md#syntax-statement-terminator)
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*) · [в онтологии](concepts.md#syntax-statement-terminator)
 
 - **Перевод строки (layer: language, profile: python314)** — `;` допустима для нескольких операторов в одной строке
 
 #### Чувствительность имён к регистру { #syntax-case-sensitive }
 
-*Identifier case sensitivity* · [в онтологии](concepts.md#syntax-case-sensitive)
+англ. *Case sensitivity* (также *identifier case sensitivity*) · [в онтологии](concepts.md#syntax-case-sensitive)
 
 - **да (layer: language, profile: python314)**
 
 #### Метапрограммирование { #syntax-metaprogramming }
 
-*Metaprogramming* · [в онтологии](concepts.md#syntax-metaprogramming)
+англ. *Metaprogramming* (также *macros*, *reflection*, *compile-time evaluation*) · [в онтологии](concepts.md#syntax-metaprogramming)
 
 - **Рефлексия (layer: language, profile: python314)**
 - **Построение и выполнение кода (layer: language, profile: python314)** — eval, exec, создание классов и метаклассы
@@ -501,12 +521,28 @@ publish: true
 
 #### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms* · [в онтологии](concepts.md#paradigm-supported)
+англ. *Programming paradigms* (также *supported paradigms*) · [в онтологии](concepts.md#paradigm-supported)
 
 - **Императивная (layer: language, profile: python314)**
 - **Процедурная (layer: language, profile: python314)**
 - **Объектно-ориентированная (layer: language, profile: python314)**
 - **Функциональная (layer: language, profile: python314)** — функции первого класса, замыкания, `map`/`filter`, генераторы; без гарантированного устранения хвостовых вызовов
+
+### Инструменты построения языковых процессоров { #tooling }
+
+#### Способ построения синтаксического анализатора { #tooling-parser-construction }
+
+англ. *Parser construction* (также *parser generator*, *compiler-compiler*, *hand-written parser*, *parser combinators*) · [в онтологии](concepts.md#tooling-parser-construction)
+
+Справочник: [PEP 617](sources.md#pep-617): [PEP 617 — New PEG parser for CPython](https://peps.python.org/pep-0617/)
+
+- **Генератор по грамматике (с Python 3.9 включительно, layer: implementation, profile: python314, implementation: CPython)** — Парсер генерируется pegen из грамматики python.gram; до 3.9 — LL(1)-генератор pgen, старый парсер удалён в 3.10. ([PEP 617 — New PEG parser for CPython](https://peps.python.org/pep-0617/))
+
+#### Алгоритм синтаксического анализа { #tooling-parsing-algorithm }
+
+англ. *Parsing algorithm* (также *LL(k)*, *ALL(*)*, *LALR(1)*, *GLR*, *Earley*, *PEG*, *packrat*) · [в онтологии](concepts.md#tooling-parsing-algorithm)
+
+- **Грамматики разбирающих выражений с упорядоченным выбором (с Python 3.9 включительно, layer: implementation, profile: python314, implementation: CPython)** — PEG с выборочной packrat-мемоизацией; леворекурсивные правила поддерживаются. Токенизатор отдельный. ([CPython InternalDocs — Guide to the parser](https://github.com/python/cpython/blob/main/InternalDocs/parser.md))
 
 ## Грамматика { #grammar }
 

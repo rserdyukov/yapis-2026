@@ -320,6 +320,33 @@ concepts:
     - value: allowed
       applies_to: поля и параметры
       note: "локальная переменная или параметр может скрыть поле класса; доступ к полю — через `this`"
+  evaluation.order:
+    - value: left_to_right
+      note: "Левый операнд вычисляется полностью до правого; аргументы вызова — слева направо."
+      sources:
+        - {url: "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.7", title: "JLS 21 §15.7 Evaluation Order"}
+  evaluation.undefined_behavior:
+    - value: checked
+      note: "Выход за границы массива, разыменование null и целочисленное деление на ноль дают исключения; переполнение int определено как перенос по модулю 2^32. Неуточнённые детали (например, порядок обхода HashMap) относятся к библиотекам."
+  evaluation.compile_time:
+    - value: constant_expressions
+      note: "Константные выражения из литералов и final-переменных; используются в case и аннотациях."
+      sources:
+        - {url: "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.29", title: "JLS 21 §15.29 Constant Expressions"}
+  subprograms.overload_resolution:
+    - value: conversion_ranking
+      note: "Три фазы поиска применимых методов (без boxing и varargs, с boxing, с varargs), затем выбор most specific; при отсутствии единственного — ошибка неоднозначности."
+      sources:
+        - {url: "https://docs.oracle.com/javase/specs/jls/se21/html/jls-15.html#jls-15.12.2", title: "JLS 21 §15.12.2 Compile-Time Step 2: Determine Method Signature"}
+  memory.concurrency_model:
+    - value: data_race_defined
+      note: "Программа с гонкой данных сохраняет типобезопасность; значения чтения ограничены моделью happens-before, но могут быть неожиданными."
+      sources:
+        - {url: "https://docs.oracle.com/javase/specs/jls/se21/html/jls-17.html#jls-17.4", title: "JLS 21 §17.4 Memory Model"}
+    - value: explicit_ordering
+      layer: standard_library
+      applies_to: VarHandle
+      note: "Режимы доступа plain, opaque, acquire/release и volatile."
 
 grammar:
   spec_url: https://docs.oracle.com/javase/specs/jls/se21/html/jls-19.html

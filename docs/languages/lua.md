@@ -11,7 +11,7 @@ publish: true
 
 Lua — компактный встраиваемый язык с динамической типизацией, в котором таблицы — единственный механизм структурирования данных, а метатаблицы позволяют переопределять операции и строить объекты и наследование. Функции первого класса с лексическими замыканиями, асимметричные корутины и гарантированные хвостовые вызовы входят в ядро языка. Описан срез по Lua 5.4 Reference Manual и эталонной реализации PUC-Rio Lua; LuaJIT и другие реализации не рассматриваются.
 
-*Карточка сравнительная: 38/74 понятий* — [как читать отметку](index.md#как-читать-карточку).
+*Карточка сравнительная: 38/85 понятий* — [как читать отметку](index.md#как-читать-карточку).
 
 ## Метаданные { #meta }
 
@@ -35,10 +35,6 @@ Lua — компактный встраиваемый язык с динамич
 | Lua 5.4 | 2020-06-29 | выпуск | [Lua — version history](https://www.lua.org/versions.html) (получено 2026-09-25) |
 | Lua 5.5 — актуальная | 2025-12-22 | выпуск | [Lua — version history](https://www.lua.org/versions.html) (получено 2026-09-25) |
 
-## Статьи { #articles }
-
-- [Lua: метатаблицы, язык как конструктор](../garden/lua-metatables.md)
-
 ## Люди { #people }
 
 - [Роберту Иерузалимски](people.md#ierusalimschy) — Ведущий архитектор Lua в PUC-Rio и автор книги «Programming in Lua».
@@ -46,6 +42,8 @@ Lua — компактный встраиваемый язык с динамич
 ## Публикации { #publications }
 
 - Роберту Иерузалимски, Luiz Henrique de Figueiredo, Waldemar Celes. *The Evolution of Lua*. HOPL III, 2007. DOI: [10.1145/1238844.1238846](https://doi.org/10.1145/1238844.1238846). Авторы объясняют, почему таблицы и метатаблицы стали единственным механизмом структурирования в Lua. ([в источниках](sources.md#hopl-lua))
+- Rui Pereira, Marco Couto, Francisco Ribeiro, Rui Rua, Jácome Cunha, João Paulo Fernandes, João Saraiva. [Energy Efficiency across Programming Languages: How Do Energy, Time, and Memory Relate?](https://greenlab.di.uminho.pt/wp-content/uploads/2017/10/sleFinal.pdf). SLE 2017, 2017. DOI: [10.1145/3136014.3136031](https://doi.org/10.1145/3136014.3136031). Измерения энергии, времени и памяти для 27 языков на задачах Benchmarks Game — материал к критерию «стоимость»; обсуждайте вместе с ограничениями методики. ([в источниках](sources.md#pereira-energy-2017))
+- Roberto Ierusalimschy, Luiz Henrique de Figueiredo, Waldemar Celes. [The Implementation of Lua 5.0](https://www.lua.org/doc/jucs05.pdf). Journal of Universal Computer Science 11(7), 2005. Однопроходный компилятор без AST и регистровая виртуальная машина; почему авторы отказались от yacc в пользу рукописного парсера. ([в источниках](sources.md#lua-50-impl))
 
 ## Концепции { #concepts }
 
@@ -66,14 +64,14 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Введение связывания { #bindings-introduction }
 
-*Binding introduction* · [в онтологии](concepts.md#bindings-introduction)
+англ. *Binding introduction* (также *declaration*, *name binding*) · [в онтологии](concepts.md#bindings-introduction)
 
 - **Явное объявление (layer: language, profile: lua54, applies_to: локальные переменные)** — `local x = 1` объявляет локальную переменную; параметры функций и переменные циклов `for` тоже локальны. ([Lua 5.4 manual §3.3.7 — Local Declarations](https://www.lua.org/manual/5.4/manual.html#3.3.7))
 - **Связывание присваиванием (layer: language, profile: lua54, applies_to: глобальные переменные)** — Присваивание необъявленному имени создаёт поле в таблице окружения `_ENV`; чтение необъявленного имени даёт `nil`, а не ошибку. ([Lua 5.4 manual §2.2 — Environments and the Global Environment](https://www.lua.org/manual/5.4/manual.html#2.2); [Lua 5.4 manual §3.2 — Variables](https://www.lua.org/manual/5.4/manual.html#3.2))
 
 #### Изменяемость связывания { #bindings-mutation }
 
-*Binding mutability* · [в онтологии](concepts.md#bindings-mutation)
+англ. *Binding mutability* (также *rebinding*, *immutable binding*, *const qualification*) · [в онтологии](concepts.md#bindings-mutation)
 
 - **Перепривязываемое (layer: language, profile: lua54)** — Переменная может получить значение любого типа.
 - **Неизменяемое (с Lua 5.4 включительно, layer: language, profile: lua54, applies_to: локальные с атрибутом `<const>` или `<close>`)** — Присваивание такой переменной после инициализации — ошибка компиляции; изменяемость таблицы, на которую она ссылается, не ограничивается. ([Lua 5.4 manual §3.3.7 — Local Declarations](https://www.lua.org/manual/5.4/manual.html#3.3.7))
@@ -82,7 +80,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Формы присваивания и связывания { #bindings-assignment }
 
-*Assignment and binding forms* · [в онтологии](concepts.md#bindings-assignment)
+англ. *Assignment and binding forms* (также *assignment*, *destructuring*, *unification*) · [в онтологии](concepts.md#bindings-assignment)
 
 - **Одиночное присваивание (layer: language, profile: lua54)**
 - **Распаковка при присваивании (layer: language, profile: lua54)** — `a, b = b, a`: все выражения вычисляются до присваиваний; лишние значения отбрасываются, недостающие заполняются `nil`. Вызов в конце списка раскрывается во все свои результаты. ([Lua 5.4 manual §3.3.3 — Assignment](https://www.lua.org/manual/5.4/manual.html#3.3.3); [Lua 5.4 manual §3.4.12 — Lists of expressions, multiple results, and adjustment](https://www.lua.org/manual/5.4/manual.html#3.4.12))
@@ -91,7 +89,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Правило разрешения имён { #scope-resolution }
 
-*Name resolution* · [в онтологии](concepts.md#scope-resolution)
+англ. *Name resolution* (также *name lookup*, *lexical scoping*, *dynamic scoping*) · [в онтологии](concepts.md#scope-resolution)
 
 - **Лексическое (layer: language, profile: lua54)** — Локальные переменные видны от объявления до конца самого внутреннего блока; вложенные функции обращаются к ним как к upvalue. ([Lua 5.4 manual §3.5 — Visibility Rules](https://www.lua.org/manual/5.4/manual.html#3.5))
 
@@ -99,7 +97,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Конструкции областей видимости { #scope-constructs }
 
-*Scoping constructs* · [в онтологии](concepts.md#scope-constructs)
+англ. *Scoping constructs* (также *scope*, *block scope*) · [в онтологии](concepts.md#scope-constructs)
 
 - **Блок (layer: language, profile: lua54)** — `do … end`, тела циклов, ветви `if`, тела функций; чанк (файл или строка кода) тоже блок. ([Lua 5.4 manual §3.3.1 — Blocks](https://www.lua.org/manual/5.4/manual.html#3.3.1))
 - **Подпрограмма (layer: language, profile: lua54)**
@@ -108,7 +106,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Связывания верхнего уровня { #scope-globals }
 
-*Top-level bindings* · [в онтологии](concepts.md#scope-globals)
+англ. *Top-level bindings* (также *global variables*, *file scope*, *namespace scope*) · [в онтологии](concepts.md#scope-globals)
 
 - **Глобальные переменные (layer: language, profile: lua54)** — Глобальные переменные — поля таблицы `_ENV`, по умолчанию разделяемой глобальной таблицы `_G`; чанк может подменить `_ENV` и изолировать свои глобалы. ([Lua 5.4 manual §2.2 — Environments and the Global Environment](https://www.lua.org/manual/5.4/manual.html#2.2))
 
@@ -116,7 +114,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Сокрытие имён { #scope-shadowing }
 
-*Name shadowing* · [в онтологии](concepts.md#scope-shadowing)
+англ. *Name shadowing* (также *name hiding*, *variable shadowing*) · [в онтологии](concepts.md#scope-shadowing)
 
 - **Во вложенной области (layer: language, profile: lua54)**
 - **Новое связывание в той же области (layer: language, profile: lua54)** — Повторный `local x` в том же блоке вводит новую переменную; замыкания, созданные ранее, продолжают ссылаться на прежнюю. ([Lua 5.4 manual §3.5 — Visibility Rules](https://www.lua.org/manual/5.4/manual.html#3.5))
@@ -125,7 +123,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Проверка типов { #typing-checking }
 
-*Type checking* · [в онтологии](concepts.md#typing-checking)
+англ. *Type checking* (также *static typing*, *dynamic typing*) · [в онтологии](concepts.md#typing-checking)
 
 - **Динамическая (layer: language, profile: lua54)** — Типы имеют значения, а не переменные; восемь базовых типов: nil, boolean, number, string, function, userdata, thread, table. ([Lua 5.4 manual §2.1 — Values and Types](https://www.lua.org/manual/5.4/manual.html#2.1))
 
@@ -134,26 +132,26 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Преобразования типов { #typing-conversions }
 
-*Type conversions* · [в онтологии](concepts.md#typing-conversions)
+англ. *Type conversions* (также *type coercion*, *type casting*) · [в онтологии](concepts.md#typing-conversions)
 
 - **Неявные (layer: language, profile: lua54)** — Строка приводится к числу в арифметике, число к строке при конкатенации `..`; целое и вещественное преобразуются друг в друга при смешанной арифметике. Сравнение `==` строки и числа всегда ложно. ([Lua 5.4 manual §3.4.3 — Coercions and Conversions](https://www.lua.org/manual/5.4/manual.html#3.4.3))
 - **Явные (layer: standard_library, profile: lua54)** — `tonumber`, `tostring`, `math.tointeger`.
 
 #### Совместимость типов { #typing-compatibility }
 
-*Type compatibility* · [в онтологии](concepts.md#typing-compatibility)
+англ. *Type compatibility* (также *type equivalence*, *nominal typing*, *structural typing*, *duck typing*) · [в онтологии](concepts.md#typing-compatibility)
 
 - **По доступным операциям во время выполнения (layer: language, profile: lua54)** — Допустимость операции определяется во время выполнения типом значения или наличием метаметода (`__add`, `__index`, `__call` и др.). ([Lua 5.4 manual §2.4 — Metatables and Metamethods](https://www.lua.org/manual/5.4/manual.html#2.4))
 
 #### Типы-произведения { #typing-product-types }
 
-*Product types* · [в онтологии](concepts.md#typing-product-types)
+англ. *Product types* (также *tuples*, *records*, *structs*) · [в онтологии](concepts.md#typing-product-types)
 
 - **Записи и структуры (layer: language, profile: lua54)** — Записи — таблицы со строковыми ключами: `p.x` — синтаксический сахар для `p["x"]`. Отдельных типов struct или кортежей нет; массивы, множества и объекты тоже строятся из таблиц. ([Lua 5.4 manual §2.1 — Values and Types](https://www.lua.org/manual/5.4/manual.html#2.1); [Lua 5.4 manual §3.4.9 — Table Constructors](https://www.lua.org/manual/5.4/manual.html#3.4.9))
 
 #### Представление отсутствия значения { #typing-nullability }
 
-*Absence of a value* · [в онтологии](concepts.md#typing-nullability)
+англ. *Nullability* (также *null reference*, *option type*) · [в онтологии](concepts.md#typing-nullability)
 
 - **Nullable-ссылки по умолчанию (layer: language, profile: lua54)** — Любая переменная или поле может содержать `nil`; отсутствующий ключ таблицы читается как `nil`, а присваивание `nil` удаляет поле. Ложны только `nil` и `false`, число 0 и пустая строка истинны. ([Lua 5.4 manual §2.1 — Values and Types](https://www.lua.org/manual/5.4/manual.html#2.1))
 
@@ -163,13 +161,13 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Условный выбор { #control-selection }
 
-*Conditional selection* · [в онтологии](concepts.md#control-selection)
+англ. *Conditional selection* (также *selection statement*, *conditional expression*) · [в онтологии](concepts.md#control-selection)
 
 - **Условный оператор (layer: language, profile: lua54)** — `if … then … elseif … else … end`. Условного выражения нет; идиома `c and a or b` ошибается, если `a` ложно. ([Lua 5.4 manual §3.3.4 — Control Structures](https://www.lua.org/manual/5.4/manual.html#3.3.4))
 
 #### Выбор по значению switch/case { #control-switch }
 
-*Switch/case value selection* · [в онтологии](concepts.md#control-switch)
+англ. *Switch statement* (также *case statement*, *multiway branch*) · [в онтологии](concepts.md#control-switch)
 
 - **нет (layer: language, profile: lua54)** — Выбор по значению выражают цепочкой `elseif` или таблицей обработчиков.
 
@@ -177,7 +175,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Цикл до истинности условия { #control-until }
 
-*Until loop* · [в онтологии](concepts.md#control-until)
+англ. *Until loop* (также *repeat-until loop*) · [в онтологии](concepts.md#control-until)
 
 - **Проверка после тела (layer: language, profile: lua54)** — `repeat … until cond` проверяет условие после тела; в условии видны локальные переменные тела. ([Lua 5.4 manual §3.3.4 — Control Structures](https://www.lua.org/manual/5.4/manual.html#3.3.4))
 
@@ -185,7 +183,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Цикл do-while с постусловием { #control-do-while }
 
-*Post-test do-while loop* · [в онтологии](concepts.md#control-do-while)
+англ. *Do-while loop* (также *post-test loop*) · [в онтологии](concepts.md#control-do-while)
 
 - **нет (layer: language, profile: lua54)** — Цикл с постусловием есть только в форме `repeat … until` с обратной полярностью условия.
 
@@ -193,7 +191,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Формы итерации { #control-iteration }
 
-*Iteration forms* · [в онтологии](concepts.md#control-iteration)
+англ. *Iteration* (также *loops*, *for loop*, *foreach loop*, *range-based for loop*) · [в онтологии](concepts.md#control-iteration)
 
 - **По последовательности или итератору (layer: language, profile: lua54)** — Общий `for k, v in explist do` вызывает функцию-итератор до получения `nil`; `pairs`/`ipairs` — библиотечные итераторы. Числовой `for i = a, b, step do` вычисляет границы один раз и не является C-подобным циклом с произвольными условием и шагом. ([Lua 5.4 manual §3.3.5 — For Statement](https://www.lua.org/manual/5.4/manual.html#3.3.5); [Lua 5.4 manual — pairs](https://www.lua.org/manual/5.4/manual.html#pdf-pairs))
 
@@ -203,7 +201,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Перегрузка по сигнатуре { #subprograms-overloading }
 
-*Signature overloading* · [в онтологии](concepts.md#subprograms-overloading)
+англ. *Function overloading* (также *overloading*, *operator overloading*) · [в онтологии](concepts.md#subprograms-overloading)
 
 - **нет (layer: language, profile: lua54)** — Одно имя связано с одним значением-функцией; разбор аргументов по типу и числу выполняется в теле вручную.
 
@@ -211,31 +209,31 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Связывание параметров { #subprograms-parameter-passing }
 
-*Parameter passing* · [в онтологии](concepts.md#subprograms-parameter-passing)
+англ. *Parameter passing* (также *call by value*, *call by reference*, *call by sharing*) · [в онтологии](concepts.md#subprograms-parameter-passing)
 
 - **Разделение объекта (layer: language, profile: lua54)** — Таблицы, функции, корутины и full userdata передаются как ссылки без копирования; изменение таблицы видно вызывающему, но присваивание параметру — нет. Числа и строки неизменяемы. ([Lua 5.4 manual §2.1 — Values and Types](https://www.lua.org/manual/5.4/manual.html#2.1))
 
 #### Захват окружения { #subprograms-closures }
 
-*Closure capture* · [в онтологии](concepts.md#subprograms-closures)
+англ. *Closures* (также *lambda capture*, *captured variables*) · [в онтологии](concepts.md#subprograms-closures)
 
 - **да (layer: language, profile: lua54)** — Вложенная функция захватывает внешние локальные переменные как upvalue: разделяет саму переменную, а не копию значения; каждое выполнение `local` создаёт новую переменную. ([Lua 5.4 manual §3.5 — Visibility Rules](https://www.lua.org/manual/5.4/manual.html#3.5))
 
 #### Анонимные функции { #subprograms-lambda }
 
-*Anonymous functions* · [в онтологии](concepts.md#subprograms-lambda)
+англ. *Anonymous functions* (также *lambda expressions*, *function literals*) · [в онтологии](concepts.md#subprograms-lambda)
 
 - **да (layer: language, profile: lua54)** — `function (x) return x * 2 end` — выражение; все функции Lua анонимны, имя — лишь переменная.
 
 #### Аргументы по умолчанию { #subprograms-default-args }
 
-*Default arguments* · [в онтологии](concepts.md#subprograms-default-args)
+англ. *Default arguments* (также *optional parameters*) · [в онтологии](concepts.md#subprograms-default-args)
 
 - **нет (layer: language, profile: lua54)** — Недостающие аргументы получают `nil`; значение по умолчанию задают идиомой `x = x or default`. ([Lua 5.4 manual §3.4.11 — Function Definitions](https://www.lua.org/manual/5.4/manual.html#3.4.11))
 
 #### Именованные аргументы { #subprograms-named-args }
 
-*Named arguments* · [в онтологии](concepts.md#subprograms-named-args)
+англ. *Named arguments* (также *keyword arguments*) · [в онтологии](concepts.md#subprograms-named-args)
 
 - **нет (layer: language, profile: lua54)** — Имитируются передачей таблицы: `f{name = "x", size = 2}` — вызов с одним аргументом-таблицей.
 
@@ -243,19 +241,19 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Диспетчеризация вызовов { #abstraction-dispatch }
 
-*Call dispatch* · [в онтологии](concepts.md#abstraction-dispatch)
+англ. *Method dispatch* (также *static dispatch*, *dynamic dispatch*, *virtual functions*, *multiple dispatch*) · [в онтологии](concepts.md#abstraction-dispatch)
 
 - **По одному динамическому типу (layer: language, profile: lua54)** — `obj:method(a)` — сахар для `obj.method(obj, a)`; метод ищется в самом объекте, затем через метаметод `__index`, то есть выбор зависит только от получателя. ([Lua 5.4 manual §3.4.10 — Function Calls](https://www.lua.org/manual/5.4/manual.html#3.4.10); [Lua 5.4 manual §2.4 — Metatables and Metamethods](https://www.lua.org/manual/5.4/manual.html#2.4))
 
 #### Наследование реализации { #abstraction-inheritance }
 
-*Implementation inheritance* · [в онтологии](concepts.md#abstraction-inheritance)
+англ. *Implementation inheritance* (также *inheritance*, *subclassing*, *derived classes*) · [в онтологии](concepts.md#abstraction-inheritance)
 
 - **Одиночное (layer: language, profile: lua54, applies_to: соглашение через цепочку `__index` метатаблиц)** — Классов и наследования в синтаксисе нет: прототипное делегирование строят, задавая `__index` метатаблицы на таблицу-прототип. Множественное наследование возможно, если `__index` — функция, ищущая в нескольких родителях. ([Lua 5.4 manual §2.4 — Metatables and Metamethods](https://www.lua.org/manual/5.4/manual.html#2.4))
 
 #### Модульность { #abstraction-modules }
 
-*Modules* · [в онтологии](concepts.md#abstraction-modules)
+англ. *Modules* (также *module system*, *namespaces*, *packages*) · [в онтологии](concepts.md#abstraction-modules)
 
 - **Модули как объекты времени выполнения (layer: standard_library, profile: lua54)** — `require` загружает чанк один раз и кэширует возвращённое значение (обычно таблицу) в `package.loaded`; модуль — обычная таблица, экспорт — её поля. ([Lua 5.4 manual §6.3 — Modules](https://www.lua.org/manual/5.4/manual.html#6.3))
 
@@ -263,13 +261,13 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Гарантированное устранение хвостовых вызовов { #evaluation-tail-calls }
 
-*Guaranteed tail-call elimination* · [в онтологии](concepts.md#evaluation-tail-calls)
+англ. *Tail-call elimination* (также *proper tail calls*, *tail-call optimization*) · [в онтологии](concepts.md#evaluation-tail-calls)
 
 - **да (layer: language, profile: lua54)** — Вызов вида `return f(args)` — хвостовой: вызываемая функция переиспользует стековый кадр, число вложенных хвостовых вызовов не ограничено. `return (f(x))` и `return f(x) + 1` хвостовыми не являются. ([Lua 5.4 manual §3.4.10 — Function Calls](https://www.lua.org/manual/5.4/manual.html#3.4.10))
 
 #### Протокол выдачи и возобновления результатов { #evaluation-result-protocol }
 
-*Result and resumption protocol* · [в онтологии](concepts.md#evaluation-result-protocol)
+англ. *Result and resumption protocol* (также *generators*, *coroutines*, *goal-directed evaluation*) · [в онтологии](concepts.md#evaluation-result-protocol)
 
 - **Обычный возврат результата вызова (layer: language, profile: lua54)** — Функция может вернуть несколько значений одним `return`; это не поток альтернатив.
 - **Явное возобновление генератора или корутины (layer: standard_library, profile: lua54)** — `coroutine.resume` продолжает корутину до следующего `coroutine.yield` или завершения; `coroutine.wrap` превращает корутину в функцию-итератор. Корутины асимметричные и не являются продолжениями первого класса. ([Lua 5.4 manual §2.6 — Coroutines](https://www.lua.org/manual/5.4/manual.html#2.6); [Lua 5.4 manual §6.2 — Coroutine Manipulation](https://www.lua.org/manual/5.4/manual.html#6.2))
@@ -278,7 +276,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Освобождение памяти { #memory-management }
 
-*Memory reclamation* · [в онтологии](concepts.md#memory-management)
+англ. *Memory management* (также *memory reclamation*, *garbage collection*, *reference counting*) · [в онтологии](concepts.md#memory-management)
 
 - **Трассирующая сборка мусора (layer: language, profile: lua54)** — Автоматическое управление памятью; в Lua 5.4 сборщик работает в инкрементальном или поколенческом режиме, переключаемом `collectgarbage`. Есть слабые таблицы и финализаторы `__gc`. ([Lua 5.4 manual §2.5 — Garbage Collection](https://www.lua.org/manual/5.4/manual.html#2.5))
 
@@ -286,7 +284,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Представление и передача ошибок { #errors-model }
 
-*Error representation and propagation* · [в онтологии](concepts.md#errors-model)
+англ. *Error handling* (также *exceptions*, *result types*, *error codes*) · [в онтологии](concepts.md#errors-model)
 
 - **Исключения (layer: language, profile: lua54)** — `error(v)` возбуждает ошибку с произвольным значением, `pcall`/`xpcall` перехватывают её и возвращают `false, v`. Синтаксиса try/catch и иерархии типов исключений нет: это функции базовой библиотеки над механизмом раскрутки ядра. ([Lua 5.4 manual §2.3 — Error Handling](https://www.lua.org/manual/5.4/manual.html#2.3); [Lua 5.4 manual — pcall](https://www.lua.org/manual/5.4/manual.html#pdf-pcall))
 - **Код ошибки (layer: standard_library, profile: lua54, applies_to: функции `io`, `os` и подобные)** — Соглашение библиотеки: при неудаче вернуть `nil` (или `fail`), сообщение и код ошибки вместо возбуждения ошибки. ([Lua 5.4 manual §6.8 — Input and Output Facilities](https://www.lua.org/manual/5.4/manual.html#6.8))
@@ -297,14 +295,14 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Освобождение ресурсов { #resources-cleanup }
 
-*Resource cleanup* · [в онтологии](concepts.md#resources-cleanup)
+англ. *Resource cleanup* (также *RAII*, *deterministic destruction*, *finally*, *defer*) · [в онтологии](concepts.md#resources-cleanup)
 
 - **Конструкция управления ресурсом (с Lua 5.4 включительно, layer: language, profile: lua54)** — Локальная переменная с атрибутом `<close>` вызывает метаметод `__close` значения при выходе из блока — обычном, через `break`/`goto`/`return` или по ошибке. ([Lua 5.4 manual §3.3.8 — To-be-closed Variables](https://www.lua.org/manual/5.4/manual.html#3.3.8))
 - **Явное освобождение (layer: language, profile: lua54)** — Например, `file:close()`; финализатор `__gc` вызывается сборщиком в неопределённый момент и не заменяет детерминированную очистку.
 
 #### Конкурентное выполнение { #resources-concurrency }
 
-*Concurrency* · [в онтологии](concepts.md#resources-concurrency)
+англ. *Concurrency* (также *threads*, *async/await*, *actors*) · [в онтологии](concepts.md#resources-concurrency)
 
 - **неприменимо (n/a) (layer: language, profile: lua54)** — Ядро и стандартные библиотеки не дают вытесняющей многопоточности: тип `thread` — это корутина, выполняемая кооперативно в одном потоке ОС. Параллелизм предоставляет встраивающая программа или внешние библиотеки. ([Lua 5.4 manual §2.6 — Coroutines](https://www.lua.org/manual/5.4/manual.html#2.6))
 
@@ -314,25 +312,25 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Границы синтаксических групп { #syntax-blocks }
 
-*Syntactic grouping boundaries* · [в онтологии](concepts.md#syntax-blocks)
+англ. *Syntactic grouping boundaries* (также *block delimiters*, *compound statement*, *off-side rule*) · [в онтологии](concepts.md#syntax-blocks)
 
 - **Явные разделители (layer: language, profile: lua54)** — Ключевые слова `do … end`, `then … end`, `repeat … until`, `function … end`; отступы незначимы. ([Lua 5.4 manual §9 — The Complete Syntax of Lua](https://www.lua.org/manual/5.4/manual.html#9))
 
 #### Границы операторов и определений { #syntax-statement-terminator }
 
-*Statement and definition boundaries* · [в онтологии](concepts.md#syntax-statement-terminator)
+англ. *Statement terminators* (также *statement separators*, *automatic semicolon insertion*) · [в онтологии](concepts.md#syntax-statement-terminator)
 
 - **Необязательная точка с запятой (layer: language, profile: lua54)** — Операторы разделяются по грамматике, перевод строки незначим; `;` допускается и почти никогда не нужна, кроме устранения неоднозначности, когда следующая строка начинается с `(`. ([Lua 5.4 manual §3.3 — Statements](https://www.lua.org/manual/5.4/manual.html#3.3))
 
 #### Чувствительность имён к регистру { #syntax-case-sensitive }
 
-*Identifier case sensitivity* · [в онтологии](concepts.md#syntax-case-sensitive)
+англ. *Case sensitivity* (также *identifier case sensitivity*) · [в онтологии](concepts.md#syntax-case-sensitive)
 
 - **да (layer: language, profile: lua54)** ([Lua 5.4 manual §3.1 — Lexical Conventions](https://www.lua.org/manual/5.4/manual.html#3.1))
 
 #### Метапрограммирование { #syntax-metaprogramming }
 
-*Metaprogramming* · [в онтологии](concepts.md#syntax-metaprogramming)
+англ. *Metaprogramming* (также *macros*, *reflection*, *compile-time evaluation*) · [в онтологии](concepts.md#syntax-metaprogramming)
 
 - **Построение и выполнение кода (layer: standard_library, profile: lua54)** — `load` компилирует строку или результат функции в функцию-чанк с заданным окружением; `dofile`/`loadfile` — для файлов. ([Lua 5.4 manual — load](https://www.lua.org/manual/5.4/manual.html#pdf-load))
 - **Рефлексия (layer: standard_library, profile: lua54)** — `type`, `getmetatable`/`setmetatable`, обход таблиц `pairs`; библиотека `debug` даёт доступ к локальным переменным, upvalue и стеку вызовов, но предназначена для отладки. ([Lua 5.4 manual §6.10 — The Debug Library](https://www.lua.org/manual/5.4/manual.html#6.10))
@@ -341,7 +339,7 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Поддерживаемые парадигмы { #paradigm-supported }
 
-*Supported paradigms* · [в онтологии](concepts.md#paradigm-supported)
+англ. *Programming paradigms* (также *supported paradigms*) · [в онтологии](concepts.md#paradigm-supported)
 
 - **Императивная (layer: language, profile: lua54)**
 - **Процедурная (layer: language, profile: lua54)**
@@ -352,6 +350,6 @@ Lua — компактный встраиваемый язык с динамич
 
 #### Ограничение числовой точности { #data-numeric-precision }
 
-*Numeric precision bound* · [в онтологии](concepts.md#data-numeric-precision)
+англ. *Numeric precision bound* (также *arbitrary-precision arithmetic*, *bignum*, *fixed-width integers*) · [в онтологии](concepts.md#data-numeric-precision)
 
 - **Фиксированная разрядность типа или поля (с Lua 5.3 включительно, layer: language, profile: lua54)** — Тип number имеет подтипы integer и float; стандартная сборка использует 64-битные целые с заворачиванием при переполнении и двойную точность. До 5.3 все числа были вещественными. ([Lua 5.4 manual §2.1 — Values and Types](https://www.lua.org/manual/5.4/manual.html#2.1); [Lua 5.4 manual §3.4.1 — Arithmetic Operators](https://www.lua.org/manual/5.4/manual.html#3.4.1))

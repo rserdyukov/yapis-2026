@@ -47,7 +47,7 @@ class SiteStructureTests(unittest.TestCase):
         offenders = []
         for path in [*ROOT.glob("docs/**/*.md"), ROOT / "tools/build-docs.py",
                      ROOT / "tools/build-catalog.py", *ROOT.glob("admin/*.md")]:
-            if "_design" in path.parts or path.name in ("variants.md",) and path.parent.name == "labs":
+            if path.name in ("variants.md",) and path.parent.name == "labs":
                 continue
             if path == ROOT / "docs/materials/index.md":
                 continue
@@ -95,15 +95,30 @@ class SiteStructureTests(unittest.TestCase):
         # в каталоге нет неиспользуемых картинок
         self.assertEqual(used, {p.name for p in (practice / "img").iterdir()})
 
+    def test_no_draft_pages_in_docs(self):
+        """Черновики (publish: false) живут в рабочих материалах курса
+        (YaPIS/output), а не в репозитории сайта: сюда попадает только готовое.
+        Фрагменты-исходники сборки без front matter (_partials, _data) — не страницы."""
+        drafts = [str(p.relative_to(ROOT)) for p in ROOT.glob("docs/**/*.md")
+                  if metadata(p).get("publish") is False]
+        self.assertEqual(drafts, [])
+
     def test_garden_articles_are_linked_and_self_contained(self):
         garden = ROOT / "docs/garden"
+        if not garden.is_dir():
+            # Раздел убран: на сайте не должно остаться ссылок на него.
+            nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
+            self.assertNotRegex(nav, r"(?m)^\s*-.*garden/", "garden в nav")
+            offenders = [str(p.relative_to(ROOT)) for p in ROOT.glob("docs/**/*.md")
+                         if "garden/" in p.read_text(encoding="utf-8")]
+            self.assertEqual(offenders, [])
+            return
         index = (garden / "index.md").read_text(encoding="utf-8")
         nav = (ROOT / "mkdocs.yml").read_text(encoding="utf-8")
         onto = yaml.safe_load((ROOT / "docs/languages/_data/ontology.yaml").read_text(encoding="utf-8"))
         concepts = {c["id"] for cat in onto["categories"] for c in cat["concepts"]}
         langs = {p.stem for p in (ROOT / "docs/languages/_data/languages").glob("*.yaml")}
         articles = [p for p in garden.glob("*.md") if metadata(p).get("publish") and p.name != "index.md"]
-        self.assertGreaterEqual(len(articles), 11)
         for path in articles:
             meta = metadata(path)
             text = path.read_text(encoding="utf-8")

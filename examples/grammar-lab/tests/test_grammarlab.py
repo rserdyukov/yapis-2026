@@ -1,5 +1,6 @@
 """Тесты grammar-lab. Номера T-N — сценарии из kickoff-документа
-docs/_design/2026-09-26-task3-selfcheck-kickoff.md, раздел 11."""
+2026-09-26-task3-selfcheck-kickoff.md (рабочие материалы курса,
+YaPIS/output/design/), раздел 11."""
 
 from __future__ import annotations
 

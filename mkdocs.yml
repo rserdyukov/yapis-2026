@@ -63,19 +63,8 @@ nav:
       - Различающие примеры: concepts/examples/index.md
       - Проверочные вопросы: languages/questions.md
       - Карта языков: concepts/language-map.md
-  - Цифровой сад:
-      - garden/index.md
-      - "Rust: владение и заимствование": garden/rust-ownership.md
-      - "Go: сознательная бедность языка": garden/go-simplicity.md
-      - "Lua: метатаблицы": garden/lua-metatables.md
-      - "Zig: comptime вместо макросов": garden/zig-comptime.md
-      - "Forth: стек вместо синтаксиса": garden/forth-stack.md
-      - "APL: нотация как инструмент мышления": garden/apl-arrays.md
-      - "SQL: декларативность": garden/sql-declarative.md
-      - "Erlang: let it crash": garden/erlang-let-it-crash.md
-      - "Smalltalk: всё есть сообщение": garden/smalltalk-messages.md
-      - "Haskell: чистота и ленивость": garden/haskell-purity-laziness.md
-      - "JavaScript: цена совместимости": garden/javascript-compatibility.md
+  # Раздел «Цифровой сад» убран: статьи готовятся в рабочих материалах курса
+  # (YaPIS/output/garden) и вернутся сюда в docs/garden/ после вычитки.
 
 extra_css:
   - assets/stylesheets/course.css
@@ -161,7 +150,6 @@ markdown_extensions:
         - docs/_partials
         - docs/languages/_data
         - docs/concepts/examples
-        - docs/garden
       check_paths: true
       # Секции кода вырезаются из тела функций — убрать общий отступ.
       dedent_subsections: true
@@ -172,15 +160,15 @@ extra:
       link: https://github.com/rserdyukov/yapis-2026
 
 # Исходники сборки: отдельными страницами не публикуются.
+# Проектные документы (kickoff, обзоры) и черновики статей живут вне этого
+# репозитория — в рабочих материалах курса (YaPIS/output/design, output/garden).
 #   _partials/        — фрагменты текста задания (собираются build-docs.py)
-#   _design/          — проектные документы (kickoff, обоснования решений)
 #   languages/_data/  — YAML, примеры и грамматики каталога языков
 #                       (собираются build-catalog.py)
 #   lectures/slides/  — Marp-колоды; на сайт идёт готовый HTML в lectures/html/
 #   lectures/theme/   — CSS темы Marp, нужен только на этапе сборки слайдов
 exclude_docs: |
   _partials/
-  _design/
   languages/_data/
   lectures/slides/
   lectures/theme/

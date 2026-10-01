@@ -2552,7 +2552,8 @@ PY
 test_mkdocs_excludes_catalog_data_and_checks_anchors() {
   local cfg="${REPO_ROOT}/mkdocs.yml"
   grep -qE '^  languages/_data/$' "${cfg}" || { fail "languages/_data/ не в exclude_docs"; return 1; }
-  grep -qE '^  _design/$' "${cfg}" || { fail "_design/ не в exclude_docs"; return 1; }
+  # Проектные документы живут вне репозитория сайта (рабочие материалы курса).
+  [[ ! -e "${REPO_ROOT}/docs/_design" ]] || { fail "docs/_design/ должен жить вне репозитория сайта"; return 1; }
   grep -qE '^    anchors: warn$' "${cfg}" || { fail "validation.links.anchors должен быть warn"; return 1; }
   return 0
 }

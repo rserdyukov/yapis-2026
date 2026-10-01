@@ -246,7 +246,11 @@ ALGOL 60 — точного примера к существующему `by_nam
 `scope.linkage`, `subprograms.overload_resolution`, `evaluation.order`,
 `evaluation.undefined_behavior`, `evaluation.compile_time`,
 `memory.storage_duration`, `memory.value_categories`,
-`memory.concurrency_model`. Сейчас в словаре 82 концепции.
+`memory.concurrency_model`. Для статей об инструментах построения языков
+добавлена группа «Инструменты построения языковых процессоров» (`tooling`):
+`tooling.parser_construction`, `tooling.parsing_algorithm`,
+`tooling.language_workbench` — это свойства реализаций, а не семантики языка.
+Сейчас в словаре 85 концепций.
 
 ### Границы этой редакции
 

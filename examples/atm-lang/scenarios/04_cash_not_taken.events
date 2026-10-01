@@ -1,6 +1,0 @@
-# Наличные не забрали: банкомат втягивает их и возвращает карту.
-insert_card
-pin 4321
-withdraw 1000
-timeout
-card_taken

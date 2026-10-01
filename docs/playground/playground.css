@@ -56,7 +56,7 @@
 
 .fsm-pg__machine { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; }
 .fsm-pg__machine b { color: var(--course-accent); font-family: var(--md-code-font); }
-.fsm-pg__ctx { font-family: var(--md-code-font); color: var(--course-muted); }
+.fsm-pg__ctx { font-family: var(--md-code-font); color: var(--course-muted); white-space: pre-wrap; }
 .fsm-pg__buttons { display: flex; flex-wrap: wrap; gap: .4rem; }
 .fsm-pg__event { display: flex; gap: .2rem; margin: 0; }
 .fsm-pg__event button { font-family: var(--md-code-font); }

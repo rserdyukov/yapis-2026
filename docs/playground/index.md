@@ -9,7 +9,7 @@ search:
 
 Учебный компилятор языка конечных автоматов (карточка задачи «Диалог
 банкомата») работает прямо в браузере. Код компилятора на Python тот же, что в
-[`examples/atm-lang`](https://github.com/rserdyukov/yapis-2026/tree/main/examples/atm-lang),
+[`yapis-example-switchyard`](https://github.com/rserdyukov/yapis-example-switchyard),
 его исполняет [Pyodide](https://pyodide.org/). Компилятор выдаёт WAT и
 двоичный `.wasm`, а браузер исполняет модуль через `WebAssembly.instantiate`.
 Сервера нет, всё выполняется на вашей машине.
@@ -82,9 +82,9 @@ search:
 ```
 
 - **Два фронтенда, один язык.** Грамматика записана дважды:
-  [`Fsm.g4`](https://github.com/rserdyukov/yapis-2026/blob/main/examples/atm-lang/grammar/Fsm.g4)
+  [`Fsm.g4`](https://github.com/rserdyukov/yapis-example-switchyard/blob/main/grammar/Fsm.g4)
   для ANTLR и
-  [`fsm.lark`](https://github.com/rserdyukov/yapis-2026/blob/main/examples/atm-lang/fsmc/frontend_lark/fsm.lark)
+  [`fsm.lark`](https://github.com/rserdyukov/yapis-example-switchyard/blob/main/fsmc/frontend_lark/fsm.lark)
   для Lark. Оба фронтенда строят одно и то же AST, и это проверяют тесты.
   Переключите фронтенд и сравните сообщения о синтаксических ошибках на
   `neg_13_syntax`.
@@ -99,6 +99,12 @@ search:
   `br_table`.
 - **Хост на JS только печатает.** Автомат, guard'ы и контекст живут в модуле
   WebAssembly, а JS передаёт события и выводит строки.
+- **Системы из нескольких автоматов.** Откройте `poker` (техасский холдем:
+  стол, человек и бот), `crossroad` (перекрёсток) или `abp` (протокол
+  чередующегося бита). Модули примера подключаются через `import` так же,
+  как в CLI. На вкладке «Запуск» видно состояние каждого экземпляра, а
+  события адресуются экземпляру: `you.call`, `ctl.tick`. Головоломка
+  `puzzle` показывает, как анализ достижимости находит решение.
 
 Первая загрузка скачивает Pyodide с CDN, около 10 МБ. Дальше браузер берёт
 его из кэша.

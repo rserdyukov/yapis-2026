@@ -1,0 +1,3 @@
+[submodule "examples/switchyard"]
+	path = examples/switchyard
+	url = https://github.com/rserdyukov/yapis-example-switchyard.git

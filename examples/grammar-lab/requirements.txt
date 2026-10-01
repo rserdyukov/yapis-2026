@@ -1,3 +1,3 @@
-# Версия — как в docs/requirements.txt и examples/atm-lang/requirements.txt
+# Версия — как в docs/requirements.txt и examples/switchyard/requirements.txt
 # (сборщик бандла для сайта проверяет совпадение).
 lark==1.3.1

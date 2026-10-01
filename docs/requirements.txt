@@ -7,7 +7,7 @@ mkdocs-material==9.5.49
 pyyaml==6.0.3
 # Playground компилятора FSM: tools/playground_bundle.py упаковывает эти
 # пакеты вместе с компилятором для Pyodide. Версии — как в
-# examples/atm-lang/requirements.txt (сборка проверяет совпадение).
+# examples/switchyard/requirements.txt (сборка проверяет совпадение).
 antlr4-python3-runtime==4.13.2
 lark==1.3.1
 # Диаграммы (PlantUML, в т. ч. railroad через @startebnf) в блоках

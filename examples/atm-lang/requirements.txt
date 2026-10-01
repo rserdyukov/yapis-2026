@@ -1,7 +1,0 @@
-# Зависимости компилятора fsmc. Версии зафиксированы и совпадают с теми,
-# что playground ставит в Pyodide (docs/playground/playground.js).
-#
-# Версия runtime обязана совпадать с версией ANTLR, которой сгенерирован
-# парсер (tools/gen_antlr.py, VERSION).
-antlr4-python3-runtime==4.13.2
-lark==1.3.1

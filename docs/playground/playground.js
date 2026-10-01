@@ -1,6 +1,6 @@
 // Playground компилятора FSM.
 //
-// Python-компилятор (examples/atm-lang/fsmc) исполняется в Pyodide; файлы
+// Python-компилятор (examples/switchyard/fsmc, репозиторий yapis-example-switchyard) исполняется в Pyodide; файлы
 // fsmc-bundle.zip, fsm-host.mjs и examples.json кладёт рядом хук сборки
 // сайта (tools/site_hooks.py → tools/playground_bundle.py).
 
@@ -28,6 +28,7 @@ let machine = null;
 let wasmUrl = null;
 let lastResult = null;
 let mermaidLib = null;
+let currentFiles = {}; // модули примера для import: «имя.fsm» → текст
 
 // ------------------------------------------------------------------ вкладки
 
@@ -99,6 +100,7 @@ function loadExample(id, draft = null) {
   ui.example.value = draft ? "__draft" : ex.id;
   ui.example.options[ui.example.selectedIndex].hidden = false;
   ui.source.value = draft ?? ex.source;
+  currentFiles = ex.files ?? {};
   ui.scenario.replaceChildren(...Object.keys(ex.scenarios).map((k) => new Option(k, k)));
   ui.scenario.append(new Option("свой", "__own"));
   ui.events.value = Object.values(ex.scenarios)[0] ?? "";
@@ -143,7 +145,7 @@ async function compile() {
   await new Promise((r) => setTimeout(r, 0)); // дать браузеру перерисовать статус
   let r;
   try {
-    r = JSON.parse(compileFn(ui.source.value, ui.frontend.value));
+    r = JSON.parse(compileFn(ui.source.value, ui.frontend.value, JSON.stringify(currentFiles)));
   } catch (e) {
     status("Внутренняя ошибка компилятора — см. консоль", "error");
     console.error(e);
@@ -192,8 +194,9 @@ function showDiagnostics(list) {
     const where = document.createElement("button");
     where.type = "button";
     where.className = "fsm-pg__where";
-    where.textContent = d.line ? `${d.line}:${d.col}` : "—";
-    where.addEventListener("click", () => jumpTo(d.line, d.col));
+    where.textContent = (d.file ? d.file + ":" : "") + (d.line ? `${d.line}:${d.col}` : "—");
+    // Ошибка в модуле: перейти к строке главного файла нельзя.
+    if (!d.file) where.addEventListener("click", () => jumpTo(d.line, d.col));
     const code = document.createElement("code");
     code.textContent = d.code;
     li.append(where, code, document.createTextNode(" " + d.message));
@@ -256,8 +259,13 @@ function renderMachine() {
     return;
   }
   ui.state.textContent = machine.state;
-  ui.context.textContent = Object.entries(machine.context)
-    .map(([k, v]) => `${k} = ${typeof v === "string" ? JSON.stringify(v) : v}`).join("   ");
+  const show = (v) => Array.isArray(v) ? `[${v.map(show).join(", ")}]`
+    : typeof v === "string" ? JSON.stringify(v) : String(v);
+  const fields = (ctx) => Object.entries(ctx).map(([k, v]) => `${k} = ${show(v)}`).join("   ");
+  // У системы контекст по экземплярам: строка на экземпляр.
+  ui.context.textContent = machine.isSystem
+    ? Object.entries(machine.context).map(([inst, ctx]) => `${inst}: ${fields(ctx)}`).join("\n")
+    : fields(machine.context);
   for (const ev of machine.events) {
     const form = document.createElement("form");
     form.className = "fsm-pg__event";
@@ -296,6 +304,7 @@ function send(name, args) {
     const arrow = r.status === "moved" ? `${r.from} → ${r.to}`
       : r.status === "ignored" ? `${r.from}: проигнорировано` : `${r.from}: НЕ ОБРАБОТАНО`;
     log(`› ${name}${args.length ? " " + args.join(" ") : ""}   [${arrow}]`, r.status);
+    for (const d of r.dropped) log(`  событие ${d} из очереди не обработано`, "unhandled");
   } catch (e) {
     log(`› ${name}: ${e.message}`, "unhandled");
   }

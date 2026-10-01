@@ -3,7 +3,8 @@
 Playground компилятора FSM (docs/playground/). Хук MkDocs
 (site_hooks.on_post_build) кладёт в site/playground/:
 
-* ``fsmc-bundle.zip`` — компилятор ``examples/atm-lang/fsmc`` и чистые
+* ``fsmc-bundle.zip`` — компилятор ``examples/switchyard/fsmc`` (git submodule
+  rserdyukov/yapis-example-switchyard) и чистые
   Python-пакеты ``antlr4`` и ``lark`` из текущего окружения. Pyodide
   распаковывает архив в свою файловую систему, так что в браузере работает
   тот же код, что в CLI и тестах, а PyPI во время работы страницы не нужен;
@@ -33,9 +34,9 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-LANG = ROOT / "examples" / "atm-lang"
+LANG = ROOT / "examples" / "switchyard"  # git submodule
 GRAMMARLAB = ROOT / "examples" / "grammar-lab"
-# Версии обязаны совпадать с examples/atm-lang/requirements.txt: сборка
+# Версии обязаны совпадать с examples/switchyard/requirements.txt: сборка
 # с другой версией ANTLR runtime не прочтёт сгенерированный парсер.
 PACKAGES = {"antlr4": "antlr4-python3-runtime", "lark": "lark"}
 
@@ -103,23 +104,39 @@ def _title(source: str, fallback: str) -> str:
     return fallback
 
 
+def _kind(source: str) -> str:
+    """Первое значимое слово файла: machine, module или system."""
+    return re.sub(r"//[^\n]*", "", source).split(None, 1)[0]
+
+
 def build_examples() -> list[dict]:
+    """Примеры для меню. Модули (module) отдельными пунктами не показываются:
+    они уходят в ``files`` программы из того же каталога, чтобы её import
+    находил их в браузере так же, как в CLI."""
     items = []
     atm_scenarios = {p.stem: p.read_text(encoding="utf-8")
                      for p in sorted((LANG / "scenarios").glob("*.events"))}
-    for path in sorted((LANG / "examples").glob("*.fsm"), key=lambda p: p.name != "atm.fsm"):
+    root = LANG / "examples"
+    paths = sorted(root.rglob("*.fsm"),
+                   key=lambda p: (p.name != "atm.fsm", p.name != "features.fsm",
+                                  p.relative_to(root).as_posix()))
+    for path in paths:
         source = path.read_text(encoding="utf-8")
+        if _kind(source) == "module":
+            continue
         scenarios = dict(atm_scenarios) if path.name == "atm.fsm" else {}
         own = path.with_suffix(".events")
         if own.exists():
             scenarios[own.stem] = own.read_text(encoding="utf-8")
+        files = {p.name: p.read_text(encoding="utf-8") for p in sorted(path.parent.glob("*.fsm"))
+                 if p != path and _kind(p.read_text(encoding="utf-8")) == "module"}
         items.append({"id": path.stem, "group": "Примеры", "title": _title(source, path.stem),
-                      "source": source, "scenarios": scenarios})
+                      "source": source, "scenarios": scenarios, "files": files})
     for path in sorted((LANG / "tests" / "negative").glob("*.fsm")):
         source = path.read_text(encoding="utf-8")
         items.append({"id": path.stem, "group": "Негативные тесты",
                       "title": f"{path.stem}: {_title(source, path.stem)}",
-                      "source": source, "scenarios": {}})
+                      "source": source, "scenarios": {}, "files": {}})
     return items
 
 

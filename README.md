@@ -38,7 +38,7 @@
 | [`.github/review/`](.github/review/) | Движок ИИ-ревью: промпты, проверки, лимиты |
 | [`.github/workflows/`](.github/workflows/) | `tests`, `guard-main` и `pages` |
 | [`tools/`](tools/) | Сборка производных документов, слайдов и каталога языков |
-| [`examples/atm-lang/`](examples/atm-lang/) | Учебный компилятор FSM → WebAssembly (ANTLR и Lark), исходник playground сайта |
+| [`examples/switchyard/`](https://github.com/rserdyukov/yapis-example-switchyard) | git submodule [yapis-example-switchyard](https://github.com/rserdyukov/yapis-example-switchyard): учебный компилятор языка Switchyard (FSM → WebAssembly, ANTLR и Lark), исходник playground сайта. После клонирования: `git submodule update --init` |
 | [`examples/grammar-lab/`](examples/grammar-lab/) | Самопроверка практической задачи 3: язык ответа, проверка FIRST/FOLLOW/LL(1)/трасс, исходник страницы `practice/task3-check` |
 
 ## Быстрый старт
@@ -154,8 +154,9 @@ python3 -m unittest discover -s tools/tests -v
 Сборка слайдов очищает устаревший HTML; чистая сборка сайта удаляет ранее
 опубликованные страницы. После снятия флага пересоберите и опубликуйте сайт.
 Для новых страниц добавьте ссылку из соответствующего раздела; YAML `nav`
-в `mkdocs.yml` задаёт верхние разделы. Файл
-`docs/garden/draft-template.md` — непубликуемая заготовка заметки.
+в `mkdocs.yml` задаёт верхние разделы. Проектные документы и черновики
+статей сада хранятся вне репозитория, в рабочих материалах курса;
+сюда переносится только готовое к публикации.
 
 Оформление: `docs/assets/stylesheets/course.css`, шаблон `overrides/main.html`.
 Четыре направления из Canvas представлены на главной; будущие материалы

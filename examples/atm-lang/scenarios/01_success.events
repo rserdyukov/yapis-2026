@@ -1,9 +1,0 @@
-# Сценарий 1 из карточки: успешное снятие после двух неверных PIN.
-insert_card
-pin 1111
-pin 2222
-pin 4321
-withdraw 9000
-withdraw 3000
-cash_taken
-card_taken

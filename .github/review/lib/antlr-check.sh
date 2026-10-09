@@ -14,24 +14,36 @@
 #      (`grammar X;`) собираются по одной; пара `lexer grammar A;` +
 #      `parser grammar B;` из одного каталога — вместе. Имена A и B могут
 #      быть любыми: ANTLR этого не требует.
-#   2. Генерирует Java-таргет во временный каталог. Всегда Java — независимо
-#      от того, на чём студент пишет компилятор: Java-рантайм есть в образе,
-#      а сама грамматика от таргета не зависит. Исключение — грамматики с
-#      кодом под конкретный таргет (@header/@members на Python и т.п.,
-#      options { superClass = ... } — базовый класс живёт вне .g4): в Java
-#      они не соберутся, и это честно сообщается как ограничение проверки,
-#      а не как ошибка студента.
-#   3. Компилирует javac, стартовое правило — ПЕРВОЕ правило парсера в файле
-#      (так же поступает lab.antlr.org, когда правило не указано).
+#   2. Выбирает таргет и генерирует код во временный каталог. По умолчанию
+#      Java: рантайм есть в образе, а сама грамматика от таргета не зависит.
+#      Если в .g4 есть код под конкретный язык (@header/@members,
+#      options { language = ... }) или options { superClass = X; }, грамматика
+#      собирается в таргете студента:
+#        - C# — `using ...;`, IToken и т.п. в @members или superClass из
+#          X.cs / пакета Dentlr (yapis-2026-321702-burak#6: INDENT/DEDENT
+#          в @members на C#, раньше прогон пропускался);
+#        - Python — import/def/self. в @members или superClass из X.py;
+#        - Java — superClass из X.java рядом с грамматикой
+#          (yapis-2026-321702-cheretun#6: RelangLexerBase.java лежал в
+#          работе, а прогон пропускался из-за одного слова superClass).
+#      Базовый класс X ищется в работе по имени файла и компилируется вместе
+#      со сгенерированным кодом. Другие языки (JavaScript, Go, ...), базовый
+#      класс, которого нет в работе, и отсутствие рантайма в окружении —
+#      честный пропуск с пометкой «ПРОПУЩЕН»: это ограничение проверки, а не
+#      ошибка студента.
+#   3. Компилирует (javac / dotnet build / импорт модулей Python), стартовое
+#      правило — ПЕРВОЕ правило парсера в файле (так же поступает
+#      lab.antlr.org, когда правило не указано).
 #   4. Прогоняет каждый пример из examples/ через собственный драйвер
 #      (YapisParseDriver ниже). Раньше использовался org.antlr.v4.gui.TestRig,
 #      но он принимает одно базовое имя X и ищет классы XLexer/XParser —
 #      пара lang_lexer + lang_parser для него «не согласована», хотя для
 #      ANTLR совершенно законна (yapis-2026-321701-perminova#7: модель
 #      выдала это студенту как существенное замечание). Драйвер получает
-#      имена классов лексера и парсера явно. Корректные примеры (без
-#      префикса error-) должны разбираться без сообщений «line N:M ...»;
-#      error-примеры (если есть) — с ними.
+#      имена классов лексера и парсера явно; для C# и Python — такие же
+#      драйверы на этих языках. Корректные примеры (без префикса error-)
+#      должны разбираться без сообщений «line N:M ...»; error-примеры
+#      (если есть) — с ними.
 #
 # Результат печатается в stdout и попадает в промпт как ДАННЫЕ.
 #
@@ -43,8 +55,12 @@
 # студента: печатается предупреждение, возвращается 0.
 #
 # Переменные окружения:
-#   ANTLR_JAR   путь к antlr-4.x-complete.jar (в образе задан Dockerfile;
-#               локально ищется в типовых местах).
+#   ANTLR_JAR         путь к antlr-4.x-complete.jar (в образе задан
+#                     Dockerfile; локально ищется в типовых местах).
+#   ANTLR_NUGET_FEED  каталог с .nupkg (Antlr4.Runtime.Standard, Dentlr) для
+#                     сборки C#-таргета без сети. В образе задан Dockerfile;
+#                     если не задан — dotnet берёт пакеты из своих источников
+#                     по умолчанию (локально у студента есть сеть).
 
 ANTLR_CHECK_MAX_EXAMPLES_DEFAULT=6
 ANTLR_CHECK_TIMEOUT_DEFAULT=60
@@ -108,7 +124,8 @@ _antlr_first_parser_rule() {
 
 # Базовый класс из options { superClass = X; }, если задан. Печатает X.
 # Такой класс живёт вне .g4 (код студента или библиотека вроде Dentlr для
-# C#), поэтому сгенерированный Java-код без него не скомпилируется.
+# C#): его исходник ищет _antlr_find_super_source, по его языку выбирается
+# таргет.
 _antlr_super_class() {
   local sc
   sc="$(perl -0777 -ne 's{/\*.*?\*/}{}gs; s{//[^\n]*}{}g; print "$1\n" if /\bsuperClass\s*=\s*([A-Za-z_][\w.]*)/' "$1")"
@@ -122,21 +139,80 @@ _antlr_token_vocab() {
   perl -0777 -ne 's{/\*.*?\*/}{}gs; s{//[^\n]*}{}g; print "$1\n" if /\btokenVocab\s*=\s*([A-Za-z_]\w*)/' "$1"
 }
 
-# Есть ли в грамматике код, специфичный для не-Java таргета.
-# Признаки: @header/@members с python/import/def/self,
-# options { language = Python/JavaScript/CSharp... } или
-# options { superClass = ... }.
-_antlr_has_foreign_actions() {
-  local f="$1"
-  grep -qiE 'language\s*=\s*(Python|JavaScript|TypeScript|CSharp|Go|Cpp|Swift|Dart|PHP)' "${f}" && return 0
-  _antlr_super_class "${f}" >/dev/null && return 0
-  if grep -qE '@(header|members|lexer::header|lexer::members|parser::header|parser::members)' "${f}"; then
-    grep -qE '^\s*(import\s+\w+|from\s+\w+\s+import|def\s+\w+\(|self\.|using\s+System|const\s+\w+\s*=|require\()' "${f}" && return 0
-  fi
-  return 1
+# --- Определение таргета ----------------------------------------------------
+
+# Каталоги, которые при поиске файлов работы не смотрим.
+_ANTLR_FIND_EXCLUDES=(-not -path '*/target/*' -not -path '*/build/*' -not -path '*/.venv/*'
+  -not -path '*/node_modules/*' -not -path '*/.antlr/*' -not -path '*/.git/*'
+  -not -path '*/bin/*' -not -path '*/obj/*' -not -path '*/.deps/*')
+
+# Явный таргет из options { language = X; } первого файла, где он задан.
+_antlr_language_option() {
+  perl -0777 -ne 's{/\*.*?\*/}{}gs; s{//[^\n]*}{}g; if (/\blanguage\s*=\s*([A-Za-z_]\w*)/) { print "$1\n"; exit }' "$@" | head -n 1
 }
 
-# --- Прогон одного примера --------------------------------------------------
+# Тело блоков @header/@members/@lexer::members/... всех файлов: по нему
+# угадывается язык встроенного кода. Действия внутри правил не смотрим —
+# если они на чужом языке, это покажет компиляция.
+_antlr_action_text() {
+  perl -0777 -ne '
+    while (/@(?:lexer::|parser::)?(?:header|members|init|after)\s*\{/g) {
+      my ($start, $depth, $i) = (pos, 1, pos);
+      while ($i < length && $depth > 0) {
+        my $c = substr($_, $i, 1);
+        $depth++ if $c eq "{";
+        $depth-- if $c eq "}";
+        $i++;
+      }
+      print substr($_, $start, $i - $start - 1), "\n";
+      pos = $i;
+    }' "$@"
+}
+
+# Язык кода в блоках действий: csharp | python | javascript | java (по
+# умолчанию: и пустые блоки, и Java-код). Признаки подобраны так, чтобы не
+# пересекаться с Java: в Java нет `using X;`, IToken, readonly, override как
+# ключевого слова, self. и import без `;`.
+_antlr_action_language() {
+  local text
+  text="$(_antlr_action_text "$@")"
+  if printf '%s\n' "${text}" | grep -qE '^\s*using\s+[A-Za-z][A-Za-z0-9_.]*\s*;|\bIToken\b|\breadonly\b|\bpublic\s+override\b|\bbase\.NextToken\b|\bConsole\.Write'; then
+    echo csharp
+  elif printf '%s\n' "${text}" | grep -qE '^\s*import\s+[A-Za-z_][A-Za-z0-9_.]*(\s+as\s+\w+)?\s*$|^\s*from\s+[A-Za-z_.][A-Za-z0-9_.]*\s+import\b|^\s*def\s+\w+\s*\(|\bself\.'; then
+    echo python
+  elif printf '%s\n' "${text}" | grep -qE '\bconst\s+\w+\s*=|\blet\s+\w+\s*=|\brequire\(|\bfunction\s+\w+\s*\('; then
+    echo javascript
+  else
+    echo java
+  fi
+}
+
+# Исходник базового класса X (последний сегмент имени) с расширением ext:
+# сначала рядом с грамматикой, затем по всей работе.
+_antlr_find_super_source() {
+  local work="$1" gdir="$2" cls="${3##*.}" ext="$4" f
+  if [ -f "${gdir}/${cls}.${ext}" ]; then
+    echo "${gdir}/${cls}.${ext}"; return 0
+  fi
+  f="$(find "${work}" -type f -name "${cls}.${ext}" "${_ANTLR_FIND_EXCLUDES[@]}" 2>/dev/null | sort | head -n 1)"
+  [ -n "${f}" ] || return 1
+  echo "${f}"
+}
+
+# Человекочитаемое имя таргета.
+_antlr_target_title() {
+  case "$1" in
+    java) echo Java ;; csharp) echo 'C#' ;; python) echo Python ;; *) echo "$1" ;;
+  esac
+}
+
+# Печатает сообщение о пропуске прогона из-за ограничения проверки.
+_antlr_skip_note() {
+  echo "    Прогон примеров ПРОПУЩЕН — это ограничение автоматической проверки, а НЕ ошибка студента."
+  echo "    Грамматику нужно проверить по тексту."
+}
+
+# --- Драйверы разбора --------------------------------------------------------
 
 # Драйвер разбора: как TestRig без -tree, но классы лексера и парсера
 # передаются явно, а не выводятся из общего базового имени.
@@ -167,13 +243,121 @@ public class YapisParseDriver {
 JAVA
 }
 
+# Тот же драйвер для C#: классы ищутся по имени в сборке (у сгенерированных
+# классов может быть namespace из @namespace). Проект собирается без сети из
+# локального фида ANTLR_NUGET_FEED, если он задан.
+#   $1 — каталог, $2 — "1", если нужен пакет Dentlr.
+_antlr_write_csharp_driver() {
+  local dir="$1" dentlr="$2" dentlr_ref="" major
+  [ "${dentlr}" = "1" ] && dentlr_ref='<PackageReference Include="Dentlr" Version="2.0.0" />'
+  # TargetFramework — по установленному SDK: в образе 10, на раннере GitHub
+  # и у студента может быть 8 или 9 (Dentlr 2.0.0 требует net8.0+).
+  major="$(dotnet --version 2>/dev/null | cut -d. -f1)"
+  case "${major}" in ''|*[!0-9]*) major=10 ;; esac
+  cat > "${dir}/YapisParseDriver.cs" <<'CS'
+using System;
+using System.Linq;
+using System.Reflection;
+using Antlr4.Runtime;
+
+public static class YapisParseDriver
+{
+    public static int Main(string[] args)
+    {
+        var asm = typeof(YapisParseDriver).Assembly;
+        Type Find(string n) => asm.GetTypes().First(t => t.Name == n || t.FullName == n);
+        var input = CharStreams.fromPath(args[3]);
+        var lexer = (Lexer)Activator.CreateInstance(Find(args[0]), input);
+        var tokens = new CommonTokenStream(lexer);
+        var parser = (Parser)Activator.CreateInstance(Find(args[1]), (ITokenStream)tokens);
+        try
+        {
+            parser.GetType().GetMethod(args[2], Type.EmptyTypes).Invoke(parser, null);
+        }
+        catch (TargetInvocationException e)
+        {
+            // Только тип, сообщение и первый кадр: полный стек рантайма
+            // вытеснил бы из отчёта строки `line N:M`.
+            var inner = e.InnerException ?? e;
+            Console.Error.WriteLine(inner.GetType().FullName + ": " + inner.Message);
+            var frame = (inner.StackTrace ?? "").Split('\n').FirstOrDefault(l => !l.Contains(" Antlr4.Runtime."));
+            if (!string.IsNullOrWhiteSpace(frame)) Console.Error.WriteLine(frame.TrimEnd());
+            return 1;
+        }
+        return 0;
+    }
+}
+CS
+  cat > "${dir}/YapisParseDriver.csproj" <<CSPROJ
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net${major}.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>\$(NoWarn);CS3021;CS0108;CS8981;CS0618</NoWarn>
+    <AssemblyName>YapisParseDriver</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Antlr4.Runtime.Standard" Version="4.13.1" />
+    ${dentlr_ref}
+  </ItemGroup>
+</Project>
+CSPROJ
+  if [ -n "${ANTLR_NUGET_FEED:-}" ]; then
+    cat > "${dir}/NuGet.config" <<NUGET
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="yapis-antlr" value="${ANTLR_NUGET_FEED}" />
+  </packageSources>
+</configuration>
+NUGET
+  fi
+}
+
+_antlr_write_python_driver() {
+  cat > "$1/YapisParseDriver.py" <<'PY'
+import importlib
+import sys
+
+from antlr4 import CommonTokenStream, FileStream
+
+
+def load(name):
+    return getattr(importlib.import_module(name), name)
+
+
+lexer = load(sys.argv[1])(FileStream(sys.argv[4], encoding="utf-8"))
+parser = load(sys.argv[2])(CommonTokenStream(lexer))
+try:
+    getattr(parser, sys.argv[3])()
+except Exception as e:  # исключение из кода лексера/парсера студента
+    print(f"{type(e).__name__}: {e}", file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
+# --- Прогон одного примера --------------------------------------------------
+
 # Печатает отчёт по примеру, возвращает 0 при ожидаемом поведении.
 _antlr_run_example() {
-  local classdir="$1" jar="$2" lexer_class="$3" parser_class="$4" rule="$5" example="$6" expect="$7" timeout_s="$8" rel="$9"
+  local classdir="$1" jar="$2" target="$3" lexer_class="$4" parser_class="$5" rule="$6" example="$7" expect="$8" timeout_s="$9" rel="${10}"
   local out rc errors
 
-  out="$(cd "${classdir}" && timeout "${timeout_s}" \
-    java -cp "${jar}:." YapisParseDriver "${lexer_class}" "${parser_class}" "${rule}" "${example}" 2>&1)"
+  case "${target}" in
+    csharp)
+      out="$(cd "${classdir}" && timeout "${timeout_s}" \
+        dotnet out/YapisParseDriver.dll "${lexer_class}" "${parser_class}" "${rule}" "${example}" 2>&1)" ;;
+    python)
+      out="$(cd "${classdir}" && timeout "${timeout_s}" \
+        python3 YapisParseDriver.py "${lexer_class}" "${parser_class}" "${rule}" "${example}" 2>&1)" ;;
+    *)
+      out="$(cd "${classdir}" && timeout "${timeout_s}" \
+        java -cp "${jar}:." YapisParseDriver "${lexer_class}" "${parser_class}" "${rule}" "${example}" 2>&1)" ;;
+  esac
   rc=$?
 
   # Ошибки печатаются в формате `line N:M message`; процесс при
@@ -199,13 +383,18 @@ _antlr_run_example() {
       echo "    РЕЗУЛЬТАТ: разобран без ошибок, как и ожидается."
       return 0
     fi
-    echo "    РЕЗУЛЬТАТ: ${errors} сообщений об ошибках — корректный пример НЕ разбирается грамматикой."
+    if [ "${errors}" -eq 0 ]; then
+      echo "    РЕЗУЛЬТАТ: разбор прерван исключением (код ${rc}) — корректный пример НЕ разбирается грамматикой."
+    else
+      echo "    РЕЗУЛЬТАТ: ${errors} сообщений об ошибках — корректный пример НЕ разбирается грамматикой."
+    fi
     return 1
   fi
 
-  # expect = error
-  if [ "${errors}" -gt 0 ]; then
-    echo "    РЕЗУЛЬТАТ: ${errors} сообщений об ошибках — ошибка обнаружена, как и ожидается."
+  # expect = error. Исключение из кода лексера (например, «Inconsistent
+  # indentation») — тоже обнаруженная ошибка.
+  if [ "${errors}" -gt 0 ] || [ "${rc}" -ne 0 ]; then
+    echo "    РЕЗУЛЬТАТ: ${errors} сообщений об ошибках (код ${rc}) — ошибка обнаружена, как и ожидается."
     return 0
   fi
   echo "    РЕЗУЛЬТАТ: разобран БЕЗ ошибок — пример с ошибкой грамматика принимает как корректный."
@@ -214,34 +403,13 @@ _antlr_run_example() {
 
 # --- Сборка одной грамматики ------------------------------------------------
 
-# Аргументы: <jar> <outdir> <файлы .g4...>
-# Печатает отчёт; в stdout последней строкой — "OK <ParserGrammarName> <rule>"
-# либо "FAIL" / "SKIP <причина>".
+# Аргументы: <jar> <outdir> <work_dir> <файлы .g4...>
+# Печатает отчёт; в stdout последней строкой —
+# "OK <target> <LexerClass> <ParserClass> <rule>" либо "FAIL" / "SKIP <причина>".
 _antlr_build() {
-  local jar="$1" outdir="$2"; shift 2
+  local jar="$1" outdir="$2" work="$3"; shift 3
   local files=("$@") f out rc
   local parser_name="" rule="" kind name
-
-  local sc
-  for f in "${files[@]}"; do
-    if sc="$(_antlr_super_class "${f}")"; then
-      echo "    $(basename "${f}"): options { superClass = ${sc}; } — базовый класс определён вне .g4"
-      echo "    (в коде студента или библиотеке под его язык, например Dentlr для отступов в C#)."
-      echo "    Собрать такую грамматику в Java для проверки нельзя — прогон примеров ПРОПУЩЕН."
-      echo "    Это ограничение автоматической проверки, а НЕ ошибка студента: superClass — штатный механизм ANTLR,"
-      echo "    не замечание. Грамматику нужно проверить по тексту."
-      echo "SKIP super-class"
-      return 0
-    fi
-    if _antlr_has_foreign_actions "${f}"; then
-      echo "    $(basename "${f}"): встроенный код (@header/@members/options language) для не-Java таргета."
-      echo "    Собрать такую грамматику в Java для проверки нельзя — прогон примеров ПРОПУЩЕН."
-      echo "    Это ограничение автоматической проверки, а НЕ ошибка студента. Грамматику нужно проверить по тексту."
-      echo "    Рекомендация (не существенное замечание): код лучше выносить из .g4 в отдельные классы."
-      echo "SKIP foreign-actions"
-      return 0
-    fi
-  done
 
   # Имена классов. Для `grammar X;` ANTLR генерирует XLexer и XParser; для
   # раздельных `lexer grammar A;` и `parser grammar B;` — классы A и B,
@@ -287,14 +455,107 @@ _antlr_build() {
     return 1
   fi
 
+  # Таргет: явный options { language = ... } > язык кода в @header/@members >
+  # язык исходника базового класса > Java. "strong" — таргет задан явно или
+  # кодом, и базовый класс обязан быть на том же языке.
+  local target="" strong=0 lang_opt reason=""
+  lang_opt="$(_antlr_language_option "${files[@]}")"
+  case "${lang_opt}" in
+    "")       ;;
+    CSharp*)  target=csharp ;;
+    Python*)  target=python ;;
+    Java)     target=java ;;
+    *)        target="${lang_opt}" ;;
+  esac
+  if [ -n "${target}" ]; then
+    strong=1; reason="options { language = ${lang_opt}; }"
+  else
+    target="$(_antlr_action_language "${files[@]}")"
+    if [ "${target}" != "java" ]; then
+      strong=1; reason="код в @header/@members"
+    fi
+  fi
+
+  local super_sources=() need_dentlr=0 sc src ext cand
+  for f in "${files[@]}"; do
+    sc="$(_antlr_super_class "${f}")" || continue
+    case "${sc}" in
+      Dentlr.*|DentlrLexer)
+        # Dentlr — NuGet-пакет с базовым лексером для отступов, только C#.
+        if [ "${strong}" -eq 1 ] && [ "${target}" != "csharp" ]; then
+          echo "    $(basename "${f}"): superClass = ${sc} (пакет Dentlr для C#), но таргет по ${reason} — $(_antlr_target_title "${target}")."
+          _antlr_skip_note
+          echo "SKIP super-class-mismatch"
+          return 0
+        fi
+        target=csharp; strong=1; need_dentlr=1
+        [ -n "${reason}" ] || reason="superClass = ${sc}"
+        continue ;;
+    esac
+    src=""
+    if [ "${strong}" -eq 1 ]; then
+      case "${target}" in java) ext=java ;; csharp) ext=cs ;; python) ext=py ;; *) ext="" ;; esac
+      [ -n "${ext}" ] && src="$(_antlr_find_super_source "${work}" "$(dirname "${f}")" "${sc}" "${ext}")"
+    else
+      for cand in java:java cs:csharp py:python; do
+        if src="$(_antlr_find_super_source "${work}" "$(dirname "${f}")" "${sc}" "${cand%%:*}")"; then
+          target="${cand##*:}"; strong=1; reason="superClass = ${sc} (${src#"${work}"/})"
+          break
+        fi
+      done
+    fi
+    if [ -z "${src}" ]; then
+      echo "    $(basename "${f}"): options { superClass = ${sc}; } — исходник базового класса ${sc##*.} в работе не найден"
+      echo "    (искали ${sc##*.}.java, ${sc##*.}.cs, ${sc##*.}.py рядом с грамматикой и во всей работе; Dentlr для C# поддерживается)."
+      _antlr_skip_note
+      echo "SKIP super-class-missing"
+      return 0
+    fi
+    echo "    $(basename "${f}"): базовый класс ${sc} — ${src#"${work}"/}"
+    super_sources+=("${src}")
+  done
+
+  case "${target}" in
+    java|csharp|python) ;;
+    *)
+      echo "    Встроенный код или options { language } для таргета ${target} (${reason:-не определено})."
+      echo "    Автоматическая проверка собирает грамматики в Java, C# и Python; для ${target} рантайма в образе нет."
+      _antlr_skip_note
+      echo "    Рекомендация (не существенное замечание): код лучше выносить из .g4 в отдельные классы."
+      echo "SKIP foreign-actions"
+      return 0 ;;
+  esac
+
+  local title
+  title="$(_antlr_target_title "${target}")"
+  if [ "${target}" = "csharp" ] && ! command -v dotnet >/dev/null 2>&1; then
+    echo "    Таргет C# (${reason}), но dotnet в окружении не найден — сборка не выполнена (ограничение окружения, не работы)."
+    _antlr_skip_note
+    echo "SKIP no-dotnet"
+    return 0
+  fi
+  if [ "${target}" = "python" ] && ! python3 -c 'import antlr4' >/dev/null 2>&1; then
+    echo "    Таргет Python (${reason}), но python3 с пакетом antlr4-python3-runtime в окружении не найден —"
+    echo "    сборка не выполнена (ограничение окружения, не работы)."
+    _antlr_skip_note
+    echo "SKIP no-python-runtime"
+    return 0
+  fi
+  [ "${target}" = "java" ] || echo "    Таргет: ${title} (${reason})."
+
   mkdir -p "${outdir}"
   # -Xexact-output-dir: класть файлы прямо в outdir, а не воспроизводить путь.
   # Файлы копируем в outdir: ANTLR ищет tokenVocab рядом с грамматикой.
   cp "${files[@]}" "${outdir}/"
-  local basenames=() b
+  local basenames=() b lang_flag=()
   for f in "${files[@]}"; do basenames+=("$(basename "${f}")"); done
+  case "${target}" in
+    csharp) lang_flag=(-Dlanguage=CSharp) ;;
+    python) lang_flag=(-Dlanguage=Python3) ;;
+    java)   lang_flag=(-Dlanguage=Java) ;;
+  esac
 
-  out="$(cd "${outdir}" && timeout 120 java -jar "${jar}" -o . -Xexact-output-dir -no-listener -no-visitor "${basenames[@]}" 2>&1)"
+  out="$(cd "${outdir}" && timeout 120 java -jar "${jar}" "${lang_flag[@]}" -o . -Xexact-output-dir -no-listener -no-visitor "${basenames[@]}" 2>&1)"
   rc=$?
   if [ -n "${out}" ]; then
     echo "    Вывод antlr4:"
@@ -309,25 +570,58 @@ _antlr_build() {
   if printf '%s\n' "${out}" | grep -qE '^(warning|error)\('; then
     echo "    ЗАМЕЧАНИЕ: antlr4 выдал предупреждения — см. выше."
   fi
-
-  _antlr_write_driver "${outdir}"
-  out="$(cd "${outdir}" && timeout 120 javac -encoding UTF-8 -cp "${jar}" ./*.java 2>&1)"
-  rc=$?
-  if [ "${rc}" -ne 0 ]; then
-    echo "    Вывод javac:"
-    printf '%s\n' "${out}" | head -n 15 | cut -c1-300 | sed 's/^/      /'
-    echo "    РЕЗУЛЬТАТ: сгенерированный Java-код не компилируется (код ${rc}). Обычно это встроенный в .g4 код под другой"
-    echo "    язык. Прогон примеров ПРОПУЩЕН — это ограничение автоматической проверки, а НЕ ошибка студента."
-    echo "SKIP javac-failed"
-    return 0
-  fi
-
   for b in "${basenames[@]}"; do
     rm -f "${outdir:?}/${b}"
   done
 
-  echo "    Сборка: успешно. Лексер: ${lexer_class}, парсер: ${parser_class}, стартовое правило: ${rule}"
-  echo "OK ${lexer_class} ${parser_class} ${rule}"
+  for src in ${super_sources[@]+"${super_sources[@]}"}; do
+    cp "${src}" "${outdir}/"
+  done
+
+  local tool
+  case "${target}" in
+    java)
+      tool=javac
+      _antlr_write_driver "${outdir}"
+      # -d .: базовый класс студента может лежать в пакете.
+      out="$(cd "${outdir}" && timeout 120 javac -encoding UTF-8 -d . -cp "${jar}" ./*.java 2>&1)" ;;
+    csharp)
+      tool="dotnet build"
+      _antlr_write_csharp_driver "${outdir}" "${need_dentlr}"
+      # Без фида пакеты берутся из источников dotnet по умолчанию (локальный
+      # запуск с сетью); с фидом — изолированный кэш внутри outdir.
+      # Сервер сборки и node reuse отключены: иначе после сборки остаются
+      # фоновые процессы, и контейнер/timeout ждут их.
+      out="$(cd "${outdir}" \
+        && if [ -n "${ANTLR_NUGET_FEED:-}" ]; then export NUGET_PACKAGES="${outdir}-nuget"; fi \
+        && DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
+           timeout 180 dotnet build YapisParseDriver.csproj -nologo -v q -nodeReuse:false \
+             -p:UseSharedCompilation=false -o out 2>&1)" ;;
+    python)
+      tool=python3
+      _antlr_write_python_driver "${outdir}"
+      out="$(cd "${outdir}" && timeout 60 python3 -c 'import importlib, sys
+for m in sys.argv[1:]:
+    importlib.import_module(m)' "${lexer_class}" "${parser_class}" 2>&1)" ;;
+  esac
+  rc=$?
+  if [ "${rc}" -ne 0 ]; then
+    echo "    Вывод ${tool}:"
+    printf '%s\n' "${out}" | grep -vE '^\s*$' | grep -E 'error|Error|rror:|^\s' | head -n 15 | cut -c1-300 | sed 's/^/      /'
+    echo "    РЕЗУЛЬТАТ: сгенерированный код (${title}) не компилируется (код ${rc})."
+    if [ "${target}" = "java" ] && [ "${strong}" -eq 0 ] && [ "${#super_sources[@]}" -eq 0 ]; then
+      echo "    Обычно это встроенный в .g4 код под другой язык, который проверка не распознала."
+    else
+      echo "    Если ошибка в коде из самого .g4 (@header/@members) или в базовом классе — это замечание к работе;"
+      echo "    если не найден тип из другой части работы (класс вне каталога грамматики) — ограничение проверки."
+    fi
+    echo "    Прогон примеров ПРОПУЩЕН."
+    echo "SKIP compile-failed"
+    return 0
+  fi
+
+  echo "    Сборка (${title}): успешно. Лексер: ${lexer_class}, парсер: ${parser_class}, стартовое правило: ${rule}"
+  echo "OK ${target} ${lexer_class} ${parser_class} ${rule}"
   return 0
 }
 
@@ -392,7 +686,7 @@ run_antlr_checks() {
   # shellcheck disable=SC2064
   trap "rm -rf '${tmp_root}'" RETURN
 
-  local failed=0 built=0 g kind dir lexers=() group=() name outdir status lexer_class parser rule example rel n=0
+  local failed=0 built=0 skipped=0 target g kind dir lexers=() group=() name outdir status lexer_class parser rule example rel n=0
 
   for g in "${grammars[@]}"; do
     kind="$(_antlr_grammar_kind "${g}")"
@@ -435,18 +729,19 @@ run_antlr_checks() {
     n=$((n + 1))
     outdir="${tmp_root}/g${n}"
     echo "== ${rel} (${name}) =="
-    status="$(_antlr_build "${jar}" "${outdir}" "${group[@]}")"
+    status="$(_antlr_build "${jar}" "${outdir}" "${work_dir}" "${group[@]}")"
     printf '%s\n' "${status}" | sed '$d'
     status="$(printf '%s\n' "${status}" | tail -n 1)"
 
     case "${status}" in
       FAIL*) failed=$((failed + 1)); echo; continue ;;
-      SKIP*) echo; continue ;;
+      SKIP*) skipped=$((skipped + 1)); echo; continue ;;
       OK*)   built=$((built + 1)) ;;
     esac
-    lexer_class="$(printf '%s' "${status}" | awk '{ print $2 }')"
-    parser="$(printf '%s' "${status}" | awk '{ print $3 }')"
-    rule="$(printf '%s' "${status}" | awk '{ print $4 }')"
+    target="$(printf '%s' "${status}" | awk '{ print $2 }')"
+    lexer_class="$(printf '%s' "${status}" | awk '{ print $3 }')"
+    parser="$(printf '%s' "${status}" | awk '{ print $4 }')"
+    rule="$(printf '%s' "${status}" | awk '{ print $5 }')"
 
     if [ -z "${examples_dir}" ]; then
       echo "    Директория с примерами не найдена — прогон пропущен."
@@ -457,7 +752,7 @@ run_antlr_checks() {
     if [ "${#ok_examples[@]}" -gt 0 ]; then
       echo "  -- Корректные примеры (ожидается разбор без ошибок) --"
       for example in "${ok_examples[@]}"; do
-        _antlr_run_example "${outdir}" "${jar}" "${lexer_class}" "${parser}" "${rule}" "${example}" ok "${timeout_s}" "${example#"${work_dir}"/}" \
+        _antlr_run_example "${outdir}" "${jar}" "${target}" "${lexer_class}" "${parser}" "${rule}" "${example}" ok "${timeout_s}" "${example#"${work_dir}"/}" \
           || failed=$((failed + 1))
       done
     else
@@ -466,7 +761,7 @@ run_antlr_checks() {
     if [ "${#err_examples[@]}" -gt 0 ]; then
       echo "  -- Примеры с ошибками (ожидаются сообщения об ошибках) --"
       for example in "${err_examples[@]}"; do
-        _antlr_run_example "${outdir}" "${jar}" "${lexer_class}" "${parser}" "${rule}" "${example}" error "${timeout_s}" "${example#"${work_dir}"/}" \
+        _antlr_run_example "${outdir}" "${jar}" "${target}" "${lexer_class}" "${parser}" "${rule}" "${example}" error "${timeout_s}" "${example#"${work_dir}"/}" \
           || failed=$((failed + 1))
       done
     fi
@@ -478,8 +773,13 @@ run_antlr_checks() {
     return 1
   fi
   if [ "${built}" -eq 0 ]; then
-    echo "Итог: прогон примеров не выполнен ни для одной грамматики (причины выше). Если причина — ограничение"
-    echo "проверки (ПРОПУЩЕН), это не замечание к работе: грамматику нужно проверить по тексту."
+    echo "Итог: прогон примеров НЕ ВЫПОЛНЕН ни для одной грамматики (причины выше). Если причина — ограничение"
+    echo "проверки (ПРОПУЩЕН), это не замечание к работе, но и подтверждения, что примеры разбираются, НЕТ:"
+    echo "грамматику и примеры нужно проверить по тексту."
+    return 0
+  fi
+  if [ "${skipped}" -gt 0 ]; then
+    echo "Итог: собрано грамматик — ${built}, их примеры разобраны ожидаемо; ещё ${skipped} грамматик(и) не собраны (ПРОПУЩЕН, см. выше)."
     return 0
   fi
   echo "Итог: собрано грамматик — ${built}, все проверенные примеры разобраны ожидаемо."

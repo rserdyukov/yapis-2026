@@ -13,7 +13,7 @@
 |---|---|
 | `.github/review/tasks/taskN/prompt.md` | Что проверять в работе №N |
 | `.github/review/tasks/taskN/check.sh` | Структурные проверки: наличие файлов, сборка грамматики (ЛР2), запуск `compile.sh` (ЛР3–5) |
-| `.github/review/lib/antlr-check.sh` | Сборка `.g4` в Java и прогон примеров через свой драйвер (имена лексера и парсера любые) — аналог lab.antlr.org |
+| `.github/review/lib/antlr-check.sh` | Сборка `.g4` и прогон примеров через свой драйвер (имена лексера и парсера любые) — аналог lab.antlr.org. Таргет — Java; C# или Python, если в `@header`/`@members` код на этом языке; базовый класс `superClass` берётся из работы (`X.java`/`X.cs`/`X.py`) или пакета Dentlr |
 | `.github/review/lib/compile-check.sh` | Прогон `compile.sh` на примерах, отличает падение компилятора от диагностики |
 | `.github/review/lib/install-deps.sh` | Фаза зависимостей (с сетью, без секретов): pip/maven/gradle/npm/dotnet по манифестам или `install-deps.sh` студента |
 | `.github/review/lib/layout-check.sh` | Раскладка по GUIDE.md: код в `compiler/`, `compile.sh` в корне |

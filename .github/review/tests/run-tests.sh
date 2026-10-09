@@ -1836,6 +1836,7 @@ import sys
 }
 prog : NUM EOF ;
 NUM  : [0-9]+ ;
+WS   : [ \t\r\n]+ -> skip ;
 EOF
       printf '1\n' > "${dir}/examples/ok.txt" ;;
     split-names)
@@ -1855,15 +1856,88 @@ EOF
       printf '1;\n2;\n' > "${dir}/examples/ok.txt"
       printf '1 2;\n' > "${dir}/examples/error-no-semi.txt" ;;
     superclass)
+      # Dentlr — NuGet-пакет с базовым лексером отступов для C#.
       cat > "${dir}/compiler/L.g4" <<'EOF'
 lexer grammar L;
+tokens { INDENT, DEDENT }
 options { superClass=Dentlr.DentlrLexer; }
-NUM : [0-9]+ ;
+@members {
+public override IToken NextToken()
+{
+    if (!AreTokensInitialized) InitializeTokens(INDENT, DEDENT, EOL);
+    return base.NextToken();
+}
+}
+EOL   : '\r'? '\n' ;
+ID    : [a-z]+ ;
+COLON : ':' ;
+WS    : [ ]+ -> channel(HIDDEN) ;
 EOF
       cat > "${dir}/compiler/P.g4" <<'EOF'
 parser grammar P;
 options { tokenVocab=L; }
+prog : stmt+ EOF ;
+stmt : ID EOL | ID COLON EOL INDENT stmt+ DEDENT ;
+EOF
+      printf 'a\nb:\n  c\n  d\ne\n' > "${dir}/examples/ok.txt" ;;
+    superclass-java)
+      # yapis-2026-321702-cheretun#6: базовый класс лексера лежит рядом с
+      # грамматикой на Java — грамматика собирается и прогоняется полностью.
+      cat > "${dir}/compiler/L.g4" <<'EOF'
+lexer grammar L;
+options { superClass = LBase; }
+NUM : [0-9]+ ;
+WS  : [ \t\r\n]+ -> skip ;
+EOF
+      cat > "${dir}/compiler/P.g4" <<'EOF'
+parser grammar P;
+options { tokenVocab = L; }
+prog : NUM+ EOF ;
+EOF
+      cat > "${dir}/compiler/LBase.java" <<'EOF'
+import org.antlr.v4.runtime.*;
+public abstract class LBase extends Lexer {
+    public LBase(CharStream input) { super(input); }
+}
+EOF
+      printf '1 2\n' > "${dir}/examples/ok.txt"
+      printf '1 x\n' > "${dir}/examples/error-letter.txt" ;;
+    superclass-missing)
+      printf 'grammar M;\noptions { superClass = Nope; }\nprog : ID EOF ;\nID : [a-z]+ ;\n' > "${dir}/compiler/M.g4"
+      printf 'a\n' > "${dir}/examples/ok.txt" ;;
+    csharp)
+      # yapis-2026-321702-burak#6: INDENT/DEDENT в @members на C#.
+      cat > "${dir}/compiler/L.g4" <<'EOF'
+lexer grammar L;
+@header {
+using System.Linq;
+}
+@members {
+private readonly Queue<IToken> _pending = new Queue<IToken>();
+public override IToken NextToken()
+{
+    if (_pending.Count > 0) return _pending.Dequeue();
+    return base.NextToken();
+}
+}
+NUM : [0-9]+ ;
+WS  : [ \t\r\n]+ -> skip ;
+EOF
+      cat > "${dir}/compiler/P.g4" <<'EOF'
+parser grammar P;
+options { tokenVocab = L; }
+prog : NUM+ EOF ;
+EOF
+      printf '1 2\n' > "${dir}/examples/ok.txt"
+      printf '1 x\n' > "${dir}/examples/error-letter.txt" ;;
+    javascript)
+      cat > "${dir}/compiler/Calc.g4" <<'EOF'
+grammar Calc;
+@members {
+const depth = 0;
+}
 prog : NUM EOF ;
+NUM  : [0-9]+ ;
 EOF
       printf '1\n' > "${dir}/examples/ok.txt" ;;
   esac
@@ -1901,14 +1975,49 @@ test_antlr_check_detects_broken_grammar() {
   return 0
 }
 
-# Грамматика с Python-кодом в @header в Java не соберётся — это ограничение
+# Код в @members под таргет без рантайма в образе (JavaScript) — ограничение
 # проверки, а не ошибка студента: код 0 и явное сообщение.
 test_antlr_check_skips_foreign_actions() {
   _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-js"; _make_grammar_work "${w}" javascript
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "таргета javascript" "таргет назван" || return 1
+  assert_contains "${out}" "ПРОПУЩЕН" "пропуск объявлен явно" || return 1
+  assert_contains "${out}" "НЕ ВЫПОЛНЕН" "итог не выдаёт пропуск за успех" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ограничение окружения не должно давать ненулевой код"; return 1; }
+  return 0
+}
+
+# Python-код в @header: собирается в Python-таргете, если есть рантайм
+# antlr4, иначе — честный пропуск. В Java его не собираем никогда.
+test_antlr_check_python_target() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
   local w="${TMP_ROOT}/g-py"; _make_grammar_work "${w}" python
   local out rc; out="$(_run_antlr "${w}")"; rc=$?
-  assert_contains "${out}" "ПРОПУЩЕН" "пропуск объявлен явно" || return 1
-  [ "${rc}" -eq 0 ] || { fail "ограничение окружения не должно давать ненулевой код"; return 1; }
+  assert_not_contains "${out}" "Сборка (Java)" "Python-код не собирается в Java" || return 1
+  if python3 -c 'import antlr4' >/dev/null 2>&1; then
+    assert_contains "${out}" "Сборка (Python): успешно" "собрано в Python" || return 1
+    assert_contains "${out}" "разобран без ошибок" "пример прогнан" || return 1
+  else
+    assert_contains "${out}" "antlr4-python3-runtime" "причина пропуска названа" || return 1
+    assert_contains "${out}" "ПРОПУЩЕН" "пропуск объявлен явно" || return 1
+  fi
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
+  return 0
+}
+
+# Определение языка кода в @header/@members: C# и Python не путаются с Java.
+test_antlr_action_language_detection() {
+  local d="${TMP_ROOT}/lang"; rm -rf "${d}"; mkdir -p "${d}"
+  printf 'grammar A;\n@header {\nusing System.Linq;\n}\nprog : EOF ;\n' > "${d}/cs.g4"
+  printf 'grammar A;\n@members {\ndef f(self):\n    return self.x\n}\nprog : EOF ;\n' > "${d}/py.g4"
+  printf 'grammar A;\n@header {\nimport java.util.*;\n}\n@members {\nprivate int depth = 0;\n}\nprog : EOF ;\n' > "${d}/java.g4"
+  printf 'grammar A;\nprog : EOF ;\n' > "${d}/none.g4"
+  local f r
+  for f in cs:csharp py:python java:java none:java; do
+    r="$(bash -c "source '${REVIEW_DIR}/lib/antlr-check.sh'; _antlr_action_language '${d}/${f%%:*}.g4'")"
+    assert_eq "${r}" "${f##*:}" "язык кода в ${f%%:*}.g4" || return 1
+  done
   return 0
 }
 
@@ -1927,15 +2036,70 @@ test_antlr_check_split_grammars_any_names() {
   return 0
 }
 
-# superClass (Dentlr и т.п.) — класс вне .g4: в Java не соберётся. Это
-# ограничение проверки, и вывод обязан прямо сказать, что это не ошибка.
-test_antlr_check_skips_super_class() {
+# superClass = Dentlr.DentlrLexer — пакет для C#: грамматика собирается в
+# C#-таргете (в образе — из офлайн-фида ANTLR_NUGET_FEED). Без dotnet —
+# пропуск, и вывод обязан прямо сказать, что это не ошибка.
+test_antlr_check_dentlr_super_class() {
   _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
   local w="${TMP_ROOT}/g-sc"; _make_grammar_work "${w}" superclass
   local out rc; out="$(_run_antlr "${w}")"; rc=$?
-  assert_contains "${out}" "superClass = Dentlr.DentlrLexer" "причина названа" || return 1
+  assert_not_contains "${out}" "Сборка (Java)" "Dentlr не собирается в Java" || return 1
+  if command -v dotnet >/dev/null 2>&1; then
+    assert_contains "${out}" "Сборка (C#): успешно" "собрано в C# с Dentlr" || return 1
+    assert_contains "${out}" "разобран без ошибок" "INDENT/DEDENT от Dentlr работают" || return 1
+  else
+    assert_contains "${out}" "dotnet в окружении не найден" "причина пропуска названа" || return 1
+    assert_contains "${out}" "НЕ ошибка студента" "явно не замечание" || return 1
+  fi
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
+  return 0
+}
+
+# Регрессия: yapis-2026-321702-cheretun#6 — superClass = RelangLexerBase,
+# а RelangLexerBase.java лежал рядом с грамматикой. Прогон пропускался по
+# одному слову superClass, хотя всё нужное для сборки было в работе.
+test_antlr_check_super_class_java_source() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-scj"; _make_grammar_work "${w}" superclass-java
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "базовый класс LBase — compiler/LBase.java" "исходник базового класса найден" || return 1
+  assert_contains "${out}" "Сборка (Java): успешно" "собрано вместе с базовым классом" || return 1
+  assert_contains "${out}" "разобран без ошибок" "корректный пример прогнан" || return 1
+  assert_contains "${out}" "ошибка обнаружена, как и ожидается" "error-пример прогнан" || return 1
+  assert_not_contains "${out}" "ПРОПУЩЕН" "прогон не пропущен" || return 1
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
+  return 0
+}
+
+# superClass, исходника которого в работе нет, — честный пропуск с именем класса.
+test_antlr_check_super_class_missing_source() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-scm"; _make_grammar_work "${w}" superclass-missing
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_contains "${out}" "исходник базового класса Nope в работе не найден" "причина названа" || return 1
   assert_contains "${out}" "НЕ ошибка студента" "явно не замечание" || return 1
+  assert_contains "${out}" "НЕ ВЫПОЛНЕН" "итог не выдаёт пропуск за успех" || return 1
   [ "${rc}" -eq 0 ] || { fail "ограничение проверки не должно давать ненулевой код"; return 1; }
+  return 0
+}
+
+# Регрессия: yapis-2026-321702-burak#6 — INDENT/DEDENT в @members на C#,
+# прогон пропускался. Теперь грамматика собирается в C#-таргете.
+test_antlr_check_csharp_actions() {
+  _antlr_available || { echo "    (пропущено: нет java/antlr jar)"; return 0; }
+  local w="${TMP_ROOT}/g-cs"; _make_grammar_work "${w}" csharp
+  local out rc; out="$(_run_antlr "${w}")"; rc=$?
+  assert_not_contains "${out}" "Сборка (Java)" "C#-код не собирается в Java" || return 1
+  if command -v dotnet >/dev/null 2>&1; then
+    assert_contains "${out}" "Таргет: C#" "таргет C# выбран по коду в @members" || return 1
+    assert_contains "${out}" "Сборка (C#): успешно" "собрано в C#" || return 1
+    assert_contains "${out}" "разобран без ошибок" "корректный пример прогнан" || return 1
+    assert_contains "${out}" "ошибка обнаружена, как и ожидается" "error-пример прогнан" || return 1
+  else
+    assert_contains "${out}" "Таргет C#" "таргет C# выбран по коду в @members" || return 1
+    assert_contains "${out}" "dotnet в окружении не найден" "причина пропуска названа" || return 1
+  fi
+  [ "${rc}" -eq 0 ] || { fail "ожидался код 0, получен ${rc}"; return 1; }
   return 0
 }
 
@@ -1944,6 +2108,10 @@ test_prompt_task2_skip_is_not_remark() {
   local p="${REVIEW_DIR}/tasks/task2/prompt.md"
   grep -q 'а не замечание' "${p}" || { fail "промпт должен говорить, что пропуск — не замечание"; return 1; }
   grep -q 'не проверено: <причина' "${p}" || { fail "промпт должен требовать «не проверено» в таблице"; return 1; }
+  # burak#6, cheretun#6: при пропущенном прогоне резюме было «Грамматика
+  # полностью соответствует...» — без единого доказательства.
+  grep -q 'Если прогон пропущен, резюме обязано это сказать' "${p}" \
+    || { fail "промпт должен требовать упомянуть пропуск прогона в резюме"; return 1; }
   return 0
 }
 

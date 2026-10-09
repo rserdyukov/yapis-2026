@@ -69,6 +69,7 @@ Workflow `review` по расписанию (каждые 10 минут) обх�
 ## Образ для проверок
 
 `reviewer/Dockerfile` содержит toolchain студенческих работ (Python, JDK 21,
-Node, .NET SDK 10 + runtime 8.0, ANTLR). Собирается workflow `build-check-image` еженедельно и
+Node, .NET SDK 10 + runtime 8.0, ANTLR и офлайн-фид NuGet с `Antlr4.Runtime.Standard` и `Dentlr`
+для сборки C#-грамматик ЛР2 без сети). Собирается workflow `build-check-image` еженедельно и
 при изменении Dockerfile. Если студенту нужен другой инструмент — добавьте
 пакет в Dockerfile в репозитории курса и запустите синхронизацию.

@@ -54,6 +54,18 @@ RUN mkdir -p /opt/antlr \
     && printf '#!/bin/sh\nexec java -cp %s:"$CLASSPATH" org.antlr.v4.gui.TestRig "$@"\n' "${ANTLR_JAR}" > /usr/local/bin/grun \
     && chmod +x /usr/local/bin/antlr4 /usr/local/bin/grun
 
+# Офлайн-фид NuGet для сборки C#-грамматик ЛР2 (.github/review/lib/antlr-check.sh):
+# грамматика с кодом на C# в @members или с superClass = Dentlr.DentlrLexer
+# собирается в C#-таргете, а сети во время проверки нет. Antlr4.Runtime.Standard
+# 4.13.1 — последняя версия рантайма в NuGet (совместима с инструментом 4.13.2);
+# Dentlr — базовый лексер INDENT/DEDENT, который встречается в работах на C#.
+ENV ANTLR_NUGET_FEED=/opt/antlr/nuget
+RUN mkdir -p "${ANTLR_NUGET_FEED}" \
+    && curl -fsSL -o "${ANTLR_NUGET_FEED}/antlr4.runtime.standard.4.13.1.nupkg" \
+         https://api.nuget.org/v3-flatcontainer/antlr4.runtime.standard/4.13.1/antlr4.runtime.standard.4.13.1.nupkg \
+    && curl -fsSL -o "${ANTLR_NUGET_FEED}/dentlr.2.0.0.nupkg" \
+         https://api.nuget.org/v3-flatcontainer/dentlr/2.0.0/dentlr.2.0.0.nupkg
+
 # JAVA_HOME — через symlink, а не захардкоженный путь с архитектурой:
 # на раннере образ amd64, а локально у преподавателя на Apple Silicon —
 # arm64, и mvn с неверным JAVA_HOME отказывался стартовать.

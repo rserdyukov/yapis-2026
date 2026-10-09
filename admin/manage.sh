@@ -1818,7 +1818,11 @@ sync_repo_from_manifest() {
     rm -rf "${work:?}/${rm_path}"
   done <<< "$(parse_student_remove "${manifest}")"
 
-  find "${work}" -name '.DS_Store' -delete 2>/dev/null || true
+  # Мусор редакторов и ОС, которого нет в git репозитория курса, но который
+  # cp -R копирует из рабочей копии (реальный случай: .antlr-check.sh.swp
+  # открытого в vim файла попал в репозиторий ревьюера).
+  find "${work}" \( -name '.DS_Store' -o -name '.*.sw[a-p]' -o -name '*~' -o -name '.#*' \) \
+    -not -path "${work}/.git/*" -delete 2>/dev/null || true
 
   (
     cd "${work}"

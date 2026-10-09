@@ -1,0 +1,5 @@
+int n = 3
+bool flag = n < 10
+if flag
+  n = n + 1
+end

@@ -2,11 +2,6 @@
 // Считываем ряд чисел, строим статистику: сумма, среднее, минимум,
 // максимум, дисперсия, доля чётных. Печатаем отчёт.
 
-float toFloat(int x) {
-    float y = x;
-    return y;
-}
-
 int isEven(int x) {
     if (x % 2 == 0) {
         return 1;
@@ -19,14 +14,13 @@ float square(float x) {
     return x * x;
 }
 
-string verdict(float mean, float variance) {
-    if (variance < 1.0 && mean > 0.0) {
+// Короткие имена параметров: m — среднее, v — дисперсия.
+string verdict(float m, float v) {
+    if (v < 1.0 && m > 0.0) {
         return "stable positive";
-    }
-    if (variance >= 1.0 || mean <= 0.0) {
+    } else {
         return "noisy";
     }
-    return "unknown";
 }
 
 int n = read();
@@ -38,7 +32,7 @@ int evenCount = 0;
 float sumSquares = 0.0;
 
 while (i < n) {
-    int x = read();
+    int x = read();         // объявление в теле цикла: та же x на каждой итерации
     if (i == 0) {
         minValue = x;
         maxValue = x;
@@ -50,28 +44,28 @@ while (i < n) {
         maxValue = x;
     }
     sum = sum + x;
-    sumSquares = sumSquares + square(toFloat(x));
+    sumSquares = sumSquares + square(x);
     evenCount = evenCount + isEven(x);
     i = i + 1;
 }
 
 float mean = 0.0;
 float variance = 0.0;
-if (n != 0) {
-    mean = sum / n;
-    variance = sumSquares / n - square(mean);
-}
-
 float evenShare = 0.0;
-if (!(n == 0)) {
-    evenShare = toFloat(evenCount) / toFloat(n);
-}
+float total = sum;          // неявное int -> float: деление станет вещественным
 
 write("count = " + n);
-write("sum = " + sum);
-write("min = " + minValue);
-write("max = " + maxValue);
-write("mean = " + mean);
-write("variance = " + variance);
-write("even share = " + evenShare);
-write("verdict: " + verdict(mean, variance));
+if (n == 0) {
+    write("empty series");
+} else {
+    mean = total / n;
+    variance = sumSquares / n - square(mean);
+    evenShare = (evenCount * 1.0) / n;
+    write("sum = " + sum);
+    write("min = " + minValue);
+    write("max = " + maxValue);
+    write("mean = " + mean);
+    write("variance = " + variance);
+    write("even share = " + evenShare);
+    write("verdict: " + verdict(mean, variance));
+}

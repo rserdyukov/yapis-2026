@@ -844,6 +844,20 @@ test_prompt_builds_for_all_tasks() {
   return 0
 }
 
+# Лимит объёма ответа подставляется из config.env, на ЛР4 — свой
+# (чеклист П1-П9 с файлами и строками в 5000 символов не помещается).
+test_prompt_uses_per_task_length_limit() {
+  local diff="${TMP_ROOT}/dl.txt"; printf 'x\n' > "${diff}"
+  local general task4 out
+  general="$(sed -n 's/^REVIEW_MAX_CHARS=//p' "${REVIEW_DIR}/config.env")"
+  task4="$(sed -n 's/^REVIEW_MAX_CHARS_TASK4=//p' "${REVIEW_DIR}/config.env")"
+  [ -n "${general}" ] && [ -n "${task4}" ] || { fail "в config.env нет REVIEW_MAX_CHARS[_TASK4]"; return 1; }
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 "." "s" 4 "${diff}" 2>&1)"
+  assert_contains "${out}" "не более ${task4} символов" "лимит ЛР4" || return 1
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 "." "s" 3 "${diff}" 2>&1)"
+  assert_contains "${out}" "не более ${general} символов" "общий лимит"
+}
+
 # Регрессия: build-prompt.sh раньше искал промпты относительно текущего
 # каталога (REVIEW_ROOT=".github/review"), поэтому работал только если его
 # запускали из корня репозитория. Ревьюер запускает его из рабочей копии
@@ -1166,7 +1180,7 @@ test_agent_reads_prompt_from_stdin() {
   case "${run_line}" in
     *'$(cat '*) fail "промпт не должен передаваться через \$(cat ...) — предел argv"; return 1 ;;
   esac
-  grep -A1 'opencode run --auto --pure' "${REPO_ROOT}/reviewer/lib/review-pr.sh" | grep -q '< "${PROMPT_FILE}"' \
+  grep -A1 'opencode run "${AGENT_RUN_FLAGS\[@\]}"' "${REPO_ROOT}/reviewer/lib/review-pr.sh" | grep -q '< "${PROMPT_FILE}"' \
     || { fail "opencode run должен читать промпт из PROMPT_FILE через stdin"; return 1; }
   return 0
 }
@@ -1472,8 +1486,10 @@ _make_student_work() {
 #!/usr/bin/env bash
 set -uo pipefail
 SRC="${1:?нужен файл}"
+[ -f "$SRC" ] || { echo "error: файл не найден: $SRC" >&2; exit 2; }
+iconv -f UTF-8 -t UTF-8 "$SRC" >/dev/null 2>&1 || { echo "error: файл не в UTF-8" >&2; exit 2; }
 if grep -q BAD "$SRC"; then
-  echo "error: строка 1: недопустимый токен" >&2
+  echo "error: строка $(grep -n BAD "$SRC" | head -n 1 | cut -d: -f1): недопустимый токен" >&2
   exit 1
 fi
 touch "${SRC%.txt}.class"
@@ -1556,6 +1572,147 @@ test_compile_check_handles_timeout() {
   local out
   out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; run_compile_checks '${w}' 1 6 '${w}/examples'" 2>&1)"
   assert_contains "${out}" "таймаут" "зависший compile.sh должен отсекаться по таймауту"
+}
+
+# Регрессия rublevskaya#8: head -n 6 по алфавиту брал error-lex/error-syntax
+# раньше error-sem и молча отбрасывал 3 из 7 семантических примеров, а бот
+# писал «7/7». Теперь «старые» ошибки идут последними, пропущенные
+# перечисляются, а счётчики печатаются явно.
+test_compile_check_demotes_legacy_errors_and_lists_skipped() {
+  local w="${TMP_ROOT}/cc-order"
+  _make_student_work "${w}"
+  rm -f "${w}/examples/error-1.txt"
+  local f
+  for f in error-lex-a error-syntax-b error-sem-c error-sem-d; do
+    printf 'BAD\n' > "${w}/examples/${f}.txt"
+  done
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; run_compile_checks '${w}' 20 2 '${w}/examples' 'lex|synt'" 2>&1)"
+  assert_contains "${out}" "--- ./compile.sh examples/error-sem-c.txt" "семантический пример запущен" || return 1
+  assert_contains "${out}" "--- ./compile.sh examples/error-sem-d.txt" "семантический пример запущен" || return 1
+  assert_not_contains "${out}" "--- ./compile.sh examples/error-lex-a.txt" "лексический — за лимитом" || return 1
+  assert_contains "${out}" "НЕ запускались" "пропущенные перечислены" || return 1
+  assert_contains "${out}" "examples/error-lex-a.txt" "пропущенный файл назван" || return 1
+  assert_contains "${out}" "error-*: запущено 2, ожидаемо 2, не запускалось 2" "точные счётчики" || return 1
+  return 0
+}
+
+test_task4_check_runs_semantic_examples_first() {
+  grep -q 'run_compile_checks .*LEGACY_ERROR_RE' "${REVIEW_DIR}/tasks/task4/check.sh" \
+    || { fail "task4/check.sh должен передавать шаблон старых ошибок"; return 1; }
+  return 0
+}
+
+# Конфигурация агента одна на бота, review-local.sh и стенд: только
+# чтение, small_model = model, объявление модели — по флагу.
+test_agent_config_is_read_only_and_declares_model() {
+  local cfg
+  cfg="$(source "${REVIEW_DIR}/lib/agent-config.sh"; MODEL_DECLARE=1 MODEL_CONTEXT_TOKENS=1000 MODEL_OUTPUT_TOKENS=10 agent_config_json openrouter/a/b-1.5)" \
+    || { fail "agent_config_json упал"; return 1; }
+  printf '%s' "${cfg}" | jq -e '.model=="openrouter/a/b-1.5" and .small_model==.model
+      and .permission["*"]=="deny" and .permission.bash=="deny" and .permission.edit=="deny"
+      and .permission.webfetch=="deny" and .permission.read=="allow"
+      and .provider.openrouter.models["a/b-1.5"].limit.context==1000' >/dev/null \
+    || { fail "неверная конфигурация: ${cfg}"; return 1; }
+  cfg="$(source "${REVIEW_DIR}/lib/agent-config.sh"; MODEL_DECLARE=0 agent_config_json openrouter/a/b)"
+  printf '%s' "${cfg}" | jq -e 'has("provider")|not' >/dev/null \
+    || { fail "без MODEL_DECLARE модель объявляться не должна"; return 1; }
+  if (source "${REVIEW_DIR}/lib/agent-config.sh"; agent_config_json 'openrouter/a"b' >/dev/null 2>&1); then
+    fail "имя модели с кавычкой должно отвергаться"; return 1
+  fi
+  local s
+  for s in "${REPO_ROOT}/reviewer/lib/review-pr.sh" "${REPO_ROOT}/admin/template-review-local.sh" "${TESTS_DIR}/eval-prompts.sh"; do
+    grep -q 'agent_config_json' "${s}" || { fail "$(basename "${s}") не использует agent-config.sh"; return 1; }
+    grep -q 'agent_run_flags' "${s}" || { fail "$(basename "${s}") не использует agent_run_flags"; return 1; }
+  done
+  return 0
+}
+
+test_sanitize_replaces_latex_arrows() {
+  local f="${TMP_ROOT}/latex.md"
+  printf '| П2 README $\\leftrightarrow$ код | выполнено | `README.md:58` $\\to$ `a.py` | код $\\neq$ 0 |\n' > "${f}"
+  bash -c "source '${REPO_ROOT}/reviewer/lib/common.sh'; sanitize_review_text '${f}'"
+  local out; out="$(cat "${f}")"
+  assert_not_contains "${out}" '$\' "LaTeX-команды убраны" || return 1
+  assert_contains "${out}" "README ↔ код" "leftrightarrow → ↔" || return 1
+  assert_contains "${out}" '`README.md:58` → `a.py`' "to → →" || return 1
+  assert_contains "${out}" 'код ≠ 0' "neq → ≠" || return 1
+  return 0
+}
+
+# Зонды устойчивости (lib/probe-check.sh). Регрессия rublevskaya#8:
+# RecursionError на длинном выражении и трасса на не-UTF-8 файле не были
+# видны ни в прогоне примеров студента, ни слабой модели по коду.
+_make_probe_work() {
+  local dir="$1"
+  rm -rf "${dir}"; mkdir -p "${dir}/examples" "${dir}/compiler"
+  printf 'x = 1\ny = x + 2\n' > "${dir}/examples/1.txt"
+  printf 'x = 1\ny = BAD\n' > "${dir}/examples/error-sem-1.txt"
+  # «Компилятор»: трасса на не-UTF-8, падение на длинной строке,
+  # номер строки ошибки — по номеру строки с BAD.
+  cat > "${dir}/compile.sh" <<'EOF'
+#!/usr/bin/env bash
+SRC="${1:?}"
+[ -f "$SRC" ] || { echo "нет файла: $SRC" >&2; exit 2; }
+if LC_ALL=C grep -q $'\377' "$SRC"; then
+  echo 'Traceback (most recent call last):' >&2
+  echo "UnicodeDecodeError: 'utf-8' codec can't decode byte 0xff" >&2; exit 1
+fi
+if [ "$(wc -L < "$SRC" | tr -d ' ')" -gt 200 ]; then
+  echo 'Traceback (most recent call last):' >&2
+  echo 'RecursionError: maximum recursion depth exceeded' >&2; exit 1
+fi
+n="$(grep -n BAD "$SRC" | head -1 | cut -d: -f1)"
+[ -n "$n" ] && { echo "Семантическая ошибка: строка $n: BAD" >&2; exit 1; }
+exit 0
+EOF
+}
+
+test_probe_check_reports_crashes_and_line_shift() {
+  local w="${TMP_ROOT}/probe"
+  _make_probe_work "${w}"
+  local out rc
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; source '${REVIEW_DIR}/lib/probe-check.sh'; run_probe_checks '${w}' '${w}/examples' 20 sem" 2>&1)"
+  rc=$?
+  assert_contains "${out}" "ЗАМЕЧАНИЕ — переполнение стека" "RecursionError на длинной сумме" || return 1
+  assert_contains "${out}" "ошибка декодирования не перехвачена" "трасса на не-UTF-8" || return 1
+  assert_contains "${out}" "строка 2 → 7" "сдвиг номера строки на 5" || return 1
+  assert_contains "${out}" "замечаний 2" "счётчик замечаний" || return 1
+  [ ! -e "${w}/.review" ] || { fail "зонды должны убирать за собой .review/"; return 1; }
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  return 0
+}
+
+test_probe_check_detects_wrong_line_numbers() {
+  local w="${TMP_ROOT}/probe-lines"
+  _make_probe_work "${w}"
+  # Номер строки всегда 2 — как после препроцессора, который съел пустые строки.
+  sed -i.bak 's/строка \$n/строка 2/' "${w}/compile.sh" && rm -f "${w}/compile.sh.bak"
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; source '${REVIEW_DIR}/lib/probe-check.sh'; run_probe_checks '${w}' '${w}/examples' 20 sem" 2>&1)"
+  assert_contains "${out}" "номер строки 2 → 2, ожидалось 7" "неверный номер строки виден" || return 1
+  return 0
+}
+
+test_probe_deepen_keeps_strings_and_comments() {
+  local f="${TMP_ROOT}/deep.txt"
+  printf 'write("a = 5") // b = 3\nx = point(1.5, 2)\n' > "${f}"
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; l=\$(_probe_literal_line '${f}'); echo \"line=\$l\"; _probe_deepen '${f}' \"\$l\" 3")"
+  assert_contains "${out}" "line=2" "литералы в строках и комментариях пропущены" || return 1
+  assert_contains "${out}" 'x = point((1.5 + 0.0 + 0.0), 2)' "float-литерал дополнен нулями того же типа" || return 1
+  assert_contains "${out}" 'write("a = 5") // b = 3' "первая строка не тронута" || return 1
+  return 0
+}
+
+test_prompt_task4_has_fixed_checklist() {
+  local p="${REVIEW_DIR}/tasks/task4/prompt.md" n
+  for n in 1 2 3 4 5 6 7 8 9; do
+    grep -q "^\*\*П${n} " "${p}" || { fail "в промпте ЛР4 нет пункта П${n}"; return 1; }
+  done
+  grep -q 'Счётчики' "${p}" || { fail "промпт ЛР4 должен ссылаться на блок «Счётчики»"; return 1; }
+  grep -q 'Счётчики' "${REVIEW_DIR}/common-footer.md" || { fail "футер должен требовать числа из вывода"; return 1; }
+  return 0
 }
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -1883,6 +2040,27 @@ test_task_checks_include_layout() {
   return 0
 }
 
+# Регрессия rublevskaya#8: на ЛР4 вывод раскладки говорил «doc/ — отчёт»,
+# и модель «подтверждала» несуществующую папку. doc/ — только для ЛР5.
+test_layout_doc_only_with_flag() {
+  local w="${TMP_ROOT}/lay-doc"; rm -rf "${w}"; mkdir -p "${w}/compiler" "${w}/examples"
+  printf 'x\n' > "${w}/compiler/main.py"; printf '#!/bin/bash\n' > "${w}/compile.sh"
+  local out
+  out="$(_run_layout "${w}")"
+  assert_not_contains "${out}" "doc/ — отчёт" "без флага doc/ не заявляется как место отчёта" || return 1
+  assert_contains "${out}" "не проверяется" "без флага сказано, что doc/ не проверяется" || return 1
+  out="$(bash -c "source '${REVIEW_DIR}/lib/layout-check.sh'; check_layout '${w}' with-doc" 2>&1)"
+  assert_contains "${out}" "doc/ — отчёт" "на ЛР5 doc/ упоминается" || return 1
+  grep -q 'check_layout "${WORK_DIR}" with-doc' "${REVIEW_DIR}/tasks/task5/check.sh" \
+    || { fail "task5/check.sh должен звать check_layout с with-doc"; return 1; }
+  if grep -q 'with-doc' "${REVIEW_DIR}/tasks/task4/check.sh"; then fail "task4 не проверяет doc/"; return 1; fi
+  if grep -q 'doc/' "${REVIEW_DIR}/tasks/task4/prompt.md" \
+     && ! grep -q 'не требуется' "${REVIEW_DIR}/tasks/task4/prompt.md"; then
+    fail "промпт ЛР4 не должен требовать doc/"; return 1
+  fi
+  return 0
+}
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # Тесты: install-deps.sh — фаза зависимостей (без обращения к сети)
@@ -1945,7 +2123,9 @@ test_run_check_direct_runs_deps_phase() {
   cat > "${w}/compile.sh" <<'EOF'
 #!/usr/bin/env bash
 case "${PYTHONPATH:-}" in */.deps/python*) ;; *) echo "no deps env" >&2; exit 3 ;; esac
-grep -q BAD "$1" && { echo "line 1: error" >&2; exit 1; }
+[ -f "$1" ] || { echo "no file" >&2; exit 2; }
+iconv -f UTF-8 -t UTF-8 "$1" >/dev/null 2>&1 || { echo "not utf-8" >&2; exit 2; }
+grep -q BAD "$1" && { echo "line $(grep -n BAD "$1" | head -n 1 | cut -d: -f1): error" >&2; exit 1; }
 echo ok
 EOF
   local out="${TMP_ROOT}/rc-deps.out"

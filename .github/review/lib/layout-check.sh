@@ -11,8 +11,13 @@
 # пропускала analyzer.py в корне репозитория (semenido#3). Расположение —
 # факт, который дешевле проверить скриптом и отдать модели готовым.
 #
-# Использование: source layout-check.sh; check_layout <work_dir>
+# Использование: source layout-check.sh; check_layout <work_dir> [with-doc]
 # Печатает отчёт; возвращает 0, если исходники лежат в compiler/, иначе 1.
+#
+# with-doc — упоминать doc/ как место отчёта (ЛР5; наличие отчёта проверяет
+# сам tasks/task5/check.sh). Без флага сказано, что doc/ не проверяется:
+# строка «doc/ — отчёт» в выводе ЛР4 приводила к тому, что модель
+# «подтверждала» несуществующую папку (rublevskaya#8).
 
 # Расширения исходников компилятора. Не включаем .sh (compile.sh в корне —
 # норма), .md (документы), .txt (примеры), конфиги сборки (pom.xml,
@@ -21,10 +26,15 @@ LAYOUT_SOURCE_EXT_RE='\.(py|java|kt|kts|scala|cs|fs|js|mjs|ts|go|rs|c|cc|cpp|h|h
 
 check_layout() {
   local work="${1:?work_dir}"
+  local with_doc="${2:-}"
   work="$(cd "${work}" && pwd)"
   local status=0
 
-  echo "Раскладка (GUIDE.md, раздел «Структура репозитория»): compiler/ — код, examples/ — примеры, doc/ — отчёт, compile.sh — в корне."
+  if [ "${with_doc}" = "with-doc" ]; then
+    echo "Раскладка (GUIDE.md, раздел «Структура репозитория»): compiler/ — код, examples/ — примеры, doc/ — отчёт, compile.sh — в корне."
+  else
+    echo "Раскладка (GUIDE.md, раздел «Структура репозитория»): compiler/ — код, examples/ — примеры, compile.sh — в корне. Отчёт (doc/) на этой лабораторной не проверяется."
+  fi
 
   if [ -d "${work}/compiler" ]; then
     echo "  compiler/: есть, файлов исходников — $(find "${work}/compiler" -type f | grep -cE "${LAYOUT_SOURCE_EXT_RE}")."

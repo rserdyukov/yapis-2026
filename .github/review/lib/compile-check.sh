@@ -19,7 +19,16 @@
 # Используется из tasks/task3..task5/check.sh, чтобы не дублировать логику.
 #
 # Использование:
-#   run_compile_checks <work_dir> [timeout_seconds] [max_examples]
+#   run_compile_checks <work_dir> [timeout_seconds] [max_examples] [examples_dir] [demote_re]
+#
+# demote_re — регулярное выражение (grep -E, без учёта регистра) по имени
+# error-файла: такие примеры идут в прогон последними. На ЛР4 это
+# лексические/синтаксические примеры из ЛР3: при сортировке по алфавиту
+# error-lex-*/error-syntax-* шли раньше error-sem-* и вытесняли семантические
+# за лимит (rublevskaya#8: прогнано 4 из 7).
+#
+# Не попавшие в прогон файлы перечисляются в выводе, а в конце печатаются
+# точные счётчики — модель должна брать числа отсюда, а не из README.
 #
 # Возвращает 0, если поведение всех примеров ожидаемое, иначе 1.
 # Отсутствие compile.sh — это нарушение требования, возвращает 1.
@@ -113,6 +122,7 @@ run_compile_checks() {
   local timeout_s="${2:-120}"
   local max_examples="${3:-${COMPILE_CHECK_MAX_EXAMPLES_DEFAULT}}"
   local examples_dir="${4:-}"
+  local demote_re="${5:-}"
 
   local script
   if ! script="$(find_compile_script "${work_dir}")"; then
@@ -129,24 +139,41 @@ run_compile_checks() {
     return 1
   fi
 
-  local ok_examples=() err_examples=() line
+  local all_err all_ok
+  all_ok="$(find "${examples_dir}" -type f -not -iname "error-*" -not -iname "*.md" 2>/dev/null | sort)"
+  all_err="$(find "${examples_dir}" -type f -iname "error-*" 2>/dev/null | sort)"
+  if [ -n "${demote_re}" ] && [ -n "${all_err}" ]; then
+    all_err="$(
+      printf '%s\n' "${all_err}" | while IFS= read -r line; do
+        if ! basename "${line}" | grep -qiE "${demote_re}"; then printf '%s\n' "${line}"; fi
+      done
+      printf '%s\n' "${all_err}" | while IFS= read -r line; do
+        if basename "${line}" | grep -qiE "${demote_re}"; then printf '%s\n' "${line}"; fi
+      done
+    )"
+  fi
+
+  local ok_examples=() err_examples=() ok_skipped=() err_skipped=() line
   while IFS= read -r line; do
-    [ -n "${line}" ] && err_examples+=("${line}")
-  done < <(find "${examples_dir}" -type f -iname "error-*" 2>/dev/null | sort | head -n "${max_examples}")
+    [ -z "${line}" ] && continue
+    if [ "${#err_examples[@]}" -lt "${max_examples}" ]; then err_examples+=("${line}"); else err_skipped+=("${line}"); fi
+  done <<< "${all_err}"
 
   while IFS= read -r line; do
-    [ -n "${line}" ] && ok_examples+=("${line}")
-  done < <(find "${examples_dir}" -type f -not -iname "error-*" -not -iname "*.md" 2>/dev/null | sort | head -n "${max_examples}")
+    [ -z "${line}" ] && continue
+    if [ "${#ok_examples[@]}" -lt "${max_examples}" ]; then ok_examples+=("${line}"); else ok_skipped+=("${line}"); fi
+  done <<< "${all_ok}"
 
-  echo "Найден ${work_dir}/${script}. Прогоняю примеры (таймаут ${timeout_s}с на файл)."
+  echo "Найден ${work_dir}/${script}. Прогоняю примеры (таймаут ${timeout_s}с на файл, не более ${max_examples} каждого вида)."
+  [ -n "${demote_re}" ] && echo "Error-примеры с именем по шаблону «${demote_re}» (ошибки прошлых лабораторных) запускаются последними."
   echo
 
-  local failed=0 example
+  local ok_failed=0 err_failed=0 example
 
   if [ "${#ok_examples[@]}" -gt 0 ]; then
     echo "== Корректные примеры (ожидается успешная компиляция) =="
     for example in "${ok_examples[@]}"; do
-      _run_one_example "${work_dir}" "${script}" "${example}" "ok" "${timeout_s}" || failed=$((failed + 1))
+      _run_one_example "${work_dir}" "${script}" "${example}" "ok" "${timeout_s}" || ok_failed=$((ok_failed + 1))
     done
     echo
   else
@@ -157,7 +184,7 @@ run_compile_checks() {
   if [ "${#err_examples[@]}" -gt 0 ]; then
     echo "== Примеры с ошибками (ожидается сообщение об ошибке) =="
     for example in "${err_examples[@]}"; do
-      _run_one_example "${work_dir}" "${script}" "${example}" "error" "${timeout_s}" || failed=$((failed + 1))
+      _run_one_example "${work_dir}" "${script}" "${example}" "error" "${timeout_s}" || err_failed=$((err_failed + 1))
     done
     echo
   else
@@ -165,6 +192,20 @@ run_compile_checks() {
     echo
   fi
 
+  if [ "$(( ${#ok_skipped[@]} + ${#err_skipped[@]} ))" -gt 0 ]; then
+    echo "== НЕ запускались (лимит ${max_examples} на вид) =="
+    echo "Поведение этих файлов неизвестно: не пиши о них «отработал» и не включай их в числа прогона."
+    for example in ${ok_skipped[@]+"${ok_skipped[@]}"} ${err_skipped[@]+"${err_skipped[@]}"}; do
+      echo "  ${example#"${work_dir}"/}"
+    done
+    echo
+  fi
+
+  echo "Счётчики (копируй в таблицу проверок как есть):"
+  echo "  корректные: запущено ${#ok_examples[@]}, ожидаемо $(( ${#ok_examples[@]} - ok_failed )), не запускалось ${#ok_skipped[@]}"
+  echo "  error-*: запущено ${#err_examples[@]}, ожидаемо $(( ${#err_examples[@]} - err_failed )), не запускалось ${#err_skipped[@]}"
+
+  local failed=$((ok_failed + err_failed))
   if [ "${failed}" -gt 0 ]; then
     echo "Итог: расхождений с ожидаемым поведением — ${failed}."
     return 1

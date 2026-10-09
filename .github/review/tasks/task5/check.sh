@@ -16,6 +16,8 @@ TIMEOUT_SECONDS=180
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
 
 STATUS=0
 
@@ -49,7 +51,7 @@ for candidate in "examples" "example" "samples"; do
 done
 
 echo "== Раскладка репозитория =="
-check_layout "${WORK_DIR}" || STATUS=1
+check_layout "${WORK_DIR}" with-doc || STATUS=1
 echo
 
 echo "== Проверка компилятора через compile.sh =="
@@ -74,5 +76,11 @@ else
   echo "не генерирует запускаемый файл, либо артефакты складываются в"
   echo "нестандартное место или игнорируются git. Проверьте по коду и отчёту."
 fi
+echo
+
+# Зонды — после поиска артефактов: их файлы компилируются в .review/probes
+# и удаляются, в список артефактов студента они попасть не должны.
+echo "== Зонды устойчивости =="
+run_probe_checks "${WORK_DIR}" "${EXAMPLES_DIR}" 60 'sem' || STATUS=1
 
 exit "${STATUS}"

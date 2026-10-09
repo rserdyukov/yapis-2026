@@ -44,6 +44,16 @@ sanitize_review_text() {
     }
     { print }
   ' "${file}" > "${tmp}" && mv "${tmp}" "${file}"
+  # LaTeX-стрелки ($\to$, $\leftrightarrow$ …) GitHub в комментарии не
+  # отрисует: gemma 4 писала «П2 README $\leftrightarrow$ код». Заменяем
+  # на обычные символы во всём тексте — в ревью кода курса им взяться неоткуда.
+  LC_ALL=C sed -E \
+    -e 's/\$\\(leftrightarrow|Leftrightarrow|longleftrightarrow)\$/↔/g' \
+    -e 's/\$\\(to|rightarrow|Rightarrow|longrightarrow|implies)\$/→/g' \
+    -e 's/\$\\(leftarrow|Leftarrow|gets)\$/←/g' \
+    -e 's/\$\\(neq|ne)\$/≠/g' -e 's/\$\\(leq|le)\$/≤/g' -e 's/\$\\(geq|ge)\$/≥/g' \
+    -e 's/\$\\times\$/×/g' \
+    "${file}" > "${tmp}" && mv "${tmp}" "${file}"
   rm -f "${tmp}"
 }
 

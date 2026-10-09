@@ -351,6 +351,7 @@ fi
 say "2. ИИ-ревью"
 echo
 
+COURSE_MODEL="${MODEL}"
 if [ -n "${MODEL_OVERRIDE}" ]; then
   MODEL="${MODEL_OVERRIDE}"
 elif [ -n "${REVIEW_MODEL:-}" ]; then
@@ -411,33 +412,28 @@ mkdir -p "${REPO_ROOT}/.review"
 cp "${DIFF_FILE}" "${REPO_ROOT}/.review/pr-diff.txt"
 trap 'rm -f "${DIFF_FILE}" "${PROMPT_FILE}" "${CHECK_FILE}" "${GENERATED_FILE}" "${NUMSTAT_FILE}"; rm -rf "${SANDBOX}" "${REPO_ROOT}/.review"' EXIT
 
-# Агент работает в режиме только для чтения — как и в PR.
-AGENT_CONFIG="$(cat <<EOF
-{
-  "\$schema": "https://opencode.ai/config.json",
-  "model": "${MODEL}",
-  "small_model": "${MODEL}",
-  "share": "disabled",
-  "permission": {
-    "*": "deny",
-    "read": "allow",
-    "glob": "allow",
-    "grep": "allow",
-    "list": "allow",
-    "bash": "deny",
-    "edit": "deny",
-    "write": "deny"
-  }
-}
-EOF
-)"
+# Агент работает в режиме только для чтения — как и в PR. Конфигурация —
+# та же, что у бота (lib/agent-config.sh). Объявление модели в config.env
+# описывает MODEL курса; для своей модели (--model) его не используем.
+MODEL_DECLARE_EFFECTIVE="${MODEL_DECLARE:-0}"
+[ "${MODEL}" = "${COURSE_MODEL}" ] || MODEL_DECLARE_EFFECTIVE=0
+if [ -f "${REVIEW_ROOT}/lib/agent-config.sh" ]; then
+  # shellcheck source=/dev/null
+  source "${REVIEW_ROOT}/lib/agent-config.sh"
+  AGENT_CONFIG="$(MODEL_DECLARE="${MODEL_DECLARE_EFFECTIVE}" agent_config_json "${MODEL}")" || exit 1
+  AGENT_RUN_FLAGS=()
+  while IFS= read -r flag; do AGENT_RUN_FLAGS+=("${flag}"); done < <(agent_run_flags "${MODEL}")
+else
+  err "В ${CACHE_DIR} нет lib/agent-config.sh — обновите проверки: $0 --update"
+  exit 1
+fi
 
 # Промпт — через stdin, как в боте: аргумент командной строки ограничен
 # ~128 КБ, а промпт с большим diff может быть длиннее.
 RESULT_FILE="${SANDBOX}/result.md"
 if ! (cd "${REPO_ROOT}" && OPENCODE_CONFIG_CONTENT="${AGENT_CONFIG}" \
         OPENCODE_DISABLE_CLAUDE_CODE=true \
-        opencode run --auto --format default \
+        opencode run "${AGENT_RUN_FLAGS[@]}" \
         < "${PROMPT_FILE}" > "${RESULT_FILE}" 2>"${SANDBOX}/err.log"); then
   err "ИИ-ревью не удалось выполнить:"
   tail -5 "${SANDBOX}/err.log" | sed 's/^/     /'

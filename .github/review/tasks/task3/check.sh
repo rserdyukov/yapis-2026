@@ -19,6 +19,8 @@ TIMEOUT_SECONDS=120
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
 
 EXAMPLES_DIR=""
 for candidate in "examples" "example" "samples"; do
@@ -66,5 +68,9 @@ echo
 
 echo "== Проверка компилятора через compile.sh =="
 run_compile_checks "${WORK_DIR}" "${TIMEOUT_SECONDS}" 6 "${EXAMPLES_DIR}" || STATUS=1
+echo
+
+echo "== Зонды устойчивости =="
+run_probe_checks "${WORK_DIR}" "${EXAMPLES_DIR}" 60 'synt|pars' doubled || STATUS=1
 
 exit "${STATUS}"

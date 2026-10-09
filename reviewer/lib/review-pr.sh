@@ -66,6 +66,8 @@ source "${REVIEW_ROOT}/messages.env"
 source "${SCRIPT_DIR}/common.sh"
 # shellcheck source=/dev/null
 source "${REVIEW_ROOT}/lib/generated-files.sh"
+# shellcheck source=/dev/null
+source "${REVIEW_ROOT}/lib/agent-config.sh"
 
 log() { echo "[${REPO}#${PR}] $*" >&2; }
 
@@ -256,46 +258,13 @@ log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF
 # --- 7. Запуск агента --------------------------------------------------------
 
 # Конфигурация агента передаётся inline (OPENCODE_CONFIG_CONTENT) — она имеет
-# приоритет над любым opencode.json в проекте. Все разрешения, кроме
-# чтения/поиска, запрещены ЯВНО и по именам: "*" перекрывается ключами из
-# конфигурации проекта, отдельные ключи — нет.
-#
-# small_model задан явно: без него opencode для служебных вызовов (заголовок
-# сессии) сам выбирает самую свежую gemini-flash из каталога OpenRouter —
-# в логах OpenRouter это был лишний запрос к google/gemini-3.x-flash на
-# каждое ревью, мимо MODEL из config.env.
+# приоритет над любым opencode.json в проекте. Содержимое (разрешения только
+# на чтение, small_model, объявление модели) — в lib/agent-config.sh, общем
+# с review-local.sh и eval-prompts.sh.
 AGENT_HOME="${WORK}/agent-home"
 mkdir -p "${AGENT_HOME}"
-AGENT_CONFIG="$(jq -cn --arg model "${MODEL}" '{
-  "$schema": "https://opencode.ai/config.json",
-  model: $model,
-  small_model: $model,
-  share: "disabled",
-  autoupdate: false,
-  snapshot: false,
-  plugin: [],
-  instructions: [],
-  permission: {
-    "*": "deny",
-    read: "allow",
-    glob: "allow",
-    grep: "allow",
-    list: "allow",
-    bash: "deny",
-    edit: "deny",
-    write: "deny",
-    patch: "deny",
-    task: "deny",
-    skill: "deny",
-    lsp: "deny",
-    question: "deny",
-    webfetch: "deny",
-    websearch: "deny",
-    todowrite: "deny",
-    external_directory: "deny",
-    doom_loop: "deny"
-  }
-}')"
+AGENT_CONFIG="$(agent_config_json "${MODEL}")"
+mapfile -t AGENT_RUN_FLAGS < <(agent_run_flags "${MODEL}")
 
 RESULT_FILE="${WORK}/result.md"
 AGENT_ERR="${WORK}/agent.err"
@@ -320,7 +289,7 @@ AGENT_ENV=(
 (
   cd "${STUDENT_DIR}" \
     && timeout "${AGENT_TIMEOUT_SECONDS:-900}" env -i "${AGENT_ENV[@]}" \
-         opencode run --auto --pure --format default \
+         opencode run "${AGENT_RUN_FLAGS[@]}" \
          < "${PROMPT_FILE}" > "${RESULT_FILE}" 2> "${AGENT_ERR}"
 )
 AGENT_RC=$?

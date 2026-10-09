@@ -2,7 +2,9 @@
 # Структурная проверка для лабораторной работы №4:
 #   1. наличие примеров с ошибками (префикс error-);
 #   2. наличие compile.sh в корне (обязателен с ЛР3, см. TASK.md);
-#   3. фактический прогон примеров через compile.sh.
+#   3. фактический прогон примеров через compile.sh;
+#   4. зонды устойчивости (lib/probe-check.sh): программы, построенные
+#      автоматически без знания синтаксиса варианта.
 #
 # Важно: у каждого студента своё окружение (Java/Maven, Python/venv и т.д.),
 # поэтому запуск выполняется "по возможности" — падение не считается фатальной
@@ -14,11 +16,19 @@ set -uo pipefail
 
 WORK_DIR="${1:?work_dir is required}"
 TIMEOUT_SECONDS=120
+# Лимит error-примеров выше, чем в ЛР3: в examples/ лежат и ошибки ЛР3
+# (лексические/синтаксические), и новые семантические.
+MAX_EXAMPLES=12
+# Имена error-файлов из ЛР3 — запускаются после семантических, чтобы не
+# вытеснять их за лимит.
+LEGACY_ERROR_RE='lex|synt|pars|token'
 
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
 
 EXAMPLES_DIR=""
 for candidate in "examples" "example" "samples"; do
@@ -65,6 +75,10 @@ check_layout "${WORK_DIR}" || STATUS=1
 echo
 
 echo "== Проверка компилятора через compile.sh =="
-run_compile_checks "${WORK_DIR}" "${TIMEOUT_SECONDS}" 6 "${EXAMPLES_DIR}" || STATUS=1
+run_compile_checks "${WORK_DIR}" "${TIMEOUT_SECONDS}" "${MAX_EXAMPLES}" "${EXAMPLES_DIR}" "${LEGACY_ERROR_RE}" || STATUS=1
+echo
+
+echo "== Зонды устойчивости =="
+run_probe_checks "${WORK_DIR}" "${EXAMPLES_DIR}" 60 'sem' || STATUS=1
 
 exit "${STATUS}"

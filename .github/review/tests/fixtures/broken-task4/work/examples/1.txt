@@ -1,0 +1,16 @@
+# Корректная программа
+int total = 0
+float rate = 1.5
+func int add(val int a, val int b)
+  int s = a + b
+  return s
+end
+func void store(res int out)
+  out = 5
+end
+total = add(1, 2)
+store(total)
+if total > 2
+  int local = total * 2
+  total = local
+end

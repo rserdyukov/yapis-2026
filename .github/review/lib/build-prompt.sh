@@ -81,12 +81,23 @@ COURSE_NAME_SAFE="$(sanitize_value "${COURSE_NAME:-учебного курса}"
 COURSE_DOCS_SAFE="$(sanitize_value "${COURSE_DOCS:-README.md}")"
 WORK_DIR_SAFE="$(sanitize_value "${WORK_DIR}")"
 
+# Лимит объёма ответа: REVIEW_MAX_CHARS_TASK<N> для отдельной лабы (на ЛР4
+# чеклист длиннее), иначе общий REVIEW_MAX_CHARS. Только цифры.
+REVIEW_MAX_CHARS_SAFE="${REVIEW_MAX_CHARS:-5000}"
+case "${TASK_NUM}" in
+  ''|*[!0-9]*) ;;
+  *) _max_chars_var="REVIEW_MAX_CHARS_TASK${TASK_NUM}"
+     REVIEW_MAX_CHARS_SAFE="${!_max_chars_var:-${REVIEW_MAX_CHARS_SAFE}}" ;;
+esac
+case "${REVIEW_MAX_CHARS_SAFE}" in ''|*[!0-9]*) REVIEW_MAX_CHARS_SAFE=5000 ;; esac
+
 # Подстановка плейсхолдеров в шаблоны промптов. Значения берутся из config.env
 # и аргументов, данные студента сюда не попадают.
 render() {
   sed -e "s|{{WORK_DIR}}|${WORK_DIR_SAFE}|g" \
       -e "s|{{COURSE_NAME}}|${COURSE_NAME_SAFE}|g" \
       -e "s|{{COURSE_DOCS}}|${COURSE_DOCS_SAFE}|g" \
+      -e "s|{{REVIEW_MAX_CHARS}}|${REVIEW_MAX_CHARS_SAFE}|g" \
       "$1"
 }
 

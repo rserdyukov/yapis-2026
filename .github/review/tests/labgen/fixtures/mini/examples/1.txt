@@ -1,0 +1,25 @@
+// Функции, вызовы, условия
+int add(int a, int b) {
+    int s = a + b;
+    return s;
+}
+
+float scale(float x, float k) {
+    float r = x * k;
+    return r;
+}
+
+void show(int v) {
+    print(v);
+}
+
+int total = 0;
+float rate = 1.5;
+total = add(1, 2);
+rate = scale(rate, 2.0);
+rate = 3.0;
+show(total);
+if (total > 2) {
+    int local = total * 2;
+    total = local - 1;
+}

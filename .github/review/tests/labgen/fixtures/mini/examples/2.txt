@@ -1,0 +1,18 @@
+// Цикл и строки
+int sign(int n) {
+    if (n < 0) {
+        return 0 - 1;
+    } else {
+        return 1;
+    }
+}
+
+int i = 0;
+int acc = 0;
+string name = "mini";
+while (i < 10) {
+    acc = acc + sign(i - 5);
+    i = i + 1;
+}
+print(acc);
+print(name);

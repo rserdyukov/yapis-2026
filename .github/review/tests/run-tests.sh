@@ -1694,6 +1694,17 @@ test_probe_check_detects_wrong_line_numbers() {
   return 0
 }
 
+# Регрессия perminova#9: «Time Elapsed 00:00:00.67» из dotnet build стоит в
+# выводе раньше сообщения анализатора и принимался за позицию «00:00».
+test_probe_line_no_skips_build_timestamps() {
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; _probe_first_line_no \$'Time Elapsed 00:00:00.67\n    shift.txt:11:11: Недопустимый символ'")"
+  [ "${out}" = "11" ] || { fail "ожидалась строка 11, получено '${out}'"; return 1; }
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; _probe_first_line_no 'BUILD SUCCESSFUL in 00:01:02'")"
+  [ -z "${out}" ] || { fail "время сборки не должно считаться номером строки, получено '${out}'"; return 1; }
+  return 0
+}
+
 test_probe_deepen_keeps_strings_and_comments() {
   local f="${TMP_ROOT}/deep.txt"
   printf 'write("a = 5") // b = 3\nx = point(1.5, 2)\n' > "${f}"

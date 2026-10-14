@@ -64,11 +64,14 @@ sanitize_review_text() {
 # ревью 50 КБ английских рассуждений «Let's check…», а в конце зациклилась
 # на 18 тыс. плюсов и 19 тыс. девяток. Ни одна из существующих проверок
 # (пустой файл, справка CLI, утечка ключа) этого не поймала, и брак ушёл
-# студенту в PR. Пороги — в config.env (REVIEW_MAX_BYTES, REVIEW_MIN_CYR_PCT,
-# REVIEW_MAX_REPEAT). Любую проверку можно отключить нулём.
+# студенту в PR. Пороги — в config.env (REVIEW_MAX_BYTES, REVIEW_MIN_BYTES,
+# REVIEW_REQUIRE_TABLE, REVIEW_MIN_CYR_PCT, REVIEW_MAX_REPEAT). Любую
+# проверку можно отключить нулём.
 validate_review_text() {
   local file="${1}"
   local max_bytes="${REVIEW_MAX_BYTES:-15000}"
+  local min_bytes="${REVIEW_MIN_BYTES:-500}"
+  local require_table="${REVIEW_REQUIRE_TABLE:-1}"
   local min_cyr="${REVIEW_MIN_CYR_PCT:-60}"
   local max_repeat="${REVIEW_MAX_REPEAT:-200}"
 
@@ -77,6 +80,22 @@ validate_review_text() {
   local bytes; bytes="$(wc -c < "${file}" | tr -d ' ')"
   if [ "${max_bytes}" -gt 0 ] && [ "${bytes}" -gt "${max_bytes}" ]; then
     echo "ответ модели слишком длинный: ${bytes} байт (лимит ${max_bytes})"
+    return 1
+  fi
+  # Слишком короткий ответ — не ревью, а обрывок. kadikov#9: модель
+  # написала «Сначала прочитаю README…» (121 байт), ушла читать файлы и
+  # закончила без итогового текста; обрывок был опубликован как ревью.
+  # Самое короткое настоящее ревью курса — около 2 КБ.
+  if [ "${min_bytes}" -gt 0 ] && [ "${bytes}" -lt "${min_bytes}" ]; then
+    echo "ответ модели слишком короткий: ${bytes} байт (минимум ${min_bytes}) — похоже на обрывок, а не на ревью"
+    return 1
+  fi
+
+  # 1a. Структура. Формат футера требует таблицу «Выполненные проверки»;
+  #     модель иногда опускает заголовок или слово «Резюме», но таблица
+  #     была во всех настоящих ревью курса. Её нет — ответ не дописан.
+  if [ "${require_table}" = "1" ] && ! grep -qE '^[[:space:]]*\|.*\|.*\|' "${file}"; then
+    echo "в ответе модели нет таблицы «Выполненные проверки» — ревью не дописано"
     return 1
   fi
 
@@ -89,12 +108,18 @@ validate_review_text() {
 
   # 3. Язык. Считаем кириллические и латинские буквы; в UTF-8 кириллица
   #    начинается с байтов 0xD0/0xD1 — по одному на символ, так что счёт
-  #    байтов равен счёту букв. Код в обратных кавычках и пути файлов дают
-  #    латиницу, поэтому порог мягкий; английские рассуждения дают ~10%.
+  #    байтов равен счёту букв. Код, пути и имена файлов в обратных
+  #    кавычках, блоки кода и ссылки не считаем: это латиница, которую
+  #    футер разрешает. astakhov#8: русское ревью ЛР3 с путями вида
+  #    `examples/error-syntax-semicolon.jmath` дало 58% по всему тексту и
+  #    было отклонено; без кода — 98%. Английские рассуждения дают ~10%.
   if [ "${min_cyr}" -gt 0 ]; then
-    local cyr lat total
-    cyr="$(LC_ALL=C tr -cd '\320\321' < "${file}" | wc -c | tr -d ' ')"
-    lat="$(LC_ALL=C tr -cd 'A-Za-z' < "${file}" | wc -c | tr -d ' ')"
+    local cyr lat total prose
+    # shellcheck disable=SC2016  # обратные кавычки — разметка Markdown, а не подстановка
+    prose="$(LC_ALL=C awk '/^[[:space:]]*(```|~~~)/ { fence = !fence; next } !fence' "${file}" \
+      | LC_ALL=C sed -E 's/`[^`]*`//g; s#https?://[^ )>]*##g')"
+    cyr="$(printf '%s' "${prose}" | LC_ALL=C tr -cd '\320\321' | wc -c | tr -d ' ')"
+    lat="$(printf '%s' "${prose}" | LC_ALL=C tr -cd 'A-Za-z' | wc -c | tr -d ' ')"
     total=$((cyr + lat))
     if [ "${total}" -gt 0 ] && [ $((cyr * 100 / total)) -lt "${min_cyr}" ]; then
       echo "ответ модели не на русском: кириллицы $((cyr * 100 / total))% (порог ${min_cyr}%)"
@@ -105,12 +130,58 @@ validate_review_text() {
   # 4. Ход рассуждений вместо ответа. Характерные зачины reasoning-моделей в
   #    первых строках. Проверяем только начало: цитата такой фразы в теле
   #    ревью (например, как замечание студенту) — не повод отклонять.
-  if head -n 5 "${file}" | LC_ALL=C grep -qiE '^(we are given|we need to|let'"'"'s (check|start|look|begin)|first, let|okay, |<think>|thinking:)'; then
+  #    Русские зачины (romanov#9, semenido#8: «Сначала прочитаю README…»)
+  #    — без -i: в локали C он не понимает регистр кириллицы.
+  if head -n 5 "${file}" | LC_ALL=C grep -qiE '^(we are given|we need to|let'"'"'s (check|start|look|begin)|first, let|okay, |<think>|thinking:)' \
+     || head -n 1 "${file}" | LC_ALL=C grep -qE '^[[:space:]]*(Сначала|сначала|Начинаю|начинаю|Начну|начну|Прочитаю|прочитаю|Давай|давай|Посмотрю|посмотрю|Изучу|изучу)[[:space:],]'; then
     echo "ответ модели начинается с хода рассуждений, а не с ревью"
     return 1
   fi
 
   return 0
+}
+
+# Финальный ответ агента из потока событий `opencode run --format json`.
+#   extract_final_answer <events.jsonl> <out.md>
+#
+# В формате default opencode печатает в stdout ВЕСЬ текст модели подряд,
+# включая реплики между вызовами инструментов («Сначала прочитаю README…»).
+# Они склеивались с ревью, а если итогового текста не было (модель закончила
+# ход на чтении файлов) — публиковались одни (kadikov#9). Здесь берём
+# только текст последнего сообщения ассистента: каждый шаг цикла агента —
+# отдельное сообщение, итоговое ревью — в последнем. Нет текста — пустой файл.
+# Строки, которые не являются JSON (мусор, справка CLI), пропускаются.
+extract_final_answer() {
+  local events="${1}" out="${2}"
+  jq -R 'fromjson? // empty' "${events}" 2>/dev/null | jq -js '
+    [ .[] | select(type == "object" and .type == "text" and (.part.text | type) == "string") ] as $t
+    | if ($t | length) == 0 then ""
+      else
+        ($t[-1].part.messageID) as $m
+        | [ $t[] | select(.part.messageID == $m) | .part.text | sub("^\\s+"; "") | sub("\\s+$"; "") | select(length > 0) ]
+        | if length == 0 then "" else join("\n\n") + "\n" end
+      end' > "${out}" 2>/dev/null || : > "${out}"
+}
+
+# Однострочная сводка по событиям агента — для лога workflow, чтобы по
+# сбою было видно, что делала модель: сколько шагов и вызовов
+# инструментов, чем закончился последний шаг (stop / tool-calls / length /
+# content-filter), сколько токенов, какие ошибки сообщил opencode.
+#   summarize_agent_events <events.jsonl>
+summarize_agent_events() {
+  jq -R 'fromjson? // empty' "${1}" 2>/dev/null | jq -rs '
+    [ .[] | select(type == "object") ] as $all
+    | [ $all[] | select(.type == "step_finish") ] as $s
+    | [ $all[] | select(.type == "tool_use") ] as $tl
+    | [ $all[] | select(.type == "error") | .error
+        | (.data.message? // .message? // .name? // "неизвестная ошибка") | tostring | .[0:300] ] as $e
+    | "шагов \($s | length), вызовов инструментов \($tl | length)"
+      + " (с ошибкой \([ $tl[] | select(.part.state.status == "error") ] | length))"
+      + ", текстовых фрагментов \([ $all[] | select(.type == "text") ] | length)"
+      + ", последний шаг: \($s[-1].part.reason // "нет")"
+      + ", токенов вход/выход \([ $s[].part.tokens.input // 0 ] | add // 0)/\([ $s[].part.tokens.output // 0 ] | add // 0)"
+      + (if ($e | length) > 0 then ", ошибки: " + ($e | join("; ")) else "" end)
+  ' 2>/dev/null || echo "события не разобраны"
 }
 
 # ISO-время 24 часа назад (GNU и BSD date).

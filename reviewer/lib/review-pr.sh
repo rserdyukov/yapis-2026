@@ -20,10 +20,13 @@
 #      Если PR помечен oversize (см. discover.sh) — промпт собирается в
 #      сокращённом режиме: модель оценивает только результаты автоматических
 #      проверок и структуру, анализ кода не проводит.
-#   7. Проверяет ответ (не пустой, не справка CLI, не содержит секретов,
-#      не слишком длинный, без зацикливания, на русском, не ход рассуждений)
-#      и публикует его в PR от имени GitHub App. При ошибке — публикует
-#      сообщение о технической ошибке и завершается с кодом 1.
+#   7. Берёт из потока событий агента только финальный ответ, проверяет его
+#      (не пустой, не справка CLI, не содержит секретов, не слишком длинный
+#      и не слишком короткий, есть таблица проверок, без зацикливания, на
+#      русском, не ход рассуждений); при браке один раз перезапускает агента
+#      (AGENT_ATTEMPTS) и публикует ответ в PR от имени GitHub App. При
+#      ошибке — публикует сообщение о технической ошибке и завершается с
+#      кодом 1.
 #
 # Использование:
 #   review-pr.sh <org> <repo> <pr> <head_sha> <base_sha> <branch> <student> [oversize]
@@ -262,13 +265,12 @@ log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF
 # на чтение, small_model, объявление модели) — в lib/agent-config.sh, общем
 # с review-local.sh и eval-prompts.sh.
 AGENT_HOME="${WORK}/agent-home"
-mkdir -p "${AGENT_HOME}"
 AGENT_CONFIG="$(agent_config_json "${MODEL}")"
-mapfile -t AGENT_RUN_FLAGS < <(agent_run_flags "${MODEL}")
+mapfile -t AGENT_RUN_FLAGS < <(agent_run_flags "${MODEL}" json)
 
 RESULT_FILE="${WORK}/result.md"
+AGENT_EVENTS="${WORK}/agent-events.jsonl"
 AGENT_ERR="${WORK}/agent.err"
-log "запуск модели ${MODEL}..."
 
 # Минимальное окружение: PATH, HOME (пустой временный), ключ провайдера и
 # флаги opencode. GH_TOKEN и прочее сюда НЕ попадают.
@@ -284,44 +286,93 @@ AGENT_ENV=(
   "OPENROUTER_API_KEY=${KEY_VALUE}"
 )
 
-# Промпт — через stdin (opencode run читает сообщение из него, если
-# позиционный аргумент не передан): так нет ограничения на длину argv.
-(
-  cd "${STUDENT_DIR}" \
-    && timeout "${AGENT_TIMEOUT_SECONDS:-900}" env -i "${AGENT_ENV[@]}" \
-         opencode run "${AGENT_RUN_FLAGS[@]}" \
-         < "${PROMPT_FILE}" > "${RESULT_FILE}" 2> "${AGENT_ERR}"
-)
-AGENT_RC=$?
+# Один запуск агента. Возвращает 0 и готовый ответ в RESULT_FILE, либо 1 и
+# причину в AGENT_FAIL_REASON. Каждая попытка — с чистым HOME: сессия
+# прошлой попытки не должна подмешиваться.
+#
+# Вывод — поток событий (--format json): в ревью идёт только текст
+# последнего сообщения ассистента (extract_final_answer), а не реплики
+# между вызовами инструментов. Сводка событий и хвост stderr opencode
+# пишутся в лог — без них сбой вида «пустой результат» не разобрать
+# (sergievich#9: модель 2,5 минуты читала файлы и закончила без ответа).
+AGENT_FAIL_REASON=""
+run_agent_once() {
+  local attempt="${1}"
+  rm -rf "${AGENT_HOME}"; mkdir -p "${AGENT_HOME}"
+  log "запуск модели ${MODEL} (попытка ${attempt})..."
+  # Промпт — через stdin (opencode run читает сообщение из него, если
+  # позиционный аргумент не передан): так нет ограничения на длину argv.
+  (
+    cd "${STUDENT_DIR}" \
+      && timeout "${AGENT_TIMEOUT_SECONDS:-900}" env -i "${AGENT_ENV[@]}" \
+           opencode run "${AGENT_RUN_FLAGS[@]}" \
+           < "${PROMPT_FILE}" > "${AGENT_EVENTS}" 2> "${AGENT_ERR}"
+  )
+  local rc=$?
+  log "агент: код ${rc}; $(summarize_agent_events "${AGENT_EVENTS}")"
+  if [ "${rc}" -ne 0 ] && [ -s "${AGENT_ERR}" ]; then
+    log "stderr opencode (хвост): $(tail -5 "${AGENT_ERR}" | tr '\n' ' ' | head -c 600)"
+  fi
+  if [ "${rc}" -eq 124 ]; then
+    AGENT_FAIL_REASON="таймаут агента (${AGENT_TIMEOUT_SECONDS:-900} с)"; return 1
+  fi
+  if [ "${rc}" -ne 0 ]; then
+    AGENT_FAIL_REASON="opencode завершился с кодом ${rc}: $(tail -3 "${AGENT_ERR}" | tr '\n' ' ')"; return 1
+  fi
+  # opencode при некорректных флагах печатает справку и выходит с кодом 0.
+  if grep -qE '^opencode run \[message' "${AGENT_EVENTS}" "${AGENT_ERR}" 2>/dev/null; then
+    AGENT_FAIL_REASON="opencode напечатал справку вместо ревью — проверьте флаги CLI."; return 1
+  fi
+  extract_final_answer "${AGENT_EVENTS}" "${RESULT_FILE}"
+  if [ ! -s "${RESULT_FILE}" ]; then
+    AGENT_FAIL_REASON="пустой результат ревью (в последнем сообщении модели нет текста)."; return 1
+  fi
+  # Служебные токены модели в начале ответа («thought», «}», «<|tool_call>»)
+  # срезаем, затем проверяем качество: размер, структура, зацикливание,
+  # язык, «мысли вслух» вместо ревью (см. common.sh). Публиковать брак хуже,
+  # чем не публиковать ничего: студент получает шум и теряет доверие к боту.
+  sanitize_review_text "${RESULT_FILE}"
+  if [ ! -s "${RESULT_FILE}" ]; then
+    AGENT_FAIL_REASON="после очистки служебных токенов ответ модели пуст."; return 1
+  fi
+  local verr
+  if ! verr="$(validate_review_text "${RESULT_FILE}")"; then
+    AGENT_FAIL_REASON="${verr}. Первые строки ответа: $(head -c 300 "${RESULT_FILE}" | tr '\n' ' ')"; return 1
+  fi
+  return 0
+}
 
-if [ "${AGENT_RC}" -ne 0 ]; then
-  fail_review "opencode завершился с кодом ${AGENT_RC}: $(tail -3 "${AGENT_ERR}" | tr '\n' ' ')"
-fi
-if [ ! -s "${RESULT_FILE}" ]; then
-  fail_review "пустой результат ревью."
-fi
-# opencode при некорректных флагах печатает справку и выходит с кодом 0.
-if grep -qE '^opencode run \[message' "${RESULT_FILE}"; then
-  fail_review "opencode напечатал справку вместо ревью — проверьте флаги CLI."
-fi
+# Пустой ответ и брак модели — как правило, случайность: в том же запуске
+# соседние PR проходят. Поэтому одна повторная попытка (AGENT_ATTEMPTS в
+# config.env). Не повторяем после таймаута и после долгой первой попытки
+# (больше половины AGENT_TIMEOUT_SECONDS): вторая не уложится в
+# timeout-minutes job в review.yml.
+AGENT_ATTEMPTS="${AGENT_ATTEMPTS:-2}"
+case "${AGENT_ATTEMPTS}" in ''|*[!0-9]*|0) AGENT_ATTEMPTS=1 ;; esac
+attempt=1
+agent_ok=0
+while :; do
+  attempt_start="${SECONDS}"
+  if run_agent_once "${attempt}"; then agent_ok=1; break; fi
+  log "попытка ${attempt} не удалась: ${AGENT_FAIL_REASON}"
+  case "${AGENT_FAIL_REASON}" in таймаут*) break ;; esac
+  [ "${attempt}" -lt "${AGENT_ATTEMPTS}" ] || break
+  if [ $((SECONDS - attempt_start)) -gt $(( ${AGENT_TIMEOUT_SECONDS:-900} / 2 )) ]; then
+    log "повтор пропущен: попытка заняла $((SECONDS - attempt_start)) с, вторая не уложится в лимит job."
+    break
+  fi
+  attempt=$((attempt + 1))
+done
+[ "${agent_ok}" -eq 1 ] || fail_review "${AGENT_FAIL_REASON}"
+
 # Защита от утечки: если в ответе оказался ключ модели или токен — не
-# публикуем ни при каких обстоятельствах.
-if [ -n "${KEY_VALUE}" ] && grep -qF -- "${KEY_VALUE}" "${RESULT_FILE}"; then
+# публикуем ни при каких обстоятельствах. Проверяем и весь поток событий:
+# ключ, попавший в промежуточный текст, — признак атаки на ревьюер.
+if [ -n "${KEY_VALUE}" ] && grep -qF -- "${KEY_VALUE}" "${RESULT_FILE}" "${AGENT_EVENTS}"; then
   fail_review "в ответе модели обнаружен ключ провайдера — публикация отменена."
 fi
-if [ -n "${GH_TOKEN:-}" ] && grep -qF -- "${GH_TOKEN}" "${RESULT_FILE}"; then
+if [ -n "${GH_TOKEN:-}" ] && grep -qF -- "${GH_TOKEN}" "${RESULT_FILE}" "${AGENT_EVENTS}"; then
   fail_review "в ответе модели обнаружен токен GitHub — публикация отменена."
-fi
-# Служебные токены модели в начале ответа («thought», «}», «<|tool_call>»)
-# срезаем, затем проверяем качество: размер, зацикливание, язык, «мысли
-# вслух» вместо ревью (см. common.sh). Публиковать брак хуже, чем не
-# публиковать ничего: студент получает 50 КБ шума и теряет доверие к боту.
-sanitize_review_text "${RESULT_FILE}"
-if [ ! -s "${RESULT_FILE}" ]; then
-  fail_review "после очистки служебных токенов ответ модели пуст."
-fi
-if ! VALIDATION_ERR="$(validate_review_text "${RESULT_FILE}")"; then
-  fail_review "${VALIDATION_ERR}. Первые строки ответа: $(head -c 300 "${RESULT_FILE}" | tr '\n' ' ')"
 fi
 
 # --- 8. Публикация ------------------------------------------------------------

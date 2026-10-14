@@ -1640,6 +1640,94 @@ test_sanitize_replaces_latex_arrows() {
   return 0
 }
 
+# Проверки качества ответа на реальных инцидентах курса.
+_validate() {
+  bash -c "source '${REVIEW_DIR}/config.env'; source '${REPO_ROOT}/reviewer/lib/common.sh'; validate_review_text '$1'"
+}
+
+_good_review_body() {
+  printf '**Резюме:** Замечаний не найдено.\n\nЗамечаний не найдено.\n\n**Выполненные проверки**\n\n'
+  printf '| Проверка | Результат | Где |\n|---|---|---|\n'
+  local i
+  for i in 1 2 3 4 5 6 7 8; do
+    printf '| П%s. Пункт чеклиста номер %s проверен по коду | выполнено | `examples/error-syntax-semicolon-%s.jmath`, `compiler/src/ErrorHumanizer.java:%s` |\n' "$i" "$i" "$i" "$i"
+  done
+}
+
+# astakhov#8: русское ревью с большим числом путей в `…` отклонялось
+# проверкой языка (58% кириллицы по всему тексту).
+test_validate_ignores_code_in_language_check() {
+  local f="${TMP_ROOT}/lang.md"
+  _good_review_body > "${f}"
+  printf '\n```\nint main() { return compileEverythingWithLongEnglishIdentifiers(); }\n```\nhttps://github.com/yapis-2026/some-long-english-path/blob/main/compiler/src/Main.java\n' >> "${f}"
+  local out; out="$(_validate "${f}")" || { fail "русское ревью с кодом отклонено: ${out}"; return 1; }
+  printf 'Summary: no issues were found in this work, everything looks fine and the checks pass.\n' > "${f}"
+  _good_review_body | sed 's/Пункт чеклиста номер/Checklist item number/' >> "${f}"
+  _validate "${f}" >/dev/null && { fail "английское ревью должно отклоняться"; return 1; }
+  return 0
+}
+
+# kadikov#9: опубликованы 121 байт «Сначала прочитаю README…» вместо ревью.
+test_validate_rejects_fragment_and_missing_table() {
+  local f="${TMP_ROOT}/frag.md" out
+  printf 'Сначала прочитаю README, код анализатора, грамматику и корневой TASK.md.\n' > "${f}"
+  out="$(_validate "${f}")" && { fail "обрывок должен отклоняться"; return 1; }
+  assert_contains "${out}" "слишком короткий" "причина отказа" || return 1
+  _good_review_body | grep -v '^|' > "${f}"
+  printf 'Подробное описание без таблицы, чтобы ответ был длиннее минимального размера. %.0s' $(seq 1 10) >> "${f}"
+  out="$(_validate "${f}")" && { fail "ответ без таблицы проверок должен отклоняться"; return 1; }
+  assert_contains "${out}" "нет таблицы" "причина отказа" || return 1
+  { printf 'Начинаю с чтения README и основного кода.\n\n'; _good_review_body; } > "${f}"
+  out="$(_validate "${f}")" && { fail "ответ с русским зачином рассуждений должен отклоняться"; return 1; }
+  _good_review_body > "${f}"
+  out="$(_validate "${f}")" || { fail "нормальное ревью отклонено: ${out}"; return 1; }
+  return 0
+}
+
+# В ревью идёт только текст последнего сообщения ассистента, а не реплики
+# между вызовами инструментов (kadikov#9, romanov#9, semenido#8).
+test_extract_final_answer_takes_last_message() {
+  local ev="${TMP_ROOT}/events.jsonl" out="${TMP_ROOT}/final.md"
+  cat > "${ev}" <<'EOF'
+{"type":"step_start","part":{"messageID":"m1","type":"step-start"}}
+{"type":"text","part":{"messageID":"m1","type":"text","text":"Сначала прочитаю README."}}
+{"type":"tool_use","part":{"messageID":"m1","type":"tool","tool":"read","state":{"status":"completed"}}}
+{"type":"step_finish","part":{"messageID":"m1","type":"step-finish","reason":"tool-calls","tokens":{"input":10,"output":5}}}
+не JSON — мусор в выводе
+{"type":"text","part":{"messageID":"m2","type":"text","text":"\n**Резюме:** итог.\n"}}
+{"type":"text","part":{"messageID":"m2","type":"text","text":"| a | b | c |"}}
+{"type":"step_finish","part":{"messageID":"m2","type":"step-finish","reason":"stop","tokens":{"input":20,"output":7}}}
+EOF
+  bash -c "source '${REPO_ROOT}/reviewer/lib/common.sh'; extract_final_answer '${ev}' '${out}'"
+  assert_eq "$(cat "${out}")" "$(printf '**Резюме:** итог.\n\n| a | b | c |')" "финальный ответ" || return 1
+  local sum
+  sum="$(bash -c "source '${REPO_ROOT}/reviewer/lib/common.sh'; summarize_agent_events '${ev}'")"
+  assert_contains "${sum}" "шагов 2, вызовов инструментов 1" "сводка событий" || return 1
+  assert_contains "${sum}" "последний шаг: stop" "сводка событий" || return 1
+  assert_contains "${sum}" "токенов вход/выход 30/12" "сводка событий" || return 1
+  # Модель закончила ход на вызове инструмента без текста (sergievich#9).
+  grep -v '"m2"' "${ev}" | sed 's/"text":"Сначала прочитаю README."/"text":"  "/' > "${ev}.2"
+  bash -c "source '${REPO_ROOT}/reviewer/lib/common.sh'; extract_final_answer '${ev}.2' '${out}'"
+  [ ! -s "${out}" ] || { fail "без итогового текста ответ должен быть пустым: $(cat "${out}")"; return 1; }
+  return 0
+}
+
+# Бот запускает агента в формате json, берёт финальный ответ и повторяет
+# попытку при браке.
+test_reviewer_uses_json_events_and_retries() {
+  local rp="${REPO_ROOT}/reviewer/lib/review-pr.sh"
+  grep -q 'agent_run_flags "${MODEL}" json' "${rp}" || { fail "бот должен запускать opencode с --format json"; return 1; }
+  grep -q 'extract_final_answer' "${rp}" || { fail "бот должен брать только финальный ответ"; return 1; }
+  grep -q 'summarize_agent_events' "${rp}" || { fail "бот должен писать сводку событий агента в лог"; return 1; }
+  grep -q 'AGENT_ATTEMPTS' "${rp}" || { fail "нет повторной попытки агента"; return 1; }
+  local flags
+  flags="$(cd "${TMP_ROOT}" && source "${REVIEW_DIR}/lib/agent-config.sh" && agent_run_flags m/x json | tr '\n' ' ')"
+  assert_contains "${flags}" "--format json" "флаги json" || return 1
+  flags="$(cd "${TMP_ROOT}" && source "${REVIEW_DIR}/lib/agent-config.sh" && agent_run_flags m/x | tr '\n' ' ')"
+  assert_contains "${flags}" "--format default" "флаги по умолчанию" || return 1
+  return 0
+}
+
 # Зонды устойчивости (lib/probe-check.sh). Регрессия rublevskaya#8:
 # RecursionError на длинном выражении и трасса на не-UTF-8 файле не были
 # видны ни в прогоне примеров студента, ни слабой модели по коду.

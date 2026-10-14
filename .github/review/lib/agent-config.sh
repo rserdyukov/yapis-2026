@@ -47,9 +47,13 @@ agent_config_json() {
 # и в конфиге, и через -m: opencode 2.x без -m и --standalone берёт модель
 # фонового сервиса пользователя, а не из OPENCODE_CONFIG_CONTENT. --pure
 # (без внешних плагинов) есть только в 1.x, --standalone — только в 2.x.
-#   agent_run_flags <model> -> печатает флаги по одному в строке
+#   agent_run_flags <model> [default|json] -> печатает флаги по одному в строке
+# json — поток событий (текст, вызовы инструментов, причины завершения
+# шагов): по нему бот берёт только финальный ответ и пишет диагностику.
+# default — весь текст модели подряд, как видит его человек.
 agent_run_flags() {
-  local model="${1:?model}" help
+  local model="${1:?model}" format="${2:-default}" help
+  case "${format}" in default|json) ;; *) format=default ;; esac
   help="$(opencode run --help 2>&1 || true)"
   echo "--auto"
   case "${help}" in *--standalone*) echo "--standalone" ;; esac
@@ -57,5 +61,5 @@ agent_run_flags() {
   echo "-m"
   echo "${model}"
   echo "--format"
-  echo "default"
+  echo "${format}"
 }

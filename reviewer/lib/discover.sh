@@ -8,6 +8,9 @@
 #      комментарий (ревью, отказ или сообщение о сбое) — PR уже обработан,
 #      пропускаем. Исключение — ручной запуск (--only): сообщение о сбое
 #      тогда не мешает повторить ревью.
+#   2a. Пропускает PR, если на текущий head SHA преподаватель уже поставил
+#      «Request changes»: ИИ-ревью того же кода после ручного не нужно.
+#      Новый коммит студента снова делает PR кандидатом; --force — тоже.
 #   3. Применяет лимиты из config.env. Лимиты считаются по ФАКТИЧЕСКИ
 #      опубликованным ревью (маркер MARKER_REVIEW без MARKER_SKIPPED и
 #      MARKER_FAILED), а не по запускам workflow — отказы и сбои бюджет не
@@ -166,7 +169,7 @@ while IFS= read -r repo; do
   esac
 
   if ! prs_json="$(gh pr list --repo "${ORG}/${repo}" --state open --limit 50 \
-      --json number,headRefName,headRefOid,baseRefName,isDraft,additions,deletions,updatedAt,comments 2>/dev/null)"; then
+      --json number,headRefName,headRefOid,baseRefName,isDraft,additions,deletions,updatedAt,comments,reviews 2>/dev/null)"; then
     log "${repo}: не удалось получить список PR (нет доступа?), пропускаю."
     continue
   fi
@@ -222,6 +225,17 @@ while IFS= read -r repo; do
       ] | length')"
     if [ "${seen}" -gt 0 ] && [ "${FORCE}" -eq 0 ]; then
       log "${repo}#${number}: коммит ${head_sha:0:7} уже обработан."; continue
+    fi
+
+    # Преподаватель уже запросил изменения на этом коммите — ИИ-ревью того
+    # же кода после ручного только дублирует замечания и тратит лимит.
+    # Учитывается только head: новый коммит студента снова включает бота.
+    changes_requested="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" --arg sha "${head_sha}" '
+      [ .[] | select(.number == $n) | (.reviews // [])[]
+        | select(.state == "CHANGES_REQUESTED" and .commit.oid == $sha)
+        | .author.login ] | unique | join(", ")')"
+    if [ -n "${changes_requested}" ] && [ "${FORCE}" -eq 0 ]; then
+      log "${repo}#${number}: на коммит ${head_sha:0:7} уже запрошены изменения (${changes_requested}), пропускаю."; continue
     fi
 
     # Сколько ревью уже опубликовано в этом PR. Отказы и технические сбои

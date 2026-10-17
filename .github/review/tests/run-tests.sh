@@ -202,12 +202,16 @@ make_comments() {
 # ошибку в jq-выражении скрипта.
 #   make_pr <номер> <ветка> <sha> <строк изменено> [маркеры комментариев...]
 # Маркеры: review | skipped | sha:<SHA> | <произвольный текст>
+# Ревью преподавателя: <STATE>@<SHA>, например CHANGES_REQUESTED@aaa111.
 make_pr() {
   local number="$1" branch="$2" sha="$3" changed="$4"; shift 4
-  local kind body parts="" created
+  local kind body parts="" reviews="" created
   created="$(now_iso)"
   for kind in "$@"; do
     case "${kind}" in
+      [A-Z]*@*)
+        reviews="${reviews}{\"author\":{\"login\":\"teacher\"},\"state\":\"${kind%%@*}\",\"commit\":{\"oid\":\"${kind#*@}\"}},"
+        continue ;;
       review)  body='<!-- ai-review-marker -->\n## Ревью\nзамечания' ;;
       skipped) body='<!-- ai-review-marker -->\n<!-- ai-review-skipped -->\nпропущено' ;;
       sha:*)   body="<!-- ai-review-marker -->\n<!-- ai-review-sha:${kind#sha:} -->" ;;
@@ -217,8 +221,8 @@ make_pr() {
     esac
     parts="${parts}{\"author\":{\"login\":\"yapis-reviewer\"},\"body\":\"${body}\",\"createdAt\":\"${created}\"},"
   done
-  printf '{"number":%s,"headRefName":"%s","headRefOid":"%s","baseRefName":"main","isDraft":false,"additions":%s,"deletions":0,"updatedAt":"%s","comments":[%s]}' \
-    "${number}" "${branch}" "${sha}" "${changed}" "$(now_iso)" "${parts%,}"
+  printf '{"number":%s,"headRefName":"%s","headRefOid":"%s","baseRefName":"main","isDraft":false,"additions":%s,"deletions":0,"updatedAt":"%s","comments":[%s],"reviews":[%s]}' \
+    "${number}" "${branch}" "${sha}" "${changed}" "$(now_iso)" "${parts%,}" "${reviews%,}"
 }
 
 _one_repo() { printf '[{"name":"yapis-2026-ivanov"}]'; }
@@ -314,6 +318,44 @@ test_discover_force_requires_only() {
     >/dev/null 2>&1 || rc=$?
   [ "${rc}" -ne 0 ] || { fail "--force без --only должен отклоняться"; return 1; }
   return 0
+}
+
+# Регрессия: yapis-2026-321702-puchinskaya#9 — преподаватель поставил
+# «Request changes» на b388674, а запуск по расписанию через час всё равно
+# начал ИИ-ревью того же коммита.
+test_discover_skips_changes_requested_head() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 9 task4 aaa111 100 CHANGES_REQUESTED@aaa111)]"
+  assert_eq "${DISC_OUT}" "[]" "коммит с запрошенными изменениями не проверяется" || return 1
+  assert_contains "${DISC_LOG}" "уже запрошены изменения (teacher)" "причина в логе"
+}
+
+# Новый коммит после «Request changes» — это исправления студента, их бот
+# проверять должен.
+test_discover_reviews_commit_after_changes_requested() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 9 task4 bbb222 100 CHANGES_REQUESTED@aaa111)]"
+  assert_contains "${DISC_OUT}" '"head_sha":"bbb222"' "новый коммит после запроса изменений проверяется"
+}
+
+# Комментарий или одобрение преподавателя бот не останавливают.
+test_discover_ignores_other_review_states() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 9 task4 aaa111 100 COMMENTED@aaa111)]"
+  assert_contains "${DISC_OUT}" '"pr":9' "ревью-комментарий не блокирует ИИ-ревью"
+}
+
+# --force перепроверяет и коммит с запрошенными изменениями.
+test_discover_force_overrides_changes_requested() {
+  local dir="${TMP_ROOT}/disc-force-cr.$$.${RANDOM}"
+  make_gh_mock "${dir}"
+  local out
+  out="$(env PATH="${dir}/bin:${PATH}" REVIEW_ROOT="${REVIEW_DIR}" \
+    GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 9 task4 aaa111 100 CHANGES_REQUESTED@aaa111)]" \
+    bash "${REPO_ROOT}/reviewer/lib/discover.sh" org yapis-2026- \
+      --only yapis-2026-ivanov:9 --force 2>/dev/null)"
+  assert_contains "${out}" '"pr":9' "--force игнорирует запрос изменений"
 }
 
 test_discover_skips_service_branches() {

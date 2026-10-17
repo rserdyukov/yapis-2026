@@ -58,6 +58,15 @@ _looks_like_crash() {
     '^Traceback \(most recent call last\)|ModuleNotFoundError|ImportError: |No module named|Exception in thread "main"|^\s+at [A-Za-z_$][A-Za-z0-9_.$<>]*\(.*\)$|Unhandled exception\.|^Error: Cannot find module|command not found|No such file or directory: .*(python|java|node|dotnet)|not recognized as an internal or external command|Could not find or load main class|Error: Could not find or load|MSBUILD : error|error CS[0-9]+:|error: package .* does not exist'
 }
 
+# Сбой окружения проверки, а не работы: обращение в сеть в контейнере без
+# сети. Типичный случай — обёртка antlr4 из antlr4-tools, которая при первом
+# запуске качает jar через urllib (germanenko#8: все 12 прогонов дали трассу
+# urllib/getaddrinfo, и модель сочла прогон работы проваленным).
+_looks_like_env_failure() {
+  printf '%s\n' "$1" | grep -qE \
+    'urllib\.error|getaddrinfo|Temporary failure in name resolution|Name or service not known|Could not resolve host|Network is unreachable|nodename nor servname'
+}
+
 # Запускает compile.sh на одном примере и печатает результат.
 # Возвращает 0, если поведение совпало с ожидаемым.
 _run_one_example() {
@@ -79,6 +88,13 @@ _run_one_example() {
 
   if [ "${rc}" -eq 124 ]; then
     echo "    РЕЗУЛЬТАТ: таймаут ${timeout_s}с — компиляция не завершилась."
+    return 1
+  fi
+
+  if [ "${rc}" -ne 0 ] && _looks_like_env_failure "${out}"; then
+    echo "    ОКРУЖЕНИЕ: код ${rc}, compile.sh обратился в сеть (в контейнере проверки её нет)."
+    echo "    Поведение примера неизвестно; это сбой проверки, а не вывод о работе."
+    COMPILE_CHECK_ENV_FAILED=$((${COMPILE_CHECK_ENV_FAILED:-0} + 1))
     return 1
   fi
 
@@ -169,6 +185,7 @@ run_compile_checks() {
   echo
 
   local ok_failed=0 err_failed=0 example
+  COMPILE_CHECK_ENV_FAILED=0
 
   if [ "${#ok_examples[@]}" -gt 0 ]; then
     echo "== Корректные примеры (ожидается успешная компиляция) =="
@@ -206,6 +223,9 @@ run_compile_checks() {
   echo "  error-*: запущено ${#err_examples[@]}, ожидаемо $(( ${#err_examples[@]} - err_failed )), не запускалось ${#err_skipped[@]}"
 
   local failed=$((ok_failed + err_failed))
+  if [ "${COMPILE_CHECK_ENV_FAILED:-0}" -gt 0 ]; then
+    echo "ОКРУЖЕНИЕ: ${COMPILE_CHECK_ENV_FAILED} прогонов упали на обращении в сеть. Это сбой проверки: в таблице для них «не проверено: окружение проверки», замечанием студенту это не является."
+  fi
   if [ "${failed}" -gt 0 ]; then
     echo "Итог: расхождений с ожидаемым поведением — ${failed}."
     return 1

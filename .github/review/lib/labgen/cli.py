@@ -8,13 +8,14 @@ import random
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 
 from . import __doc__ as PKG_DOC
 from .judge import judge, run_one
 from .lexing import Lexed, find_grammar, find_jar, infer_lang, lex_antlr, lex_fallback, read_props
 from .mutate import Mutant, gen_sem, gen_syn
-from .report import BAD, VERDICT_RU, write_report
+from .report import BAD, VERDICT_RU, write_report, write_summary
 
 
 def main() -> int:
@@ -29,7 +30,13 @@ def main() -> int:
     ap.add_argument("--antlr-jar")
     ap.add_argument("--no-antlr", action="store_true", help="только запасной лексер")
     ap.add_argument("--no-run", action="store_true", help="только сгенерировать мутанты")
+    ap.add_argument("--budget", type=int, default=0,
+                    help="общий лимит секунд на прогон мутантов; не успевшие помечаются «не запускался»")
+    ap.add_argument("--summary", type=Path, help="записать короткую сводку для вывода check.sh")
+    ap.add_argument("--only-high", action="store_true", help="только мутанты с однозначным ожиданием")
     a = ap.parse_args()
+    # Бюджет считается от старта: прогон исходных примеров тоже его расходует.
+    deadline = time.monotonic() + a.budget if a.budget > 0 else None
 
     work = a.work.resolve()
     if not (work / "compile.sh").is_file():
@@ -68,6 +75,8 @@ def main() -> int:
     # Исходные примеры должны проходить, иначе мутанты от них бессмысленны.
     ok_seeds, failed = [], []
     for lx in lexed:
+        if deadline is not None and time.monotonic() > deadline:
+            break
         rc, _ = run_one(work, lx.path, a.timeout)
         (ok_seeds if rc == 0 else failed).append(lx)
 
@@ -82,6 +91,8 @@ def main() -> int:
     picked: list[Mutant] = []
     by_op: dict[str, list[Mutant]] = {}
     for m in muts:
+        if a.only_high and m.confidence != "high":
+            continue
         by_op.setdefault(m.op, []).append(m)
     for op, ms in by_op.items():
         seen, uniq = set(), []
@@ -110,12 +121,17 @@ def main() -> int:
         return 0
 
     def go(m: Mutant):
+        if deadline is not None and time.monotonic() > deadline:
+            m.verdict, m.note = "not-run", "бюджет времени исчерпан"
+            return
         m.exit, m.output = run_one(work, out_dir / "mutants" / f"{m.id}.txt", a.timeout)
         judge(m)
     with cf.ThreadPoolExecutor(a.jobs) as ex:
         list(ex.map(go, picked))
 
     write_report(out_dir, work, picked, meta)
+    if a.summary:
+        write_summary(a.summary, work, picked, meta)
     bad = [m for m in picked if m.verdict in BAD]
     inv = sum(m.verdict == "invalid" for m in picked)
     els = sum(m.verdict == "elsewhere" for m in picked)

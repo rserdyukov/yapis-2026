@@ -21,6 +21,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/grammar-facts.sh"
 
 EXAMPLES_DIR=""
 for candidate in "examples" "example" "samples"; do
@@ -61,6 +63,10 @@ if [ "${#ERROR_EXAMPLES[@]}" -eq 0 ]; then
   echo
   STATUS=1
 fi
+
+echo "== Стартовое правило грамматики =="
+print_grammar_facts "${WORK_DIR}"
+echo
 
 echo "== Раскладка репозитория =="
 check_layout "${WORK_DIR}" || STATUS=1

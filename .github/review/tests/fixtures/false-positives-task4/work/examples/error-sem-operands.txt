@@ -1,0 +1,2 @@
+bool b = true
+int x = b + 1

@@ -1,0 +1,4 @@
+func int f(val int a)
+  int b = a
+end
+r = f(1)

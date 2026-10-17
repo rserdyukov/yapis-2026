@@ -1,0 +1,5 @@
+int r = 0
+func int f(val int a)
+  return a
+end
+r = f(1, 2)

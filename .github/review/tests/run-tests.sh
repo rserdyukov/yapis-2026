@@ -1765,7 +1765,9 @@ test_probe_check_reports_crashes_and_line_shift() {
   assert_contains "${out}" "ЗАМЕЧАНИЕ — переполнение стека" "RecursionError на длинной сумме" || return 1
   assert_contains "${out}" "ошибка декодирования не перехвачена" "трасса на не-UTF-8" || return 1
   assert_contains "${out}" "строка 2 → 7" "сдвиг номера строки на 5" || return 1
-  assert_contains "${out}" "замечаний 2" "счётчик замечаний" || return 1
+  # Длинная сумма, 500 вложенных скобок (тоже длинная строка) и не-UTF-8.
+  assert_contains "${out}" "ЗАМЕЧАНИЕ — переполнение стека на 500 вложенных скобках" "RecursionError на скобках" || return 1
+  assert_contains "${out}" "замечаний 3" "счётчик замечаний" || return 1
   [ ! -e "${w}/.review" ] || { fail "зонды должны убирать за собой .review/"; return 1; }
   [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
   return 0
@@ -4004,6 +4006,168 @@ test_stats_does_not_leak_api_key() {
     *"${canary}"*) fail "значение ключа попало в вывод"; return 1 ;;
   esac
   return 0
+}
+
+# ══════════════════════════════════════════════════════════════════════════
+# Тесты: правки по разбору ложных замечаний бота (ЛР4, октябрь 2026)
+# ══════════════════════════════════════════════════════════════════════════
+
+# Зонд «вложенные скобки»: падение на 500 уровнях — замечание с местом
+# падения, на 3000 после успешных 500 — только справочно.
+test_probe_nested_parens_required_and_informational() {
+  local w="${TMP_ROOT}/probe-nest"
+  _make_probe_work "${w}"
+  # Падение, если в строке больше N открывающих скобок.
+  cat > "${w}/compile.sh" <<'EOF'
+#!/usr/bin/env bash
+SRC="${1:?}"; [ -f "$SRC" ] || exit 2
+n="$(tr -cd '(' < "$SRC" | wc -c | tr -d ' ')"
+if [ "$n" -gt "${LIMIT:-1000}" ]; then
+  echo 'Traceback (most recent call last):'
+  echo '  File "/w/compiler/semantic.py", line 41, in visit_expr'
+  echo 'RecursionError: maximum recursion depth exceeded'; exit 1
+fi
+grep -q BAD "$SRC" && { echo "ошибка: строка $(grep -n BAD "$SRC" | head -1 | cut -d: -f1)"; exit 1; }
+exit 0
+EOF
+  local out
+  out="$(LIMIT=1000 bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; source '${REVIEW_DIR}/lib/probe-check.sh'; run_probe_checks '${w}' '${w}/examples' 20 sem" 2>&1)"
+  assert_contains "${out}" "ожидаемо — код 0 на 500 уровнях" "500 скобок прошли" || return 1
+  assert_contains "${out}" "справочно — переполнение стека на 3000 вложенных скобках (в коде работы: File semantic.py, line 41" "3000 — справочно, с местом" || return 1
+  assert_not_contains "${out}" "ЗАМЕЧАНИЕ — переполнение стека на 3000" "3000 не обязательное замечание" || return 1
+  out="$(LIMIT=100 bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; source '${REVIEW_DIR}/lib/probe-check.sh'; run_probe_checks '${w}' '${w}/examples' 20 sem" 2>&1)"
+  assert_contains "${out}" "ЗАМЕЧАНИЕ — переполнение стека на 500 вложенных скобках" "500 — обязательное замечание" || return 1
+  assert_contains "${out}" "на 3000 уровнях пропущен" "3000 не запускается после падения" || return 1
+}
+
+test_probe_crash_site_tells_antlr_from_student_code() {
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; _probe_crash_site \$'Traceback\n  File \"/x/antlr4/Parser.py\", line 3\n  File \"/w/gen/LangParser.py\", line 9, in expr\nRecursionError'")"
+  assert_contains "${out}" "в разборе ANTLR" "падение в парсере" || return 1
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; _probe_crash_site \$'Exception in thread \"main\" java.lang.StackOverflowError\n\tat org.antlr.v4.runtime.Parser.enterRule(Parser.java:1)\n\tat SemanticVisitor.visitExpr(SemanticVisitor.java:77)'")"
+  assert_contains "${out}" "SemanticVisitor.visitExpr" "кадр студента в JVM-трассе" || return 1
+}
+
+# Регрессия germanenko#8: обращение в сеть (urllib) в контейнере без сети —
+# сбой окружения, а не «все прогоны упали» и не замечание к работе.
+test_compile_check_marks_network_failure_as_environment() {
+  local w="${TMP_ROOT}/envfail"
+  _make_probe_work "${w}"
+  printf '#!/usr/bin/env bash\necho "urllib.error.URLError: <urlopen error [Errno -3] Temporary failure in name resolution>"\nexit 1\n' > "${w}/compile.sh"
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; run_compile_checks '${w}' 10 6 '${w}/examples'" 2>&1)"
+  assert_contains "${out}" "ОКРУЖЕНИЕ: код 1, compile.sh обратился в сеть" "строка ОКРУЖЕНИЕ у примера" || return 1
+  assert_contains "${out}" "ОКРУЖЕНИЕ: 2 прогонов упали на обращении в сеть" "итог по окружению" || return 1
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; source '${REVIEW_DIR}/lib/probe-check.sh'; run_probe_checks '${w}' '${w}/examples' 10 sem" 2>&1)"
+  assert_not_contains "${out}" "РЕЗУЛЬТАТ: ЗАМЕЧАНИЕ" "зонды не делают замечаний из сбоя сети" || return 1
+  assert_contains "${out}" "сбоев окружения" "счётчик сбоев окружения" || return 1
+}
+
+# Регрессия rumyantseva#10, romanov#9: модель придумывала программы, которые
+# грамматика не разбирает. check.sh печатает стартовое правило.
+test_grammar_facts_prints_start_rule() {
+  local w="${TMP_ROOT}/gfacts"; rm -rf "${w}"; mkdir -p "${w}/compiler"
+  cat > "${w}/compiler/L.g4" <<'EOF'
+grammar L;
+// nl: вспомогательное, стартовое — с EOF
+nl : NEWLINE+ ;
+program : globalVarDecl* funcDecl* mainBlock EOF ; // порядок
+globalVarDecl : 'var' ID ';' ;
+funcDecl : 'func' ID '(' ')' '{' '}' { /* действие; */ } ;
+mainBlock : 'main' '{' '}' ;
+ID : [a-z]+ ;
+NEWLINE : '\n' ;
+EOF
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/grammar-facts.sh'; print_grammar_facts '${w}'")"
+  assert_contains "${out}" "program: globalVarDecl* funcDecl* mainBlock EOF" "стартовое правило" || return 1
+  assert_contains "${out}" "globalVarDecl: 'var' ID ';'" "правило-ссылка с литералом ';'" || return 1
+  assert_not_contains "${out}" "nl:" "вспомогательное правило не стартовое" || return 1
+  local t
+  for t in 3 4 5; do
+    grep -q 'print_grammar_facts' "${REVIEW_DIR}/tasks/task${t}/check.sh" \
+      || { fail "task${t}/check.sh не печатает стартовое правило"; return 1; }
+  done
+}
+
+# Регрессия puchinskaya#9: tests/test_semantic.py бот счёл исходником вне
+# compiler/, хотя check.out писал «Исходников вне compiler/ не найдено».
+test_layout_ignores_tests_dir_and_prompts_say_so() {
+  local w="${TMP_ROOT}/layout-tests"; rm -rf "${w}"; mkdir -p "${w}/compiler" "${w}/tests"
+  touch "${w}/compiler/main.py" "${w}/tests/test_semantic.py" "${w}/compile.sh"
+  local out; out="$(_run_layout "${w}")" || { fail "tests/ не должен давать замечание: ${out}"; return 1; }
+  local t
+  for t in 3 4 5; do
+    grep -q 'только\*\* по строке `ЗАМЕЧАНИЕ`' "${REVIEW_DIR}/tasks/task${t}/prompt.md" \
+      || { fail "task${t}/prompt.md: раскладка не привязана к строке ЗАМЕЧАНИЕ"; return 1; }
+  done
+}
+
+test_footer_has_false_positive_filters() {
+  local f="${REVIEW_DIR}/common-footer.md"
+  assert_contains "$(cat "${f}")" "Разрешено ли это README" "фильтр README" || return 1
+  assert_contains "$(cat "${f}")" "Возможен ли пример по грамматике" "фильтр грамматики" || return 1
+  assert_contains "$(cat "${f}")" "по коду, без запуска" "пометка без запуска" || return 1
+  assert_contains "$(cat "${f}")" "**Рекомендация**" "шкала серьёзности" || return 1
+}
+
+test_prompt_includes_previous_review() {
+  local diff="${TMP_ROOT}/pd.txt" prev="${TMP_ROOT}/prev.md" pdiff="${TMP_ROOT}/prevdiff.txt" out
+  printf 'x\n' > "${diff}"
+  printf '1. **Существенно.** Нет проверки return — `a.py:3`\n' > "${prev}"
+  printf 'diff --git a/a.py b/a.py\n+return x\n' > "${pdiff}"
+  out="$(PREV_REVIEW_FILE="${prev}" PREV_REVIEW_SHA="0123456789abcdef0123456789abcdef01234567" PREV_DIFF_FILE="${pdiff}" \
+    bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 "." "s" 4 "${diff}" 2>&1)"
+  assert_contains "${out}" "Прошлое ревью в этом PR (коммит \`0123456\`)" "раздел прошлого ревью" || return 1
+  assert_contains "${out}" "BEGIN_UNTRUSTED_PREV_REVIEW" "прошлое ревью помечено как данные" || return 1
+  assert_contains "${out}" "+return x" "diff с прошлого коммита" || return 1
+  # Общие правила по-прежнему последние.
+  [ "$(printf '%s\n' "${out}" | grep -n 'BEGIN_UNTRUSTED_PREV_REVIEW' | cut -d: -f1)" -lt \
+    "$(printf '%s\n' "${out}" | grep -n '^## Границы доверия' | cut -d: -f1)" ] \
+    || { fail "прошлое ревью должно идти до общих правил"; return 1; }
+  out="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 "." "s" 4 "${diff}" 2>&1)"
+  assert_not_contains "${out}" "Прошлое ревью в этом PR" "без прошлого ревью раздела нет" || return 1
+  out="$(OVERSIZE_MODE=1 PREV_REVIEW_FILE="${prev}" bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 "." "s" 4 "${diff}" 2>&1)"
+  assert_not_contains "${out}" "Прошлое ревью в этом PR" "в сокращённом режиме раздела нет" || return 1
+}
+
+test_prev_review_helpers() {
+  local f="${TMP_ROOT}/prevc.md" out
+  {
+    echo '<!-- ai-review-marker -->'
+    echo '<!-- ai-review-sha:0123456789abcdef0123456789abcdef01234567 -->'
+    echo '## 🤖 Автоматическое ИИ-ревью (лабораторная работа №4, коммит 0123456)'
+    echo
+    echo '> Это предварительная автоматическая проверка. Финальное решение по работе принимает преподаватель.'
+    echo
+    echo 'Есть замечания.'
+  } > "${f}"
+  out="$(bash -c "source '${REVIEW_DIR}/messages.env'; source '${REPO_ROOT}/reviewer/lib/common.sh'; prev_review_sha '${f}'")"
+  assert_eq "${out}" "0123456789abcdef0123456789abcdef01234567" "sha из маркера" || return 1
+  out="$(bash -c "source '${REVIEW_DIR}/messages.env'; source '${REPO_ROOT}/reviewer/lib/common.sh'; strip_review_comment '${f}'")"
+  assert_eq "${out}" "Есть замечания." "тело без маркеров, заголовка и дисклеймера" || return 1
+  grep -q 'PREV_REVIEW_FILE=' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
+    || { fail "review-pr.sh не передаёт прошлое ревью в build-prompt.sh"; return 1; }
+}
+
+# BSD realpath (macOS) не знает --relative-to: review-local.sh печатал
+# «illegal option» вместо имени манифеста.
+test_deps_paths_without_gnu_realpath() {
+  grep -q 'realpath --relative-to' "${REVIEW_DIR}/lib/install-deps.sh" \
+    && { fail "install-deps.sh использует GNU-only realpath --relative-to"; return 1; }
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/install-deps.sh'; _deps_rel /w/r /w/r/compiler/requirements.txt")"
+  assert_eq "${out}" "compiler/requirements.txt" "относительный путь манифеста"
+}
+
+test_task4_check_runs_labgen() {
+  grep -q 'run_labgen_checks' "${REVIEW_DIR}/tasks/task4/check.sh" \
+    || { fail "task4/check.sh не вызывает labgen"; return 1; }
+  local w="${TMP_ROOT}/lg-none"; rm -rf "${w}"; mkdir -p "${w}/examples"; printf 'exit 0\n' > "${w}/compile.sh"
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/labgen-check.sh'; run_labgen_checks '${w}' 10" 2>&1)"
+  assert_contains "${out}" "Мутанты не строились" "без грамматики — причина, а не трасса" || return 1
+  [ ! -e "${w}/.review" ] || { fail "labgen должен убирать за собой .review/"; return 1; }
 }
 
 # ══════════════════════════════════════════════════════════════════════════

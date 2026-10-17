@@ -14,6 +14,8 @@
 #   5. Очищает checkout от файлов, влияющих на поведение агента
 #      (AGENTS.md, opencode.json, .opencode/ и т.п.) — они не относятся к
 #      работе и могли быть добавлены ради prompt injection.
+#   5a. Находит прошлое ревью бота в PR и diff от его коммита — модель
+#      сверяет прошлые замечания с текущим кодом, а не пишет всё заново.
 #   6. Собирает промпт (lib/build-prompt.sh) и запускает opencode в режиме
 #      только-чтение, с минимальным окружением: в нём ТОЛЬКО ключ провайдера
 #      модели, ни токена GitHub, ни прочих переменных раннера.
@@ -187,6 +189,38 @@ GENERATED_COUNT="$(wc -l < "${GENERATED_FILE}" | tr -d ' ')"
 build_review_diff "${STUDENT_DIR}" "${DIFF_BASE}" "${HEAD_SHA}" "${WORK_DIR}" "${NUMSTAT_FILE}" "${DIFF_FILE}"
 log "diff: $(wc -l < "${DIFF_FILE}" | tr -d ' ') строк (сгенерированных файлов исключено: ${GENERATED_COUNT})"
 
+# --- 3a. Прошлое ревью бота в этом PR ---------------------------------------
+
+# Без прошлого ревью модель на каждом коммите писала замечания заново:
+# повторяла уже исправленное и не замечала, что студент исправил
+# (germanenko#8, sergievich#9 — по 3 ревью на PR). Берём последний
+# опубликованный комментарий бота (не отказ и не сбой), его sha из маркера
+# и diff между тем коммитом и текущим — только по рукописным файлам.
+PREV_REVIEW_FILE="${WORK}/prev-review.md"
+PREV_DIFF_FILE="${WORK}/prev-diff.txt"
+PREV_SHA=""
+: > "${PREV_REVIEW_FILE}"; : > "${PREV_DIFF_FILE}"
+if gh pr view "${PR}" --repo "${REPO_FULL}" --json comments \
+     --jq "[.comments[] | select(.body | contains(\"${MARKER_REVIEW}\"))
+             | select(.body | contains(\"${MARKER_SKIPPED}\") | not)
+             | select(.body | contains(\"${MARKER_FAILED}\") | not)] | last | .body // \"\"" \
+     > "${PREV_REVIEW_FILE}" 2>/dev/null && [ -s "${PREV_REVIEW_FILE}" ]; then
+  PREV_SHA="$(prev_review_sha "${PREV_REVIEW_FILE}")"
+fi
+if [ -n "${PREV_SHA}" ] && [ "${PREV_SHA}" != "${HEAD_SHA}" ]; then
+  git -C "${STUDENT_DIR}" cat-file -e "${PREV_SHA}^{commit}" 2>/dev/null \
+    || git -C "${STUDENT_DIR}" fetch -q origin "${PREV_SHA}" 2>/dev/null || true
+  if git -C "${STUDENT_DIR}" cat-file -e "${PREV_SHA}^{commit}" 2>/dev/null; then
+    git -C "${STUDENT_DIR}" diff --numstat "${PREV_SHA}" "${HEAD_SHA}" -- "${WORK_DIR}" > "${WORK}/prev-numstat.tsv" 2>/dev/null
+    build_review_diff "${STUDENT_DIR}" "${PREV_SHA}" "${HEAD_SHA}" "${WORK_DIR}" "${WORK}/prev-numstat.tsv" "${PREV_DIFF_FILE}"
+  fi
+  strip_review_comment "${PREV_REVIEW_FILE}" > "${PREV_REVIEW_FILE}.body"
+  mv "${PREV_REVIEW_FILE}.body" "${PREV_REVIEW_FILE}"
+  log "прошлое ревью бота: ${PREV_SHA:0:7}, diff с ним: $(wc -l < "${PREV_DIFF_FILE}" | tr -d ' ') строк"
+else
+  : > "${PREV_REVIEW_FILE}"; PREV_SHA=""
+fi
+
 # --- 4. Структурная проверка в контейнере -----------------------------------
 
 CHECK_FILE="${WORK}/check.out"
@@ -246,6 +280,7 @@ fi
 while :; do
   MAX_DIFF_LINES_IN_PROMPT="${DIFF_LINES_IN_PROMPT}" DIFF_FILE_HINT=".review/pr-diff.txt" \
   GENERATED_FILES_LIST="${GENERATED_FILE}" OVERSIZE_MODE="${OVERSIZE}" \
+  PREV_REVIEW_FILE="${PREV_REVIEW_FILE}" PREV_REVIEW_SHA="${PREV_SHA}" PREV_DIFF_FILE="${PREV_DIFF_FILE}" \
     bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
       "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
       "${DIFF_FILE}" "${CHECK_FILE}" "${CHECK_EXIT}" > "${PROMPT_FILE}" \

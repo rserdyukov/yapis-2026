@@ -7,7 +7,15 @@
 
 ```bash
 python3 -B .github/review/lib/labgen <каталог работы> [--mode sem|syn|all] [--out DIR] [--max-per-op 4]
+                                    [--only-high] [--timeout 20] [--jobs 2] [--budget 60] [--summary FILE]
 ```
+
+- `--only-high` — только мутанты с уверенностью `high` (без `string-cond`, `implicit-cast`,
+  `cascade`: их ожидание зависит от варианта);
+- `--budget N` — общий лимит в секундах от старта, включая прогон исходных примеров; мутанты,
+  до которых не дошла очередь, получают вердикт `not-run`;
+- `--summary FILE` — короткая сводка в файл для вывода `check.sh` (так labgen вызывает
+  `lib/labgen-check.sh` в `check.sh` ЛР4).
 
 Нужны Python 3.8+, `java` и `ANTLR_JAR` (как для `compile.sh`); без них — запасной
 лексер (`--no-antlr`), менее точный. Результат: `<out>/report.md`,
@@ -39,6 +47,7 @@ python3 -B .github/review/lib/labgen <каталог работы> [--mode sem|s
 - `missed` — ошибка не найдена (код 0); `exit-code` — сообщение есть, но код 0;
 - `false-positive` — контрольный мутант отвергнут;
 - `crash`, `timeout` — трасса исключения / зависание;
+- `not-run` — не запускался: исчерпан `--budget`;
 - `elsewhere` — ошибка выдана, но в другой строке (возможно, найдена не та ошибка);
 - `cascade` — больше одного сообщения там, где ожидалось одно;
 - `invalid` — мутант отброшен: анализатор сообщил о синтаксической ошибке, значит мутация

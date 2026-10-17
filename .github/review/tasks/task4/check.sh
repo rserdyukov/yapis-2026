@@ -4,7 +4,9 @@
 #   2. наличие compile.sh в корне (обязателен с ЛР3, см. TASK.md);
 #   3. фактический прогон примеров через compile.sh;
 #   4. зонды устойчивости (lib/probe-check.sh): программы, построенные
-#      автоматически без знания синтаксиса варианта.
+#      автоматически без знания синтаксиса варианта;
+#   5. мутанты labgen (lib/labgen-check.sh): корректные примеры студента с
+#      одним семантическим изменением и известным ожиданием.
 #
 # Важно: у каждого студента своё окружение (Java/Maven, Python/venv и т.д.),
 # поэтому запуск выполняется "по возможности" — падение не считается фатальной
@@ -29,6 +31,10 @@ source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/grammar-facts.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/labgen-check.sh"
 
 EXAMPLES_DIR=""
 for candidate in "examples" "example" "samples"; do
@@ -70,6 +76,10 @@ if [ "${#ERROR_EXAMPLES[@]}" -eq 0 ]; then
   STATUS=1
 fi
 
+echo "== Стартовое правило грамматики =="
+print_grammar_facts "${WORK_DIR}"
+echo
+
 echo "== Раскладка репозитория =="
 check_layout "${WORK_DIR}" || STATUS=1
 echo
@@ -80,5 +90,11 @@ echo
 
 echo "== Зонды устойчивости =="
 run_probe_checks "${WORK_DIR}" "${EXAMPLES_DIR}" 60 'sem' || STATUS=1
+echo
+
+# Последним: бюджет labgen ограничен, и если check.sh упрётся в общий
+# таймаут, потеряется только этот раздел.
+echo "== Мутанты примеров =="
+run_labgen_checks "${WORK_DIR}" 60
 
 exit "${STATUS}"

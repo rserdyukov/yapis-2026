@@ -1,0 +1,5 @@
+int x = 1
+func void set(res float r)
+  r = 2.5
+end
+set(x)

@@ -184,6 +184,25 @@ summarize_agent_events() {
   ' 2>/dev/null || echo "события не разобраны"
 }
 
+# SHA коммита из маркера в комментарии бота («<!-- ai-review-sha:<sha> -->»).
+#   prev_review_sha <файл с комментарием>
+# Печатает 40 hex-символов или ничего. Комментарий пишет бот, но берём только
+# hex: строка затем идёт в git.
+prev_review_sha() {
+  sed -n "s|^${MARKER_SHA_PREFIX}\([0-9a-f]\{40\}\) -->.*|\1|p" "${1}" | head -n 1
+}
+
+# Тело прошлого ревью без служебных строк: маркеров, заголовка и
+# дисклеймера (их модель не должна повторять), с ограничением объёма.
+#   strip_review_comment <файл> [макс. строк]
+strip_review_comment() {
+  local f="${1}" max="${2:-200}"
+  grep -vF -e "${MARKER_REVIEW}" -e "${MARKER_SHA_PREFIX}" "${f}" \
+    | grep -vF -e "${MSG_REVIEW_DISCLAIMER:-@@нет@@}" \
+    | grep -vE '^## .*ИИ-ревью' \
+    | sed '/./,$!d' | head -n "${max}"
+}
+
 # ISO-время 24 часа назад (GNU и BSD date).
 since_24h() {
   date -u -d '24 hours ago' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \

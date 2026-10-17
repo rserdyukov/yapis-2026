@@ -17,6 +17,7 @@
 #   - целый литерал в корректном примере заменяется суммой из N единиц того
 #     же типа — программа остаётся корректной, но выражение становится
 #     глубоким (рекурсивный обход не должен падать);
+#   - тот же литерал в 500 и 3000 парах скобок — глубина дерева разбора;
 #   - корректный пример, записанный дважды подряд, — подпрограммы и явно
 #     объявленные переменные объявлены повторно с той же сигнатурой.
 #
@@ -25,12 +26,36 @@
 #   строк в первую очередь (на ЛР4 — семантические);
 #   skip      — зонды, которые не запускать, через пробел: doubled (на ЛР3
 #               повторные объявления ещё не проверяются — это ЛР4).
-# Требует _looks_like_crash из compile-check.sh.
+# Требует _looks_like_crash и _looks_like_env_failure из compile-check.sh.
 #
 # Возвращает 0, если ни один зонд не дал замечания, иначе 1.
 
 PROBE_SHIFT_LINES=5
 PROBE_SUM_TERMS=300
+# Глубины зонда «вложенные скобки». Падение на PROBE_NEST_REQUIRED уровнях и
+# меньше — обязательное замечание (как у labgen deep-expr), глубже — справочно.
+PROBE_NEST_DEPTHS="500 3000"
+PROBE_NEST_REQUIRED=500
+
+# Где упала программа по трассе: в разборе (рантайм ANTLR или сгенерированный
+# *Parser/*Lexer) или в коде работы. Смотрим 30 ближайших к падению кадров
+# (Python печатает их последними — «File "…", line N»; JVM и .NET — первыми,
+# «at …») и берём ближайший кадр не из разбора. Visitor студента чередуется
+# с accept() сгенерированного парсера, поэтому он в этих кадрах найдётся.
+_probe_crash_site() {
+  local out="$1" frames own
+  local parse_re='antlr4?[/.]|org\.antlr|Antlr4\.Runtime|(Parser|Lexer)(\.(py|java|cs|js|ts)"|\.)'
+  frames="$(printf '%s\n' "${out}" | grep -E '^[[:space:]]*File "[^"]+", line [0-9]+' | tail -n 30)"
+  if [ -n "${frames}" ]; then
+    own="$(printf '%s\n' "${frames}" | grep -viE "${parse_re}" | tail -n 1)"
+  else
+    frames="$(printf '%s\n' "${out}" | grep -E '^[[:space:]]+at [A-Za-z_$]' | head -n 30)"
+    [ -z "${frames}" ] && { echo "место по трассе не определено"; return; }
+    own="$(printf '%s\n' "${frames}" | grep -viE "${parse_re}" | head -n 1)"
+  fi
+  if [ -z "${own}" ]; then echo "в разборе ANTLR: рантайм или сгенерированный парсер"
+  else echo "в коде работы: $(printf '%s' "${own}" | sed -E 's/^[[:space:]]+//; s#"[^"]*/([^/"]+)"#\1#' | cut -c1-120)"; fi
+}
 
 # Первый номер строки из сообщения компилятора: «строка 12», «line 12»,
 # «стр. 12», «[12:5]», «12:5:». Пусто, если номера нет. Время вида
@@ -110,6 +135,23 @@ _probe_deepen() {
   ' "$1"
 }
 
+# Печатает файл, в строке ln которого литерал заменён на (((L))) из n пар скобок.
+_probe_nest() {
+  LC_ALL=C awk -v ln="$2" -v n="$3" "${_PROBE_AWK_MASK}"'
+    NR == ln {
+      m = mask($0)
+      if (find_lit(m)) {
+        seg = substr(m, RSTART, RLENGTH); base = RSTART
+        match(seg, /-?[0-9]+(\.[0-9]+)?/)
+        start = base + RSTART - 1; len = RLENGTH
+        lo = ""; hi = ""; for (k = 0; k < n; k++) { lo = lo "("; hi = hi ")" }
+        $0 = substr($0, 1, start - 1) lo substr($0, start, len) hi substr($0, start + len)
+      }
+    }
+    { print }
+  ' "$1"
+}
+
 run_probe_checks() {
   local work="${1:?work_dir}" examples_dir="${2:?examples_dir}" timeout_s="${3:-60}" prefer_re="${4:-}" skip=" ${5:-} "
   work="$(cd "${work}" && pwd)"
@@ -119,8 +161,16 @@ run_probe_checks() {
   local pdir_rel=".review/probes" pdir="${work}/.review/probes"
   rm -rf "${pdir}"; mkdir -p "${pdir}"
 
-  local total=0 remarks=0 res rc out
-  _probe_remark() { remarks=$((remarks + 1)); echo "    РЕЗУЛЬТАТ: ЗАМЕЧАНИЕ — $1"; }
+  local total=0 remarks=0 envfail=0 res rc out
+  # Сбой окружения (обращение в сеть) — не замечание к работе. out —
+  # переменная run_probe_checks, видна здесь по динамической области bash.
+  _probe_remark() {
+    if [ "${rc:-0}" -ne 0 ] && _looks_like_env_failure "${out:-}"; then
+      envfail=$((envfail + 1)); echo "    ОКРУЖЕНИЕ: compile.sh обратился в сеть (в контейнере её нет) — зонд не дал результата, это не замечание к работе."
+      return
+    fi
+    remarks=$((remarks + 1)); echo "    РЕЗУЛЬТАТ: ЗАМЕЧАНИЕ — $1"
+  }
   _probe_ok() { echo "    РЕЗУЛЬТАТ: ожидаемо — $1"; }
 
   echo "Зонды строятся автоматически и не зависят от синтаксиса варианта. Замечание по зонду — факт запуска, а не догадка; причину ищи в коде."
@@ -184,6 +234,38 @@ run_probe_checks() {
     elif [ "${rc}" -ne 0 ] && _looks_like_crash "${out}"; then _probe_remark "код ${rc}, трасса исключения"
     elif [ "${rc}" -eq 0 ]; then _probe_ok "код 0"
     else echo "    РЕЗУЛЬТАТ: код ${rc} с сообщением — программа отвергнута. Если литерал стоял там, где выражение недопустимо по правилам языка (константа, размер, граница диапазона), это не дефект; иначе — ложное срабатывание."; fi
+
+    # 4б. Вложенные скобки: тот же литерал в N парах скобок. Сумма выше
+    # проверяет длинную цепочку, а скобки — глубину дерева разбора: на
+    # левоассоциативной сумме рекурсивный обход может и не упасть
+    # (sergievich#9: 2000 скобок — 3,5 с, квадратичный обход).
+    local depth kind nest_failed=0 nest_timeout=$(( timeout_s < 30 ? timeout_s : 30 ))
+    for depth in ${PROBE_NEST_DEPTHS}; do
+      if [ "${nest_failed}" -eq 1 ]; then
+        echo "--- зонд «вложенные скобки» на ${depth} уровнях пропущен: падение уже на меньшей глубине."
+        continue
+      fi
+      total=$((total + 1))
+      _probe_nest "${deep_src}" "${deep_line}" "${depth}" > "${pdir}/nest-${depth}.txt"
+      echo "--- зонд «вложенные скобки»: ${ok_rel}, строка ${deep_line}: литерал L заменён на (((L))) из ${depth} пар скобок"
+      res="$(_probe_run "${work}" "${pdir_rel}/nest-${depth}.txt" "${nest_timeout}")"; rc="${res%%$'\t'*}"; out="${res#*$'\t'}"
+      _probe_quote "${out}"
+      kind=""
+      if [ "${rc}" -eq 124 ]; then kind="таймаут ${nest_timeout}с"
+      elif printf '%s' "${out}" | grep -qE 'RecursionError|StackOverflowError|StackOverflowException|Maximum call stack|stack overflow'; then kind="переполнение стека"
+      elif [ "${rc}" -ne 0 ] && _looks_like_crash "${out}"; then kind="трасса исключения"; fi
+      if [ -z "${kind}" ]; then
+        if [ "${rc}" -eq 0 ]; then _probe_ok "код 0 на ${depth} уровнях"
+        else echo "    РЕЗУЛЬТАТ: код ${rc} с сообщением, без трассы — программа отвергнута на ${depth} уровнях. Если это явный предел глубины с понятным сообщением или скобки в этом месте недопустимы грамматикой — не дефект; иначе ложное срабатывание."; fi
+        continue
+      fi
+      nest_failed=1
+      if [ "${depth}" -le "${PROBE_NEST_REQUIRED}" ]; then
+        _probe_remark "${kind} на ${depth} вложенных скобках ($(_probe_crash_site "${out}"))"
+      else
+        echo "    РЕЗУЛЬТАТ: справочно — ${kind} на ${depth} вложенных скобках ($(_probe_crash_site "${out}")). Не обязательное замечание: на ${PROBE_NEST_REQUIRED} уровнях падения нет. Если падает код студента (семантика, visitor) — замечание «по запуску»; если рантайм ANTLR — ограничение библиотеки, не замечание."
+      fi
+    done
   fi
 
   local ok_example="${deep_src}"
@@ -235,6 +317,6 @@ run_probe_checks() {
   rmdir "${work}/.review" 2>/dev/null || true
 
   echo
-  echo "Счётчики зондов (копируй в таблицу проверок как есть): запущено ${total}, замечаний ${remarks}"
+  echo "Счётчики зондов (копируй в таблицу проверок как есть): запущено ${total}, замечаний ${remarks}$([ "${envfail}" -gt 0 ] && echo ", сбоев окружения ${envfail}")"
   [ "${remarks}" -eq 0 ]
 }

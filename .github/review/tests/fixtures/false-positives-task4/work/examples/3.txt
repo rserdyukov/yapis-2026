@@ -1,0 +1,11 @@
+# Затенение: локальная total скрывает глобальную
+int total = 1
+func int twice(val int total)
+  int r = total * 2
+  return r
+end
+if total > 0
+  int total = 5
+  total = total + 1
+end
+total = twice(total)

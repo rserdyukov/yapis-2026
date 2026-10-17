@@ -100,6 +100,14 @@ _deps_find() {
     -not -path '*/.venv/*' 2>/dev/null | sort
 }
 
+# Путь манифеста относительно работы. Не GNU-флаг realpath: у BSD
+# realpath на macOS такого флага нет, и review-local.sh печатал пустое имя
+# с ошибкой «illegal option». _deps_find отдаёт пути вида <work>/…
+_deps_rel() {
+  local work="${1%/}" f="$2"
+  case "${f}" in "${work}"/*) printf '%s' "${f#"${work}"/}" ;; *) printf '%s' "${f}" ;; esac
+}
+
 install_deps() {
   local work="${1:?work_dir}"
   work="$(cd "${work}" && pwd)"
@@ -129,7 +137,7 @@ install_deps() {
   while IFS= read -r f; do
     [ -n "${f}" ] || continue
     did=1
-    _deps_run "pip: $(realpath --relative-to="${work}" "${f}")" "$(dirname "${f}")" \
+    _deps_run "pip: $(_deps_rel "${work}" "${f}")" "$(dirname "${f}")" \
       pip3 install --quiet --disable-pip-version-check --no-cache-dir \
         --target "${d}/python" -r "${f}" || failed=1
   done < <(_deps_find "${work}" -name 'requirements*.txt')
@@ -138,7 +146,7 @@ install_deps() {
   while IFS= read -r f; do
     [ -n "${f}" ] || continue
     did=1
-    _deps_run "maven: $(realpath --relative-to="${work}" "${f}")" "$(dirname "${f}")" \
+    _deps_run "maven: $(_deps_rel "${work}" "${f}")" "$(dirname "${f}")" \
       mvn -q -B -Dmaven.repo.local="${d}/m2" dependency:go-offline || failed=1
   done < <(_deps_find "${work}" -name 'pom.xml')
 
@@ -148,13 +156,13 @@ install_deps() {
     did=1
     local gdir; gdir="$(dirname "${f}")"
     if [ -x "${gdir}/gradlew" ]; then
-      _deps_run "gradle: $(realpath --relative-to="${work}" "${f}")" "${gdir}" \
+      _deps_run "gradle: $(_deps_rel "${work}" "${f}")" "${gdir}" \
         ./gradlew -q --no-daemon dependencies || failed=1
     elif command -v gradle >/dev/null 2>&1; then
-      _deps_run "gradle: $(realpath --relative-to="${work}" "${f}")" "${gdir}" \
+      _deps_run "gradle: $(_deps_rel "${work}" "${f}")" "${gdir}" \
         gradle -q --no-daemon dependencies || failed=1
     else
-      echo "--- gradle: $(realpath --relative-to="${work}" "${f}")"
+      echo "--- gradle: $(_deps_rel "${work}" "${f}")"
       echo "    gradle не установлен в образе и нет gradlew — добавьте wrapper в репозиторий."
       failed=1
     fi
@@ -166,9 +174,9 @@ install_deps() {
     did=1
     local ndir; ndir="$(dirname "${f}")"
     if [ -f "${ndir}/package-lock.json" ]; then
-      _deps_run "npm ci: $(realpath --relative-to="${work}" "${f}")" "${ndir}" npm ci --silent --no-audit --no-fund || failed=1
+      _deps_run "npm ci: $(_deps_rel "${work}" "${f}")" "${ndir}" npm ci --silent --no-audit --no-fund || failed=1
     else
-      _deps_run "npm install: $(realpath --relative-to="${work}" "${f}")" "${ndir}" npm install --silent --no-audit --no-fund || failed=1
+      _deps_run "npm install: $(_deps_rel "${work}" "${f}")" "${ndir}" npm install --silent --no-audit --no-fund || failed=1
     fi
   done < <(_deps_find "${work}" -name 'package.json')
 
@@ -176,7 +184,7 @@ install_deps() {
   while IFS= read -r f; do
     [ -n "${f}" ] || continue
     did=1
-    _deps_run "dotnet restore: $(realpath --relative-to="${work}" "${f}")" "$(dirname "${f}")" \
+    _deps_run "dotnet restore: $(_deps_rel "${work}" "${f}")" "$(dirname "${f}")" \
       dotnet restore --verbosity quiet "${f}" || failed=1
   done < <(_deps_find "${work}" \( -name '*.csproj' -o -name '*.fsproj' -o -name '*.sln' \))
 
@@ -185,18 +193,18 @@ install_deps() {
     [ -n "${f}" ] || continue
     did=1
     if command -v cargo >/dev/null 2>&1; then
-      _deps_run "cargo fetch: $(realpath --relative-to="${work}" "${f}")" "$(dirname "${f}")" cargo fetch --quiet || failed=1
+      _deps_run "cargo fetch: $(_deps_rel "${work}" "${f}")" "$(dirname "${f}")" cargo fetch --quiet || failed=1
     else
-      echo "--- cargo: $(realpath --relative-to="${work}" "${f}")"; echo "    cargo не установлен в образе."; failed=1
+      echo "--- cargo: $(_deps_rel "${work}" "${f}")"; echo "    cargo не установлен в образе."; failed=1
     fi
   done < <(_deps_find "${work}" -name 'Cargo.toml')
   while IFS= read -r f; do
     [ -n "${f}" ] || continue
     did=1
     if command -v go >/dev/null 2>&1; then
-      _deps_run "go mod download: $(realpath --relative-to="${work}" "${f}")" "$(dirname "${f}")" go mod download || failed=1
+      _deps_run "go mod download: $(_deps_rel "${work}" "${f}")" "$(dirname "${f}")" go mod download || failed=1
     else
-      echo "--- go: $(realpath --relative-to="${work}" "${f}")"; echo "    go не установлен в образе."; failed=1
+      echo "--- go: $(_deps_rel "${work}" "${f}")"; echo "    go не установлен в образе."; failed=1
     fi
   done < <(_deps_find "${work}" -name 'go.mod')
 

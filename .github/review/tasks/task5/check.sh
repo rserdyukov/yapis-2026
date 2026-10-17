@@ -18,6 +18,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../../lib/compile-check.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/grammar-facts.sh"
 
 STATUS=0
 
@@ -49,6 +51,10 @@ for candidate in "examples" "example" "samples"; do
     break
   fi
 done
+
+echo "== Стартовое правило грамматики =="
+print_grammar_facts "${WORK_DIR}"
+echo
 
 echo "== Раскладка репозитория =="
 check_layout "${WORK_DIR}" with-doc || STATUS=1

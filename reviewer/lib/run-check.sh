@@ -59,6 +59,9 @@
 #   CHECK_SANDBOX_DIR      где создавать sandbox (по умолчанию рядом с
 #                          student_repo_dir; на macOS с Docker Desktop
 #                          укажите каталог внутри $HOME).
+#   CHECK_KEEP_DIR         сохранить рабочую копию контейнера в этот каталог
+#                          (для run-model-probes.sh); в direct-режиме не нужен —
+#                          проверка и так идёт в student_repo_dir.
 
 set -uo pipefail
 
@@ -136,7 +139,13 @@ fi
 # рабочим каталогом путь заведомо доступен и на раннере, и локально.
 SANDBOX_PARENT="${CHECK_SANDBOX_DIR:-$(cd "$(dirname "${STUDENT_REPO_DIR}")" && pwd)}"
 SANDBOX="$(mktemp -d "${SANDBOX_PARENT}/check-sandbox.XXXXXX")"
-trap 'rm -rf "${SANDBOX}"' EXIT
+# CHECK_KEEP_DIR: сохранить рабочую копию после проверки (сгенерированный
+# парсер, .deps/) — в ней run-model-probes.sh запускает зонды модели.
+if [ -n "${CHECK_KEEP_DIR:-}" ]; then
+  trap 'rm -rf "${CHECK_KEEP_DIR}"; mv "${SANDBOX}/repo" "${CHECK_KEEP_DIR}" 2>/dev/null; rm -rf "${SANDBOX}"' EXIT
+else
+  trap 'rm -rf "${SANDBOX}"' EXIT
+fi
 
 # Копия репозитория студента: контейнер может писать в неё что угодно, на
 # оригинал (который потом читает агент) это не повлияет. .git не копируем —

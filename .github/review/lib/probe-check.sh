@@ -17,7 +17,10 @@
 #   - целый литерал в корректном примере заменяется суммой из N единиц того
 #     же типа — программа остаётся корректной, но выражение становится
 #     глубоким (рекурсивный обход не должен падать);
+#   - тот же литерал в сумме из 5000 слагаемых — квадратичный разбор и
+#     переполнение стека на длинной цепочке;
 #   - тот же литерал в 500 и 3000 парах скобок — глубина дерева разбора;
+#   - операнд || или && в 30 уровнях ((X || X) || X) — экспоненциальный обход;
 #   - корректный пример, записанный дважды подряд, — подпрограммы и явно
 #     объявленные переменные объявлены повторно с той же сигнатурой.
 #
@@ -32,8 +35,14 @@
 
 PROBE_SHIFT_LINES=5
 PROBE_SUM_TERMS=300
+PROBE_SUM_LONG=5000
+# Вложенность зонда «цепочка ||/&&»: ((X || X) || X)… Обход, который
+# заходит в левый операнд дважды, растёт как 2^N (rumyantseva#10 P7: 30
+# уровней — больше 100 с, 20 — 3 с; на 25 таймаут 30 с ещё не срабатывает).
+PROBE_LOGIC_DEPTH=30
 # Глубины зонда «вложенные скобки». Падение на PROBE_NEST_REQUIRED уровнях и
-# меньше — обязательное замечание (как у labgen deep-expr), глубже — справочно.
+# меньше — обязательное замечание (как у labgen deep-expr), глубже — тоже
+# замечание, но серьёзность зависит от места падения (ANTLR или код работы).
 PROBE_NEST_DEPTHS="500 3000"
 PROBE_NEST_REQUIRED=500
 
@@ -152,6 +161,38 @@ _probe_nest() {
   ' "$1"
 }
 
+# Номер строки и операнд для зонда «цепочка ||/&&»: однословный операнд X
+# (имя или true/false) слева от ||, &&, or, and, перед которым стоит «=»,
+# «(», «,», «!» или if/while/return/until. Такой X можно заменить на
+# ((X op X) op X)… того же типа в любом варианте. Печатает «строка<TAB>X<TAB>op».
+_probe_logic_site() {
+  LC_ALL=C awk "${_PROBE_AWK_MASK}"'
+    {
+      m = mask($0)
+      if (match(m, /(^|[=(,!]|if|while|return|until)[[:space:]]*[A-Za-z_][A-Za-z0-9_]*([[:space:]]*(\|\||&&)|[[:space:]]+(or|and)[[:space:](])/)) {
+        seg = substr(m, RSTART, RLENGTH)
+        match(seg, /[A-Za-z_][A-Za-z0-9_]*([[:space:]]*(\|\||&&)|[[:space:]]+(or|and)[[:space:](])$/)
+        rest = substr(seg, RSTART)
+        match(rest, /^[A-Za-z_][A-Za-z0-9_]*/); x = substr(rest, 1, RLENGTH)
+        if (x ~ /^(if|while|return|until|not|for|in|elif|else|then|do)$/) next
+        op = substr(rest, RLENGTH + 1); gsub(/^[[:space:]]+|[[:space:](]+$/, "", op)
+        print NR "\t" x "\t" op; exit
+      }
+    }' "$1"
+}
+
+# Печатает файл, в строке ln которого первое вхождение операнда x перед op
+# заменено на ((x op x) op x)… глубины n.
+_probe_logic_nest() {
+  LC_ALL=C awk -v ln="$2" -v x="$3" -v op="$4" -v n="$5" '
+    NR == ln {
+      e = x; for (k = 0; k < n; k++) e = "(" e " " op " " x ")"
+      i = index($0, x " " op); if (i == 0) i = index($0, x op)
+      if (i > 0) $0 = substr($0, 1, i - 1) e substr($0, i + length(x))
+    }
+    { print }' "$1"
+}
+
 run_probe_checks() {
   local work="${1:?work_dir}" examples_dir="${2:?examples_dir}" timeout_s="${3:-60}" prefer_re="${4:-}" skip=" ${5:-} "
   work="$(cd "${work}" && pwd)"
@@ -235,6 +276,25 @@ run_probe_checks() {
     elif [ "${rc}" -eq 0 ]; then _probe_ok "код 0"
     else echo "    РЕЗУЛЬТАТ: код ${rc} с сообщением — программа отвергнута. Если литерал стоял там, где выражение недопустимо по правилам языка (константа, размер, граница диапазона), это не дефект; иначе — ложное срабатывание."; fi
 
+    # 4а. Длинная сумма: тот же литерал, PROBE_SUM_LONG слагаемых. Ручное
+    # ревью ловило на ней квадратичный разбор (rublevskaya#8 P3: 5000
+    # слагаемых — код 3) и переполнение стека в обходе левоассоциативного
+    # дерева (germanenko#8 P14, semenido#8 P9), которых на 300 не видно.
+    # Запускается, только если 300 прошли: иначе замечание уже есть.
+    if [ "${rc}" -eq 0 ]; then
+      total=$((total + 1))
+      _probe_deepen "${deep_src}" "${deep_line}" "${PROBE_SUM_LONG}" > "${pdir}/long-sum.txt"
+      echo "--- зонд «длинная сумма»: ${ok_rel}, строка ${deep_line}: литерал L заменён на (L + 0 + … + 0) из ${PROBE_SUM_LONG} слагаемых"
+      res="$(_probe_run "${work}" "${pdir_rel}/long-sum.txt" "${timeout_s}")"; rc="${res%%$'\t'*}"; out="${res#*$'\t'}"
+      _probe_quote "${out}"
+      if [ "${rc}" -eq 124 ]; then _probe_remark "таймаут ${timeout_s}с на выражении из ${PROBE_SUM_LONG} слагаемых (на 300 — код 0): разбор или обход растёт быстрее линейного"
+      elif printf '%s' "${out}" | grep -qE 'RecursionError|StackOverflowError|StackOverflowException|Maximum call stack|stack overflow'; then
+        _probe_remark "переполнение стека на выражении из ${PROBE_SUM_LONG} слагаемых ($(_probe_crash_site "${out}")): рекурсивный обход левоассоциативной цепочки"
+      elif [ "${rc}" -ne 0 ] && _looks_like_crash "${out}"; then _probe_remark "код ${rc}, трасса исключения на ${PROBE_SUM_LONG} слагаемых"
+      elif [ "${rc}" -eq 0 ]; then _probe_ok "код 0 на ${PROBE_SUM_LONG} слагаемых"
+      else _probe_remark "код ${rc} на ${PROBE_SUM_LONG} слагаемых, а на 300 — код 0: корректная программа отвергнута из-за длины выражения (если это явный предел из README с понятным сообщением — не дефект)"; fi
+    fi
+
     # 4б. Вложенные скобки: тот же литерал в N парах скобок. Сумма выше
     # проверяет длинную цепочку, а скобки — глубину дерева разбора: на
     # левоассоциативной сумме рекурсивный обход может и не упасть
@@ -263,9 +323,37 @@ run_probe_checks() {
       if [ "${depth}" -le "${PROBE_NEST_REQUIRED}" ]; then
         _probe_remark "${kind} на ${depth} вложенных скобках ($(_probe_crash_site "${out}"))"
       else
-        echo "    РЕЗУЛЬТАТ: справочно — ${kind} на ${depth} вложенных скобках ($(_probe_crash_site "${out}")). Не обязательное замечание: на ${PROBE_NEST_REQUIRED} уровнях падения нет. Если падает код студента (семантика, visitor) — замечание «по запуску»; если рантайм ANTLR — ограничение библиотеки, не замечание."
+        # Ручное ревью считает трассу на 3000 скобках дефектом и тогда, когда
+        # падает рантайм ANTLR (rumyantseva#10 P6): пользователь видит стек
+        # вместо сообщения. Бот по пометке «справочно» её пропускал.
+        _probe_remark "${kind} на ${depth} вложенных скобках ($(_probe_crash_site "${out}")); на ${PROBE_NEST_REQUIRED} уровнях падения нет. Пользователь получает трассу вместо сообщения об ошибке: глубину нужно ограничить или переполнение перехватить и выдать сообщение. Серьёзность — «Замечание», если падает рантайм ANTLR, «Существенно», если код работы"
       fi
     done
+  fi
+
+  # 4в. Цепочка ||/&&: операнд логического выражения из корректного примера
+  # заменён на ((X || X) || X)… Обход, который вычисляет левый операнд
+  # дважды (тип, потом проверка), растёт как 2^N — rumyantseva#10 P7.
+  local lsrc="" lsite="" lline lx lop
+  while IFS= read -r f_ok; do
+    [ -z "${f_ok}" ] && continue
+    lsite="$(_probe_logic_site "${f_ok}")"
+    if [ -n "${lsite}" ]; then lsrc="${f_ok}"; break; fi
+  done < <(find "${examples_dir}" -type f -not -iname 'error-*' -not -iname '*.md' 2>/dev/null | sort)
+  if [ -n "${lsrc}" ]; then
+    IFS=$'\t' read -r lline lx lop <<< "${lsite}"
+    total=$((total + 1))
+    _probe_logic_nest "${lsrc}" "${lline}" "${lx}" "${lop}" "${PROBE_LOGIC_DEPTH}" > "${pdir}/logic-chain.txt"
+    local logic_timeout=$(( timeout_s < 30 ? timeout_s : 30 ))
+    echo "--- зонд «цепочка ${lop}»: ${lsrc#"${work}"/}, строка ${lline}: операнд ${lx} заменён на ((${lx} ${lop} ${lx}) ${lop} ${lx})… из ${PROBE_LOGIC_DEPTH} уровней"
+    res="$(_probe_run "${work}" "${pdir_rel}/logic-chain.txt" "${logic_timeout}")"; rc="${res%%$'\t'*}"; out="${res#*$'\t'}"
+    _probe_quote "${out}"
+    if [ "${rc}" -eq 124 ]; then _probe_remark "таймаут ${logic_timeout}с на ${PROBE_LOGIC_DEPTH} вложенных ${lop}: время растёт экспоненциально — какой-то обход заходит в операнд ${lop} больше одного раза"
+    elif printf '%s' "${out}" | grep -qE 'RecursionError|StackOverflowError|StackOverflowException|Maximum call stack|stack overflow'; then
+      _probe_remark "переполнение стека на ${PROBE_LOGIC_DEPTH} вложенных ${lop} ($(_probe_crash_site "${out}"))"
+    elif [ "${rc}" -ne 0 ] && _looks_like_crash "${out}"; then _probe_remark "код ${rc}, трасса исключения"
+    elif [ "${rc}" -eq 0 ]; then _probe_ok "код 0"
+    else echo "    РЕЗУЛЬТАТ: код ${rc} с сообщением — программа отвергнута. Если ${lx} здесь не логического типа (операнд выбран по положению, а не по типу) — зонд не применим; иначе — ложное срабатывание."; fi
   fi
 
   local ok_example="${deep_src}"

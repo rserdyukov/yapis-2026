@@ -83,8 +83,14 @@ RUN curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/b
     && mv "/opt/apache-maven-${MAVEN_VERSION}" /opt/maven
 
 # Python-рантаймы ANTLR и типовые зависимости студенческих работ.
+#
+# antlr4-tools НЕ ставим: его скрипт antlr4 перезаписывал обёртку выше и
+# при каждом запуске ходил в сеть за номером версии и jar в ~/.m2. Без
+# сети генерация парсера падала у всех, кто вызывает antlr4 из compile.sh
+# (motolyanets#8), а локально у студента проходила — там .m2 уже заполнен.
 RUN pip3 install --break-system-packages --no-cache-dir \
-      antlr4-tools antlr4-python3-runtime==4.13.2 pytest
+      antlr4-python3-runtime==4.13.2 pytest \
+    && head -2 /usr/local/bin/antlr4 | grep -q "java -jar"
 
 # Java-рантайм ANTLR в CLASSPATH по умолчанию — чтобы javac находил его без
 # настройки со стороны студента.

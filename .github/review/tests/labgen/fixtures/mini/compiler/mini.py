@@ -7,7 +7,10 @@
   no-return-check  — функция без return принимается;
   no-arg-count     — число аргументов не проверяется;
   crash-dup-func   — повторная функция роняет анализатор трассой;
-  reject-fresh     — любое имя zz_labgen_* считается ошибкой (ложная тревога).
+  reject-fresh     — любое имя zz_labgen_* считается ошибкой (ложная тревога);
+  cascade-errors   — после ошибки в операторе анализ продолжается, а имя из
+                     ошибочного объявления не объявляется (каскад сообщений);
+  no-recursion     — функция видна только после своего тела (рекурсия — ошибка).
 """
 import os
 import re
@@ -214,6 +217,7 @@ class Checker:
         self.scopes = [{}]
         self.funcs = {}
         self.ret = None
+        self.errors = []
 
     def lookup(self, name):
         for s in reversed(self.scopes):
@@ -233,7 +237,16 @@ class Checker:
             if it[0] == "func":
                 self.func(it)
             else:
-                self.stmt(it)
+                self.safe_stmt(it)
+
+    def safe_stmt(self, st):
+        if "cascade-errors" not in DEFECTS:
+            return self.stmt(st)
+        try:
+            return self.stmt(st)
+        except Fail as e:
+            self.errors.append(str(e))
+            return False
 
     def func(self, it):
         _, typ, name, params, (body, end) = it
@@ -241,7 +254,9 @@ class Checker:
             if "crash-dup-func" in DEFECTS:
                 None.attr  # noqa: B018 — заложенное падение
             raise sem(name[2], f"функция «{name[1]}» уже объявлена")
-        self.funcs[name[1]] = (typ, [p[0] for p in params])
+        sig = (typ, [p[0] for p in params])
+        if "no-recursion" not in DEFECTS:
+            self.funcs[name[1]] = sig
         self.scopes.append({})
         for ptyp, ptok in params:
             self.define(ptok, ptyp)
@@ -249,6 +264,7 @@ class Checker:
         returns = self.block(body)
         self.ret = None
         self.scopes.pop()
+        self.funcs[name[1]] = sig
         if typ != "void" and not returns and "no-return-check" not in DEFECTS:
             raise sem(end, f"функция «{name[1]}» не возвращает значение на всех путях")
 
@@ -256,7 +272,7 @@ class Checker:
         self.scopes.append({})
         returns = False
         for st in body:
-            returns = self.stmt(st) or returns
+            returns = self.safe_stmt(st) or returns
         self.scopes.pop()
         return returns
 
@@ -274,7 +290,7 @@ class Checker:
                 raise sem(name[2], f"переменная «{name[1]}» не объявлена")
             self.assign_check(vt, self.expr(e), name[2])
         elif k in {"if", "while"}:
-            if self.expr(st[2]) != "bool":
+            if self.cond_type(st[2]) != "bool":
                 raise sem(st[1], "условие должно иметь тип bool")
             if k == "while":
                 self.block(st[3][0])
@@ -295,6 +311,15 @@ class Checker:
         elif k == "expr":
             self.expr(st[2])
         return False
+
+    def cond_type(self, e):
+        if "cascade-errors" not in DEFECTS:
+            return self.expr(e)
+        try:
+            return self.expr(e)
+        except Fail as err:
+            self.errors.append(str(err))
+            return "?"
 
     def assign_check(self, target, source, line):
         if source == "void":
@@ -351,11 +376,15 @@ def depth(e):
 
 def main():
     text = open(sys.argv[1], encoding="utf-8").read()
+    checker = Checker()
     try:
         items = Parser(lex(text)).program()
-        Checker().program(items)
+        checker.program(items)
     except Fail as e:
-        print(e)
+        print("\n".join([*checker.errors, str(e)]))
+        return 1
+    if checker.errors:
+        print("\n".join(checker.errors))
         return 1
     print("OK")
     return 0

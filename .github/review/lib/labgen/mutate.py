@@ -46,6 +46,7 @@ def line_of(text: str, n: int) -> str:
 
 
 FRESH = "zz_labgen"
+LOOP_KW = {"while", "until", "for", "foreach"}
 
 
 def assign_template(lx: Lexed, li: LangInfo, funcs: list[Func]) -> tuple[str, str] | None:
@@ -266,22 +267,86 @@ def gen_sem(lx: Lexed, li: LangInfo) -> list[Mutant]:
                        f"результат void-функции `{f.name}` присвоен переменной", "\n".join(ls))
 
     # Каскад: необъявленное имя в правой части присваивания, левая часть потом используется.
-    # Ожидание — ровно одно сообщение об ошибке.
+    # Ожидание — ровно одно сообщение об ошибке. Явное объявление (`int x = a + zz;`)
+    # берём только со сложной правой частью: тип x известен из объявления, и
+    # повторные сообщения о x ниже — дубль (putyato P3, khachatryan P3, olikhver P5).
     for t in var_uses(lx, li, funcs):
         code = [x for x in lx.by_line[t.line] if x.text.strip()]
-        if len(code) < 3 or code[1].text not in ASSIGN_OPS or code[0].type != li.id_type:
+        if len(code) >= 3 and code[1].text in ASSIGN_OPS and code[0].type == li.id_type:
+            k = 1
+        elif len(code) >= 4 and code[2].text in ASSIGN_OPS and code[1].type == li.id_type \
+                and (code[0].lit or "") in li.keywords:
+            k = 2
+            if not any(x.text in {"+", "-", "*", "/", "%"} for x in code[k + 1:]):
+                continue
+        else:
             continue
-        lhs = code[0].text
+        lhs = code[k - 1].text
         if sum(1 for x in lx.toks if x.text == lhs and x.line > t.line) == 0:
             continue
         if sum(1 for x in lx.toks if x.text == lhs and x.line < t.line and x.type == li.id_type) > 0:
             continue  # уже объявлена раньше — каскада не будет
         m0 = len(out)
-        mk("cascade", "one-error", "medium", t.line,
+        mk("cascade", "one-error", "high" if k == 2 else "medium", t.line,
            f"`{t.text}` в инициализации `{lhs}` заменено необъявленным; `{lhs}` используется ниже",
            edit(T, [(t.start, t.stop + 1, f"{FRESH}_v")]))
         if len(out) > m0 and sum(m.op == "cascade" for m in out) >= 3:
             break
+
+    # Каскад в заголовке цикла: ошибочное условие не должно порождать сообщения
+    # о теле цикла (rumyantseva P19).
+    for t in var_uses(lx, li, funcs):
+        code = [x for x in lx.by_line[t.line] if x.text.strip()]
+        if not code or (code[0].lit or "") not in LOOP_KW:
+            continue
+        mk("cascade-loop", "one-error", "high", t.line,
+           f"`{t.text}` в заголовке цикла `{code[0].lit}` заменено необъявленным",
+           edit(T, [(t.start, t.stop + 1, f"{FRESH}_v")]))
+        if sum(m.op == "cascade-loop" for m in out) >= 3:
+            break
+
+    # Контроль: рекурсия. Копия функции с новым именем, первый return с выражением
+    # заменён вызовом самой себя с теми же параметрами; тип результата известен из
+    # заголовка. Копию никто не вызывает, так что при исполнении зацикливания нет.
+    # Ложная ошибка здесь — тип рекурсивного вызова не выводится (olikhver P2).
+    starts = [0]
+    for s in lines:
+        starts.append(starts[-1] + len(s) + 1)
+    for f in funcs:
+        if not f.returns_value or f.name in dup_names or len(f.params) != len(f.param_groups):
+            continue
+        # Параметр-ссылка (`out x`, `ref x`) требует пометки и в вызове — такой вызов не построить.
+        if any(re.search(r"\b(out|ref|inout|var)\b", T[s:e]) for s, e in f.param_groups):
+            continue
+        ret = None
+        for ln in range(f.header_lines[1] + 1, f.body[1] + 1):
+            code = [x for x in lx.by_line.get(ln, []) if x.text.strip()]
+            i = next((j for j, x in enumerate(code) if x.lit == "return"), None)
+            if i is None:
+                continue
+            seg = []
+            for x in code[i + 1:]:
+                if x.text in {";", "}"}:
+                    break
+                seg.append(x)
+            if seg:
+                ret = seg
+                break
+        if not ret:
+            continue
+        rec = f"{FRESH}_rec_{f.name}"
+        b0, b1 = starts[f.body[0] - 1], starts[f.body[1]] - 1
+        eds = [(x.start - b0, x.stop + 1 - b0, rec) for x in lx.toks
+               if x.type == li.id_type and x.text == f.name and b0 <= x.start < b1
+               and not (ret[0].start <= x.start <= ret[-1].stop)]
+        eds.append((ret[0].start - b0, ret[-1].stop + 1 - b0, f"{rec}({', '.join(p.text for p in f.params)})"))
+        copy = edit(T[b0:b1], eds)
+        new = "\n".join(lines[:f.body[1]] + ["", copy] + lines[f.body[1]:])
+        mk("ctl-recursion", "pass", "high", f.body[1] + 2,
+           f"копия функции `{f.name}` возвращает результат рекурсивного вызова самой себя", new)
+        # Строки вставлены, а не изменены: «было» на этом номере — посторонняя строка.
+        out[-1].before = ""
+        out[-1].after = next((x.strip() for x in copy.split("\n") if rec + "(" in x and "return" in x), "")
 
     # Глубокое выражение по образцу присваивания из примера: не должно падать.
     for t in lx.toks:

@@ -44,7 +44,9 @@ def find_funcs(lx: Lexed, li: LangInfo) -> list[Func]:
             continue
         line_toks = lx.by_line[t.line]
         first = next((x for x in line_toks if x.text.strip()), None)
-        before = [x for x in line_toks if x.start < t.start]
+        # Пробелы бывают отдельными токенами (у putyato — тип NEWLINE): без
+        # фильтра `func f(…)` не распознавалась как функция.
+        before = [x for x in line_toks if x.start < t.start and x.text.strip()]
         if not before or not all(x.lit and IDENT_RE.match(x.lit) or x.type == li.id_type for x in before):
             continue
         if first.lit in CONTROL_KW or first.text in CONTROL_KW:
@@ -79,6 +81,9 @@ def find_funcs(lx: Lexed, li: LangInfo) -> list[Func]:
         names = []
         for g in params:
             ids = [x for x in g if x.type == li.id_type]
+            if len(ids) > 1:
+                # `in a: Queue` — имя перед двоеточием, дальше тип.
+                ids = [x for x in ids if (n := lx.next(x)) and n.text == ":"]
             names.append(ids[0] if len(ids) == 1 else None)
         param_names = [n for n in names if n] if all(names) else []
         # Тело.
@@ -107,6 +112,8 @@ def find_funcs(lx: Lexed, li: LangInfo) -> list[Func]:
         for x in body_toks:
             if x.lit == "return":
                 n2 = lx.next(x)
+                while n2 and n2.line == x.line and not n2.text.strip() and n2.text != "\n":
+                    n2 = lx.next(n2)
                 if n2 and n2.line == x.line and n2.text.strip() and n2.text not in {";", "}"}:
                     ret_value = True
         groups = [(g[0].start, g[-1].stop + 1) for g in params if g]

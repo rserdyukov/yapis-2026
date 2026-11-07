@@ -147,10 +147,10 @@ class MiniEndToEnd(unittest.TestCase):
         self.assertEqual(rep["meta"]["lexer"], "ANTLR")
         self.assertEqual(verdicts(rep), {"ok"})
         ops = {m["op"] for m in rep["mutants"]}
-        # cascade строится только для неявного объявления (`x = …`): в Mini его нет.
         expected = {"undeclared-var", "unknown-func", "arg-count", "string-arith", "string-cond",
                     "missing-return", "dup-func", "dup-param", "local-leak", "void-value",
                     "implicit-cast", "deep-expr", "ctl-rename-var", "ctl-rename-func",
+                    "cascade", "cascade-loop", "ctl-recursion",
                     "drop-rparen", "bad-char", "unclosed-string", "drop-delim"}
         self.assertEqual(expected - ops, set(), "мутации, которые фикстура больше не порождает")
 
@@ -174,6 +174,17 @@ class MiniEndToEnd(unittest.TestCase):
     def test_false_positive_on_controls(self):
         _, rep = run_labgen(defects="reject-fresh")
         self.assertIn("false-positive", verdicts(rep, "ctl-rename-var"))
+
+    def test_cascade_detected(self):
+        # putyato P3, khachatryan P3: одна ошибка в выражении — несколько сообщений.
+        _, rep = run_labgen(defects="cascade-errors")
+        self.assertIn("cascade", verdicts(rep, "cascade"))
+        self.assertIn("cascade", verdicts(rep, "cascade-loop"))
+
+    def test_recursion_false_positive(self):
+        # olikhver P2: тип рекурсивного вызова не выведен.
+        _, rep = run_labgen(defects="no-recursion")
+        self.assertEqual(verdicts(rep, "ctl-recursion"), {"false-positive"})
 
     def test_no_run_writes_mutants_only(self):
         r, rep = run_labgen("--no-run")

@@ -215,6 +215,7 @@ make_pr() {
       review)  body='<!-- ai-review-marker -->\n## Ревью\nзамечания' ;;
       skipped) body='<!-- ai-review-marker -->\n<!-- ai-review-skipped -->\nпропущено' ;;
       sha:*)   body="<!-- ai-review-marker -->\n<!-- ai-review-sha:${kind#sha:} -->" ;;
+      final:*) body="<!-- ai-review-marker -->\n<!-- ai-review-sha:${kind#final:} -->\n<!-- ai-review-final -->" ;;
       failed:*) body="<!-- ai-review-marker -->\n<!-- ai-review-marker-failed -->\n<!-- ai-review-sha:${kind#failed:} -->\nсбой" ;;
       old:*)   body='<!-- ai-review-marker -->\nстарое ревью'; created="${kind#old:}" ;;
       *)       body="${kind}" ;;
@@ -379,11 +380,48 @@ test_discover_skipped_comments_do_not_count() {
   assert_contains "${DISC_OUT}" '"pr":4' "отказы не должны расходовать лимит PR"
 }
 
+# После исчерпания лимита новый коммит получает одно итоговое ревью
+# (romanov#9, rublevskaya#10: исправления после третьего ревью без ответа).
+test_discover_per_pr_limit_gives_one_final_review() {
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 4 task3 ddd444 100 sha:aaa111 sha:bbb222 sha:ccc333)]"
+  assert_contains "${DISC_OUT}" '"final":true' "итоговое ревью сверх лимита" || return 1
+  assert_contains "${DISC_LOG}" "итоговое ревью" "причина в логе" || return 1
+  run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 4 task3 ddd444 100)]"
+  assert_contains "${DISC_OUT}" '"final":false' "обычное ревью — не итоговое"
+}
+
 test_discover_per_pr_limit_blocks() {
   run_discover GH_REPOS="$(_one_repo)" \
+    GH_PRS="[$(make_pr 4 task3 eee555 100 sha:aaa111 sha:bbb222 sha:ccc333 final:ddd444)]"
+  assert_eq "${DISC_OUT}" "[]" "после итогового ревью лимит должен сработать" || return 1
+  assert_contains "${DISC_LOG}" "лимит ревью на PR" "причина в логе" || return 1
+  local cfg="${TMP_ROOT}/cfg-nofinal.$$"
+  rm -rf "${cfg}"; cp -R "${REVIEW_DIR}" "${cfg}"
+  sed -i.bak 's/^FINAL_REVIEW_OVER_LIMIT=.*/FINAL_REVIEW_OVER_LIMIT=0/' "${cfg}/config.env"
+  run_discover REVIEW_ROOT="${cfg}" GH_REPOS="$(_one_repo)" \
     GH_PRS="[$(make_pr 4 task3 aaa111 100 review review review)]"
-  assert_eq "${DISC_OUT}" "[]" "лимит ревью на PR (MAX_REVIEWS_PER_PR=3) должен сработать" || return 1
-  assert_contains "${DISC_LOG}" "лимит ревью на PR" "причина в логе"
+  assert_eq "${DISC_OUT}" "[]" "FINAL_REVIEW_OVER_LIMIT=0 — без итогового ревью"
+}
+
+# Итоговое ревью: короткий промпт без полного diff, маркер в комментарии.
+test_final_review_prompt_and_marker() {
+  local d="${TMP_ROOT}/final-p"; rm -rf "${d}"; mkdir -p "${d}"
+  printf '### Список изменённых файлов\n+1 -0 a.py\n\n### Полный diff\n+секретная_строка_diff\n' > "${d}/diff.txt"
+  printf '**Резюме:** прошлое.\n1. Замечание.\n' > "${d}/prev.md"
+  printf '+исправление\n' > "${d}/prev-diff.txt"
+  local out
+  out="$(FINAL_MODE=1 PREV_REVIEW_FILE="${d}/prev.md" PREV_REVIEW_SHA=aaa111 PREV_DIFF_FILE="${d}/prev-diff.txt" \
+    bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 . ivanov 3 "${d}/diff.txt" "" 0)"
+  assert_contains "${out}" "Режим ревью: итоговый" "раздел режима" || return 1
+  assert_contains "${out}" "+исправление" "diff с прошлого ревью" || return 1
+  assert_not_contains "${out}" "секретная_строка_diff" "полный diff не включён" || return 1
+  out="$(FINAL_MODE=1 bash "${REVIEW_DIR}/lib/build-prompt.sh" task3 . ivanov 3 "${d}/diff.txt" "" 0)"
+  assert_not_contains "${out}" "Режим ревью: итоговый" "без прошлого ревью режим не включается" || return 1
+  assert_contains "${out}" "секретная_строка_diff" "без прошлого ревью — полный diff" || return 1
+  grep -q 'MARKER_FINAL' "${REPO_ROOT}/reviewer/lib/review-pr.sh" || { fail "review-pr.sh не ставит MARKER_FINAL"; return 1; }
+  grep -q 'matrix.pr.final' "${REPO_ROOT}/reviewer/workflow/review.yml" || { fail "workflow не передаёт final"; return 1; }
 }
 
 # Большой PR больше НЕ отвергается: он идёт в матрицу с oversize=true, и
@@ -444,7 +482,7 @@ test_discover_small_pr_skips_files_api() {
 test_discover_skip_comment_has_sha_marker() {
   local log="${TMP_ROOT}/comments.$$.md"; : > "${log}"
   run_discover GH_REPOS="$(_one_repo)" GH_COMMENT_LOG="${log}" \
-    GH_PRS="[$(make_pr 4 task5 eee555 100 review review review)]"
+    GH_PRS="[$(make_pr 4 task5 eee555 100 review review review final:ddd444)]"
   local body; body="$(cat "${log}")"
   assert_contains "${body}" "ai-review-sha:eee555" "в отказе должен быть SHA-маркер" || return 1
   assert_contains "${body}" "ai-review-skipped" "в отказе должен быть маркер отказа" || return 1
@@ -456,8 +494,9 @@ test_discover_skip_comment_has_sha_marker() {
 test_discover_skip_comment_is_valid_alert() {
   local log="${TMP_ROOT}/comments2.$$.md"; : > "${log}"
   run_discover GH_REPOS="$(_one_repo)" GH_COMMENT_LOG="${log}" \
-    GH_PRS="[$(make_pr 4 task5 eee555 100 review review review)]"
+    GH_PRS="[$(make_pr 4 task5 eee555 100 review review review final:ddd444)]"
   local bad
+  grep -q '^> \[!' "${log}" || { fail "отказ не опубликован"; return 1; }
   bad="$(sed -n '/^> \[!/,$p' "${log}" | grep -vE '^>' || true)"
   [ -z "${bad}" ] || { fail "строки alert без префикса '>': ${bad}"; return 1; }
   return 0
@@ -1771,6 +1810,67 @@ EOF
   return 0
 }
 
+# Обрыв ответа по length — отказ, а не ревью (kazachenko#9 опубликован
+# оборванным, putyato#9 и olikhver#9 — две одинаковые попытки подряд).
+test_agent_length_finish_is_failure() {
+  local ev="${TMP_ROOT}/len.jsonl" common="${REPO_ROOT}/reviewer/lib/common.sh"
+  cat > "${ev}" <<'EOF'
+{"type":"step_finish","part":{"messageID":"m1","reason":"tool-calls","tokens":{"input":3,"output":5,"cache":{"read":100,"write":50}}}}
+{"type":"text","part":{"messageID":"m2","type":"text","text":"**Резюме:** …"}}
+{"type":"step_finish","part":{"messageID":"m2","reason":"length","tokens":{"input":3,"output":271,"cache":{"read":150000,"write":0}}}}
+EOF
+  assert_eq "$(bash -c "source '${common}'; agent_finish_reason '${ev}'")" "length" "причина завершения" || return 1
+  local sum
+  sum="$(bash -c "source '${common}'; summarize_agent_events '${ev}'")"
+  assert_contains "${sum}" "из кэша чтение/запись 150100/50" "токены кэша в сводке" || return 1
+  local rp="${REPO_ROOT}/reviewer/lib/review-pr.sh"
+  grep -q 'agent_finish_reason' "${rp}" || { fail "review-pr.sh не проверяет finish=length"; return 1; }
+  grep -q 'RETRY_DIFF_LINES_IN_PROMPT' "${rp}" || { fail "повтор после length должен урезать промпт"; return 1; }
+  grep -q '^RETRY_MAX_PROMPT_BYTES=' "${REVIEW_DIR}/config.env" || { fail "нет RETRY_MAX_PROMPT_BYTES в config.env"; return 1; }
+}
+
+test_validate_rejects_unfinished_table_row() {
+  local f="${TMP_ROOT}/cut.md" common="${REPO_ROOT}/reviewer/lib/common.sh" out
+  { printf '**Резюме:** работа в целом выполнена, но есть замечания по проверкам.\n\n'
+    for i in 1 2 3 4 5 6 7 8; do printf 'Замечание номер %s: описание проблемы в коде анализатора.\n' "${i}"; done
+    printf '\n| Проверка | Результат | Где |\n|---|---|---|\n| П1 README | выполнено | README.md:1 |\n| П2 README и код | замечание №1 | semantic.py:230'
+  } > "${f}"
+  out="$(bash -c "source '${common}'; validate_review_text '${f}'")"
+  assert_contains "${out}" "незаконченной строке таблицы" "обрыв посреди строки" || return 1
+  printf ' |\n' >> "${f}"
+  out="$(bash -c "source '${common}'; validate_review_text '${f}'")"
+  assert_eq "${out}" "" "законченная таблица проходит"
+}
+
+# rumyantseva e49e0ab: модель переписала «запущено 22» как «запущено 8,
+# не запускалось 14». Строки автоматических прогонов заполняет скрипт.
+test_fill_auto_rows_from_check_output() {
+  local r="${TMP_ROOT}/auto.md" c="${TMP_ROOT}/auto.out" common="${REPO_ROOT}/reviewer/lib/common.sh"
+  cat > "${c}" <<'EOF'
+Счётчики (копируй в таблицу проверок как есть):
+  корректные: запущено 5, ожидаемо 5, не запускалось 0
+  error-*: запущено 6, ожидаемо 5, не запускалось 8
+Счётчики зондов (копируй в таблицу проверок как есть): запущено 12, замечаний 0
+Счётчики мутантов (копируй как есть): построено 22, запущено 22, расхождений 0, не запускалось 0
+EOF
+  cat > "${r}" <<'EOF'
+| Проверка | Результат | Где |
+|---|---|---|
+| П1 корректные программы | выполнено | README.md:3 |
+| compile.sh на корректных примерах | выполнено | 5/5 |
+| compile.sh на error-* | замечание №2 | 6/6 |
+| Зонды устойчивости | выполнено | запущено 10 |
+| Мутанты примеров | не проверено: 14 из 22 не запускались | построено 22, запущено 8 |
+EOF
+  bash -c "source '${common}'; fill_auto_rows '${r}' '${c}'"
+  local out; out="$(cat "${r}")"
+  assert_contains "${out}" "| П1 корректные программы | выполнено | README.md:3 |" "пункт чеклиста не тронут" || return 1
+  assert_contains "${out}" "| замечание №2 | error-*: запущено 6, ожидаемо 5, не запускалось 8 (из вывода проверки) |" "error-*" || return 1
+  assert_contains "${out}" "| выполнено | запущено 12, замечаний 0 (из вывода проверки) |" "зонды" || return 1
+  assert_contains "${out}" "| Мутанты примеров | выполнено | построено 22, запущено 22, расхождений 0, не запускалось 0 (из вывода проверки) |" "мутанты" || return 1
+  grep -q 'fill_auto_rows' "${REPO_ROOT}/reviewer/lib/review-pr.sh" || { fail "review-pr.sh не вызывает fill_auto_rows"; return 1; }
+}
+
 # Бот запускает агента в формате json, берёт финальный ответ и повторяет
 # попытку при браке.
 test_reviewer_uses_json_events_and_retries() {
@@ -1898,6 +1998,31 @@ test_probe_deepen_keeps_strings_and_comments() {
   assert_contains "${out}" 'x = point((1.5 + 0.0 + 0.0), 2)' "float-литерал дополнен нулями того же типа" || return 1
   assert_contains "${out}" 'write("a = 5") // b = 3' "первая строка не тронута" || return 1
   return 0
+}
+
+# khachatryan#9 (XMLLang): чисел в примерах нет, зонды глубины пропускались,
+# RecursionError на 110 скобках не найден. Скобки — вокруг строки или имени.
+test_probe_nest_without_numeric_literal() {
+  local w="${TMP_ROOT}/nonum"; rm -rf "${w}"; mkdir -p "${w}/examples"
+  printf 'node title = find(doc, "title");\nnode d = (book);\n' > "${w}/examples/ex.txt"
+  printf 'x\n' > "${w}/examples/error-1.txt"
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; _probe_operand_site '${w}/examples/ex.txt' str; _probe_operand_site '${w}/examples/ex.txt' id")"
+  assert_eq "${out}" "$(printf '1\t24\t7\n1\t19\t3')" "место операнда (строка, имя)" || return 1
+  out="$(bash -c "source '${REVIEW_DIR}/lib/probe-check.sh'; _probe_wrap '${w}/examples/ex.txt' 1 24 7 2" | head -n 1)"
+  assert_eq "${out}" 'node title = find(doc, (("title")));' "скобки вокруг строкового литерала" || return 1
+  # «Компилятор» падает с трассой, если в файле больше 100 открывающих скобок.
+  cat > "${w}/compile.sh" <<'EOF'
+#!/usr/bin/env bash
+[ -f "$1" ] || { echo "нет файла" >&2; exit 2; }
+if [ "$(tr -cd '(' < "$1" | wc -c)" -gt 100 ]; then
+  echo 'Traceback (most recent call last):' >&2; echo 'RecursionError: maximum recursion depth exceeded' >&2; exit 1
+fi
+exit 0
+EOF
+  out="$(bash -c "source '${REVIEW_DIR}/lib/compile-check.sh'; source '${REVIEW_DIR}/lib/probe-check.sh'; run_probe_checks '${w}' '${w}/examples' 10 sem" 2>&1)"
+  assert_contains "${out}" "вложенные скобки строятся вокруг операнда (строковый литерал)" "сумма не строится, скобки — да" || return 1
+  assert_contains "${out}" "ЗАМЕЧАНИЕ — переполнение стека на 500 вложенных скобках" "трасса найдена" || return 1
 }
 
 test_prompt_task4_has_fixed_checklist() {
@@ -2376,6 +2501,20 @@ test_layout_detects_source_outside_compiler() {
   return 0
 }
 
+# G7 (romanov#9): AGENTS.md в работе — строка ЗАМЕЧАНИЕ, даже если файл
+# добавлен в прошлом PR и в текущем diff его нет.
+test_layout_detects_agent_files() {
+  local w="${TMP_ROOT}/lay-agents"; rm -rf "${w}"; mkdir -p "${w}/compiler/.cursor" "${w}/examples"
+  printf 'x\n' > "${w}/compiler/main.py"; printf '#!/bin/bash\n' > "${w}/compile.sh"
+  printf 'очередь проверки\n' > "${w}/AGENTS.md"
+  local out rc; out="$(_run_layout "${w}")"; rc=$?
+  assert_contains "${out}" "ЗАМЕЧАНИЕ: файл инструкций для ИИ-агента" "G7 найден" || return 1
+  assert_contains "${out}" "AGENTS.md" "имя файла" || return 1
+  assert_contains "${out}" "compiler/.cursor" "вложенный каталог агента" || return 1
+  [ "${rc}" -ne 0 ] || { fail "ожидался ненулевой код"; return 1; }
+  grep -q 'всегда первый' "${REVIEW_DIR}/common-footer.md" || { fail "футер: G7 должен быть первым пунктом"; return 1; }
+}
+
 test_layout_accepts_correct_tree() {
   local w="${TMP_ROOT}/lay-ok"; rm -rf "${w}"; mkdir -p "${w}/compiler" "${w}/examples" "${w}/tests"
   printf 'x\n' > "${w}/compiler/main.py"; printf 'x\n' > "${w}/tests/test_main.py"
@@ -2636,6 +2775,16 @@ test_check_sandbox_next_to_repo() {
     *SANDBOX_PARENT*) return 0 ;;
     *) fail "sandbox создаётся не в каталоге репозитория: ${block}"; return 1 ;;
   esac
+}
+
+# Регрессия 29.10–03.11: файлы контейнера (uid 1000) раннер не мог удалить —
+# сотни «rm: Permission denied» в логе. Перед rm права расширяются изнутри
+# контейнера.
+test_check_sandbox_cleanup_opens_perms() {
+  local rc="${REPO_ROOT}/reviewer/lib/run-check.sh"
+  grep -E "^  trap '" "${rc}" | grep -qv 'open_sandbox_perms' \
+    && { fail "каждый trap очистки должен сначала вызывать open_sandbox_perms"; return 1; }
+  grep -q 'chmod -R a+rwX /work' "${rc}" || { fail "нет chmod внутри контейнера"; return 1; }
 }
 
 # Прямой режим (без контейнера) должен работать: им пользуется студент
@@ -3154,6 +3303,26 @@ test_repo_name_includes_group() {
   assert_eq "${out}" \
     "yapis-2026-g1-ivanov|yapis-2026-g1-ivanov|yapis-2026-g1-ivanov" \
     "имя репозитория не должно удваивать префикс группы"
+}
+
+# Регрессия 31.10: ссылка на PR в ./manage.sh review превращалась в
+# «yapis-2026-https://github.com/…/pull/8», и workflow падал.
+test_review_only_accepts_pr_url() {
+  local out fn="${TMP_ROOT}/naming-only.$$.sh"
+  sed -n '/^group_prefix()/,/^}/p;/^repo_for_student()/,/^}/p;/^normalize_only()/,/^}/p' \
+    "${REPO_ROOT}/admin/manage.sh" > "${fn}"
+  out="$( ORG=x REPO_PREFIX=yapis-2026- GROUP=""
+    # shellcheck disable=SC1090
+    source "${fn}"
+    printf '%s|%s|%s|%s|%s' \
+      "$(normalize_only https://github.com/yapis-2026/yapis-2026-321701-dukhvalov/pull/8)" \
+      "$(normalize_only https://github.com/yapis-2026/yapis-2026-321701-dukhvalov/pull/8/files#diff)" \
+      "$(normalize_only yapis-2026-321701-dukhvalov#8)" \
+      "$(normalize_only 321701-dukhvalov:8)" \
+      "$(normalize_only ivanov)" )"
+  assert_eq "${out}" \
+    "yapis-2026-321701-dukhvalov:8|yapis-2026-321701-dukhvalov:8|yapis-2026-321701-dukhvalov:8|yapis-2026-321701-dukhvalov:8|yapis-2026-ivanov" \
+    "разбор указания PR"
 }
 
 test_repo_name_without_group() {
@@ -4253,6 +4422,38 @@ test_deps_paths_without_gnu_realpath() {
   local out
   out="$(bash -c "source '${REVIEW_DIR}/lib/install-deps.sh'; _deps_rel /w/r /w/r/compiler/requirements.txt")"
   assert_eq "${out}" "compiler/requirements.txt" "относительный путь манифеста"
+}
+
+# ЛР5: артефакт исполняется, вывод сверяется с .expected студента. До этого
+# артефакты только искались, и модель писала «подтвердите вывод в отчёте»
+# (strunets#12, pereverzev#10, rublevskaya#10).
+test_task5_runs_artifacts_and_compares_expected() {
+  command -v python3 >/dev/null 2>&1 || return 0
+  local w="${TMP_ROOT}/art"; rm -rf "${w}"; mkdir -p "${w}/examples" "${w}/tests/cases"
+  printf 'print 1\n' > "${w}/examples/good.txt"
+  printf 'print 2\n' > "${w}/examples/bad.txt"
+  printf 'print 3\n' > "${w}/examples/noexp.txt"
+  printf 'x\n' > "${w}/examples/error-1.txt"
+  printf '1\n' > "${w}/examples/good.expected"
+  printf 'два\n' > "${w}/tests/cases/bad.expected"
+  # «Компилятор»: из «print N» делает out/<имя>.pyc, печатающий N.
+  cat > "${w}/compile.sh" <<'EOF'
+#!/usr/bin/env bash
+n="$(basename "$1" .txt)"; mkdir -p out
+v="$(sed -n 's/^print //p' "$1")"
+printf 'print(%s)\n' "$v" > "out/$n.py"
+python3 -c "import py_compile,sys; py_compile.compile(sys.argv[1], cfile=sys.argv[2], doraise=True)" "out/$n.py" "out/$n.pyc"
+rm -f "out/$n.py"
+EOF
+  local out
+  out="$(bash -c "source '${REVIEW_DIR}/lib/run-artifacts.sh'; run_artifact_checks '${w}' '${w}/examples' 5 5" 2>&1)"
+  assert_contains "${out}" "python3 out/good.pyc" "команда запуска" || return 1
+  assert_contains "${out}" "совпадает с examples/good.expected" "сверка рядом с примером" || return 1
+  assert_contains "${out}" "РАСХОЖДЕНИЕ с tests/cases/bad.expected" "сверка из tests/" || return 1
+  assert_contains "${out}" "запущено 3, совпало 1, расхождений 1, без ожидаемого вывода 1, не запускалось 0" "счётчики" || return 1
+  assert_not_contains "${out}" "error-1" "error-примеры не исполняются" || return 1
+  [ ! -e "${w}/.review" ] || { fail "run-artifacts должен убирать за собой .review/"; return 1; }
+  grep -q 'run_artifact_checks' "${REVIEW_DIR}/tasks/task5/check.sh" || { fail "task5/check.sh не исполняет артефакты"; return 1; }
 }
 
 test_task4_check_runs_labgen() {

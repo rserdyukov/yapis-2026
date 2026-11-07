@@ -247,11 +247,13 @@ jobs:
           # true — PR больше MAX_DIFF_LINES: ревью в сокращённом режиме
           # (только результаты проверок, без анализа кода). См. discover.sh.
           PR_OVERSIZE: ${{ matrix.pr.oversize }}
+          # true — итоговое ревью сверх MAX_REVIEWS_PER_PR (короткий режим).
+          PR_FINAL: ${{ matrix.pr.final }}
         run: |
           bash reviewer/lib/review-pr.sh \
             "${ORG}" "${PR_REPO}" "${PR_NUMBER}" \
             "${PR_HEAD_SHA}" "${PR_BASE_SHA}" "${PR_BRANCH}" "${PR_STUDENT}" \
-            "${PR_OVERSIZE:-false}"
+            "${PR_OVERSIZE:-false}" "${PR_FINAL:-false}"
         shell: bash
 
       - name: Итог в summary

@@ -77,5 +77,26 @@ check_layout() {
     fi
   fi
 
+  check_agent_files "${work}" || status=1
+
   return "${status}"
+}
+
+# Файлы инструкций и конфигурации ИИ-агентов в работе (G7). build-prompt.sh
+# видит их только в diff текущего PR; добавленный на прошлой лабораторной
+# AGENTS.md модель не замечала, а у romanov#9 назвала «не блокирует».
+# Проверка идёт на копии, сделанной до того, как review-pr.sh удалил эти
+# файлы из рабочей копии агента.
+#   check_agent_files <work_dir>  -> 0, если таких файлов нет
+check_agent_files() {
+  local work="${1:?work_dir}" found
+  found="$(cd "${work}" && find . \
+      \( -path './.git' -o -path './.deps' -o -path './node_modules' -o -path './.venv' -o -path './.review' \) -prune -o \
+      \( -name 'AGENTS.md' -o -name 'CLAUDE.md' -o -name 'GEMINI.md' -o -name '.cursorrules' \
+         -o -name 'opencode.json' -o -name 'opencode.jsonc' \
+         -o \( -type d \( -name '.cursor' -o -name '.opencode' -o -name '.claude' \) \) \) -print \
+      2>/dev/null | sed 's#^\./##' | sort | head -n 10)"
+  [ -z "${found}" ] && return 0
+  echo "  ЗАМЕЧАНИЕ: файл инструкций для ИИ-агента в работе (G7, первый пункт замечаний, требует решения преподавателя): ${found//$'\n'/, }"
+  return 1
 }

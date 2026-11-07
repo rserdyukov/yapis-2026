@@ -31,10 +31,12 @@
 #      кодом 1.
 #
 # Использование:
-#   review-pr.sh <org> <repo> <pr> <head_sha> <base_sha> <branch> <student> [oversize]
+#   review-pr.sh <org> <repo> <pr> <head_sha> <base_sha> <branch> <student> [oversize] [final]
 #
 #   oversize — "true", если PR превышает MAX_DIFF_LINES (из матрицы
 #              discover.sh). По умолчанию false.
+#   final    — "true" для итогового ревью сверх MAX_REVIEWS_PER_PR
+#              (FINAL_REVIEW_OVER_LIMIT): короткий режим и MARKER_FINAL.
 #
 # Переменные окружения:
 #   GH_TOKEN         токен для gh (installation token GitHub App): нужен для
@@ -55,6 +57,11 @@ OVERSIZE="${8:-false}"
 case "${OVERSIZE}" in
   true|1|yes) OVERSIZE=1 ;;
   *)          OVERSIZE=0 ;;
+esac
+FINAL="${9:-false}"
+case "${FINAL}" in
+  true|1|yes) FINAL=1 ;;
+  *)          FINAL=0 ;;
 esac
 
 REPO_FULL="${ORG}/${REPO}"
@@ -273,25 +280,32 @@ cp "${DIFF_FILE}" "${STUDENT_DIR}/.review/pr-diff.txt"
 # модель работает по результатам проверок и списку файлов.
 PROMPT_FILE="${WORK}/prompt.md"
 MAX_PROMPT_BYTES="${MAX_PROMPT_BYTES:-400000}"
-DIFF_LINES_IN_PROMPT="${MAX_DIFF_LINES_IN_PROMPT:-6000}"
-if [ "${OVERSIZE}" -eq 1 ]; then
-  DIFF_LINES_IN_PROMPT=0
-fi
-while :; do
-  MAX_DIFF_LINES_IN_PROMPT="${DIFF_LINES_IN_PROMPT}" DIFF_FILE_HINT=".review/pr-diff.txt" \
-  GENERATED_FILES_LIST="${GENERATED_FILE}" OVERSIZE_MODE="${OVERSIZE}" \
-  PREV_REVIEW_FILE="${PREV_REVIEW_FILE}" PREV_REVIEW_SHA="${PREV_SHA}" PREV_DIFF_FILE="${PREV_DIFF_FILE}" \
-    bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
-      "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
-      "${DIFF_FILE}" "${CHECK_FILE}" "${CHECK_EXIT}" > "${PROMPT_FILE}" \
-    || fail_review "не удалось собрать промпт."
-  PROMPT_BYTES="$(wc -c < "${PROMPT_FILE}" | tr -d ' ')"
-  if [ "${PROMPT_BYTES}" -le "${MAX_PROMPT_BYTES}" ] || [ "${DIFF_LINES_IN_PROMPT}" -le 200 ]; then
-    break
-  fi
-  DIFF_LINES_IN_PROMPT=$((DIFF_LINES_IN_PROMPT / 2))
-done
-log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF_LINES_IN_PROMPT} строк$([ "${OVERSIZE}" -eq 1 ] && echo ', сокращённый режим'))"
+
+# Собирает промпт в PROMPT_FILE.
+#   build_prompt <строк diff> <строк вывода проверок> <лимит байт>
+build_prompt() {
+  DIFF_LINES_IN_PROMPT="${1}"
+  local check_lines="${2}" max_bytes="${3}"
+  [ "${OVERSIZE}" -eq 1 ] && DIFF_LINES_IN_PROMPT=0
+  while :; do
+    MAX_DIFF_LINES_IN_PROMPT="${DIFF_LINES_IN_PROMPT}" MAX_CHECK_LINES_IN_PROMPT="${check_lines}" \
+    DIFF_FILE_HINT=".review/pr-diff.txt" \
+    GENERATED_FILES_LIST="${GENERATED_FILE}" OVERSIZE_MODE="${OVERSIZE}" FINAL_MODE="${FINAL}" \
+    PREV_REVIEW_FILE="${PREV_REVIEW_FILE}" PREV_REVIEW_SHA="${PREV_SHA}" PREV_DIFF_FILE="${PREV_DIFF_FILE}" \
+      bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
+        "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
+        "${DIFF_FILE}" "${CHECK_FILE}" "${CHECK_EXIT}" > "${PROMPT_FILE}" \
+      || fail_review "не удалось собрать промпт."
+    PROMPT_BYTES="$(wc -c < "${PROMPT_FILE}" | tr -d ' ')"
+    if [ "${PROMPT_BYTES}" -le "${max_bytes}" ] || [ "${DIFF_LINES_IN_PROMPT}" -le 200 ]; then
+      break
+    fi
+    DIFF_LINES_IN_PROMPT=$((DIFF_LINES_IN_PROMPT / 2))
+  done
+  log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF_LINES_IN_PROMPT} строк, вывод проверок: до ${check_lines} строк$([ "${OVERSIZE}" -eq 1 ] && echo ', сокращённый режим')$([ "${FINAL}" -eq 1 ] && echo ', итоговое ревью'))"
+}
+
+build_prompt "${MAX_DIFF_LINES_IN_PROMPT:-6000}" "${MAX_CHECK_LINES_IN_PROMPT:-600}" "${MAX_PROMPT_BYTES}"
 
 # --- 7. Запуск агента --------------------------------------------------------
 
@@ -331,6 +345,7 @@ AGENT_ENV=(
 # пишутся в лог — без них сбой вида «пустой результат» не разобрать
 # (sergievich#9: модель 2,5 минуты читала файлы и закончила без ответа).
 AGENT_FAIL_REASON=""
+FAIL_LENGTH_PREFIX="ответ модели обрезан (finish=length)"
 run_agent_once() {
   local attempt="${1}"
   rm -rf "${AGENT_HOME}"; mkdir -p "${AGENT_HOME}"
@@ -358,6 +373,11 @@ run_agent_once() {
   if grep -qE '^opencode run \[message' "${AGENT_EVENTS}" "${AGENT_ERR}" 2>/dev/null; then
     AGENT_FAIL_REASON="opencode напечатал справку вместо ревью — проверьте флаги CLI."; return 1
   fi
+  # Ответ обрезан провайдером: даже если текст прошёл бы проверки качества,
+  # это обрывок (kazachenko#9 опубликован оборванным посреди таблицы).
+  if [ "$(agent_finish_reason "${AGENT_EVENTS}")" = "length" ]; then
+    AGENT_FAIL_REASON="${FAIL_LENGTH_PREFIX} (промпт ${PROMPT_BYTES} байт)."; return 1
+  fi
   extract_final_answer "${AGENT_EVENTS}" "${RESULT_FILE}"
   if [ ! -s "${RESULT_FILE}" ]; then
     AGENT_FAIL_REASON="пустой результат ревью (в последнем сообщении модели нет текста)."; return 1
@@ -370,6 +390,7 @@ run_agent_once() {
   if [ ! -s "${RESULT_FILE}" ]; then
     AGENT_FAIL_REASON="после очистки служебных токенов ответ модели пуст."; return 1
   fi
+  fill_auto_rows "${RESULT_FILE}" "${CHECK_FILE}"
   local verr
   if ! verr="$(validate_review_text "${RESULT_FILE}")"; then
     AGENT_FAIL_REASON="${verr}. Первые строки ответа: $(head -c 300 "${RESULT_FILE}" | tr '\n' ' ')"; return 1
@@ -396,6 +417,14 @@ while :; do
     log "повтор пропущен: попытка заняла $((SECONDS - attempt_start)) с, вторая не уложится в лимит job."
     break
   fi
+  # После обрыва по length повтор с тем же промптом обрывается так же
+  # (putyato#9, olikhver#9: обе попытки по ~300 токенов). Все обрывы
+  # 29.10–03.11 — при промпте ≥ 160 КБ, поэтому повторяем с урезанным.
+  case "${AGENT_FAIL_REASON}" in
+    "${FAIL_LENGTH_PREFIX}"*)
+      build_prompt "${RETRY_DIFF_LINES_IN_PROMPT:-2000}" "${RETRY_CHECK_LINES_IN_PROMPT:-300}" \
+        "${RETRY_MAX_PROMPT_BYTES:-120000}" ;;
+  esac
   attempt=$((attempt + 1))
 done
 [ "${agent_ok}" -eq 1 ] || fail_review "${AGENT_FAIL_REASON}"
@@ -416,10 +445,15 @@ COMMENT_FILE="${WORK}/review-comment.md"
 {
   echo "${MARKER_REVIEW}"
   echo "${MARKER_SHA_PREFIX}${HEAD_SHA} -->"
+  [ "${FINAL}" -eq 1 ] && echo "${MARKER_FINAL}"
   render_msg "${MSG_REVIEW_HEADER}"
   echo
   echo
   echo "${MSG_REVIEW_DISCLAIMER}"
+  if [ "${FINAL}" -eq 1 ]; then
+    echo ">"
+    echo "> $(render_msg "${MSG_FINAL_NOTE}")"
+  fi
   if [ "${OVERSIZE}" -eq 1 ]; then
     echo ">"
     # shellcheck disable=SC2034  # подставляется в MSG_OVERSIZE_NOTE через render_msg

@@ -98,6 +98,15 @@ validate_review_text() {
     echo "в ответе модели нет таблицы «Выполненные проверки» — ревью не дописано"
     return 1
   fi
+  # Ответ кончается начатой и не закрытой строкой таблицы — обрыв на
+  # полуслове (kazachenko#9: «| П2 README и код | … | semantic.py:230»).
+  local last_line
+  last_line="$(grep -v '^[[:space:]]*$' "${file}" | tail -n 1)"
+  if printf '%s\n' "${last_line}" | grep -qE '^[[:space:]]*\|' \
+     && ! printf '%s\n' "${last_line}" | grep -qE '\|[[:space:]]*$'; then
+    echo "ответ модели обрывается на незаконченной строке таблицы — ревью не дописано"
+    return 1
+  fi
 
   # 2. Зацикливание: один и тот же байт N+ раз подряд. Легитимный текст
   #    так не выглядит (линейка «---» в markdown короче 200 символов).
@@ -180,8 +189,81 @@ summarize_agent_events() {
       + ", текстовых фрагментов \([ $all[] | select(.type == "text") ] | length)"
       + ", последний шаг: \($s[-1].part.reason // "нет")"
       + ", токенов вход/выход \([ $s[].part.tokens.input // 0 ] | add // 0)/\([ $s[].part.tokens.output // 0 ] | add // 0)"
+      + ", из кэша чтение/запись \([ $s[].part.tokens.cache.read // 0 ] | add // 0)/\([ $s[].part.tokens.cache.write // 0 ] | add // 0)"
       + (if ($e | length) > 0 then ", ошибки: " + ($e | join("; ")) else "" end)
   ' 2>/dev/null || echo "события не разобраны"
+}
+
+# Причина завершения последнего шага агента (stop / tool-calls / length /
+# content-filter …) или пустая строка.
+#   agent_finish_reason <events.jsonl>
+#
+# «length» — ответ обрезан провайдером. Так было в 10 из 66 запусков
+# 29.10–03.11 при выходе всего 271–2385 токенов и промпте ≥ 160 КБ;
+# kazachenko#9 опубликован обрезанным посреди таблицы, потому что
+# validate_review_text смотрит только на размер и наличие таблицы.
+agent_finish_reason() {
+  jq -R 'fromjson? // empty' "${1}" 2>/dev/null | jq -rs '
+    [ .[] | select(type == "object" and .type == "step_finish") ] as $s
+    | $s[-1].part.reason // ""
+  ' 2>/dev/null || :
+}
+
+# Переписывает строки таблицы «Выполненные проверки» про автоматические
+# прогоны по счётчикам из вывода проверки (правит файл на месте).
+#   fill_auto_rows <ревью.md> <check.out>
+#
+# Указание «копируй как есть» модель выполняет не всегда: у rumyantseva
+# e49e0ab в таблице «мутанты: запущено 8, не запускалось 14», а в выводе
+# 22 из 22, и строка стала «не проверено». Числа — факт проверки, поэтому
+# столбец «Где» у строк про корректные примеры, error-*, зонды, мутанты и
+# исполнение целевого кода заполняет скрипт. Результат «не проверено» заменяется на «выполнено»,
+# только если по счётчикам всё запущено и расхождений нет; ссылки модели на
+# замечания («замечание №3») не трогаются.
+fill_auto_rows() {
+  local review="${1}" check="${2}" ok err probes muts runs
+  [ -s "${review}" ] && [ -s "${check}" ] || return 0
+  ok="$(sed -n 's/^  корректные: \(запущено [0-9]*, ожидаемо [0-9]*, не запускалось [0-9]*\)$/\1/p' "${check}" | tail -n 1)"
+  err="$(sed -n 's/^  error-\*: \(запущено [0-9]*, ожидаемо [0-9]*, не запускалось [0-9]*\)$/\1/p' "${check}" | tail -n 1)"
+  probes="$(sed -n 's/^Счётчики зондов (копируй[^)]*): \(запущено .*\)$/\1/p' "${check}" | tail -n 1)"
+  muts="$(sed -n 's/^Счётчики мутантов (копируй[^)]*): \(построено .*\)$/\1/p' "${check}" | tail -n 1)"
+  runs="$(sed -n 's/^Счётчики исполнения (копируй[^)]*): \(запущено .*\)$/\1/p' "${check}" | tail -n 1)"
+  [ -n "${ok}${err}${probes}${muts}${runs}" ] || return 0
+  local tmp="${review}.auto"
+  LC_ALL=C awk -v ok="${ok}" -v err="${err}" -v probes="${probes}" -v muts="${muts}" -v runs="${runs}" '
+    function num(s, key,   r) {
+      if (match(s, key " [0-9]+")) { r = substr(s, RSTART, RLENGTH); sub(/.* /, "", r); return r + 0 }
+      return -1
+    }
+    function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+    # Всё запущено и всё ожидаемо — результат «выполнено».
+    function clean(kind, s) {
+      if (kind == "ok" || kind == "err")
+        return num(s, "не запускалось") == 0 && num(s, "запущено") > 0 && num(s, "запущено") == num(s, "ожидаемо")
+      if (kind == "probes") return num(s, "запущено") > 0 && num(s, "замечаний") == 0
+      if (kind == "exec")
+        return num(s, "не запускалось") == 0 && num(s, "запущено") > 0 && num(s, "расхождений") == 0 && num(s, "трасс/таймаутов") <= 0
+      return num(s, "не запускалось") == 0 && num(s, "запущено") > 0 && num(s, "расхождений") == 0
+    }
+    /^[ \t]*\|/ && !/^[ \t]*\|[ \t:-]+\|/ {
+      n = split($0, c, "|")
+      if (n == 5 && c[2] !~ /^[ \t]*(\*\*)?П[0-9]/) {
+        name = c[2]; kind = ""; val = ""
+        if (name ~ /Исполнен|исполнен/ && runs != "")                { kind = "exec";   val = runs }
+        else if (name ~ /Мутант|мутант/ && muts != "")                      { kind = "muts";   val = muts }
+        else if (name ~ /Зонд|зонд/ && name !~ /модел/ && probes != "") { kind = "probes"; val = probes }
+        else if (name ~ /error-/ && err != "")                    { kind = "err";    val = "error-*: " err }
+        else if (name ~ /корректн/ && ok != "")                   { kind = "ok";     val = "корректные: " ok }
+        if (kind != "") {
+          res = trim(c[3])
+          if (res ~ /^не проверено/ && clean(kind, val)) res = "выполнено"
+          print c[1] "|" c[2] "| " res " | " val " (из вывода проверки) |"
+          next
+        }
+      }
+    }
+    { print }
+  ' "${review}" > "${tmp}" && mv "${tmp}" "${review}"
 }
 
 # SHA коммита из маркера в комментарии бота («<!-- ai-review-sha:<sha> -->»).

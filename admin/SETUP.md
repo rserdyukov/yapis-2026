@@ -1063,6 +1063,8 @@ Organization settings → Billing. При исчерпании квоты workfl
 | Параметр | По умолчанию | Смысл |
 |---|---|---|
 | `MAX_REVIEWS_PER_PR` | 3 | Опубликованных ревью на один PR (первичное, после правок, контроль) |
+| `FINAL_REVIEW_OVER_LIMIT` | 1 | Одно итоговое ревью сверх лимита на PR: только прошлые замечания и изменения с прошлого ревью |
+| `RETRY_MAX_PROMPT_BYTES` | 120000 | Размер промпта при повторе после обрыва ответа (`finish=length`); также `RETRY_DIFF_LINES_IN_PROMPT`, `RETRY_CHECK_LINES_IN_PROMPT` |
 | `MAX_REVIEWS_PER_DAY` | 4 | Ревью в сутки в одном репозитории студента |
 | `MAX_REVIEWS_PER_DAY_TOTAL` | 40 | Ревью в сутки на весь курс (на платной модели ограничивает только бюджет Actions) |
 | `MAX_REVIEWS_PER_RUN` | 4 | Сколько PR проверяется за один запуск по расписанию |

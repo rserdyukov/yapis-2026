@@ -1220,6 +1220,24 @@ cmd_enroll() {
     --csv "${csv}" "${extra[@]+"${extra[@]}"}" --apply
 }
 
+# Приводит указание PR к виду <repo>[:<pr>], который ждёт ревьюер.
+#   normalize_only ivanov:4 | yapis-2026-ivanov#4 | https://github.com/<org>/<repo>/pull/4
+# 31.10 два запуска упали: ссылку на PR приняли за фамилию и получили
+# «yapis-2026-https://github.com/…/pull/8».
+normalize_only() {
+  local only="${1}" only_repo only_pr=""
+  case "${only}" in
+    http://*|https://*|github.com/*)
+      only="${only%%[?#]*}"; only="${only%/}"
+      only="$(printf '%s' "${only}" | sed -E 's#^(https?://)?github\.com/[^/]+/([^/]+)/(pull|issues)/([0-9]+)(/.*)?$#\2:\4#')" ;;
+    *'#'*) only="${only%%#*}:${only#*#}" ;;
+  esac
+  only_repo="${only%%:*}"
+  case "${only}" in *:*) only_pr="${only#*:}" ;; esac
+  only_repo="$(repo_for_student "${only_repo}")"
+  printf '%s\n' "${only_repo}${only_pr:+:${only_pr}}"
+}
+
 # Ручной запуск ревьюера вне расписания.
 #
 # Полезно, когда студент ждёт ревью прямо сейчас (на занятии) или когда надо
@@ -1247,12 +1265,7 @@ cmd_review() {
   #   ./manage.sh review ivanov              -> yapis-2026-ivanov
   #   ./manage.sh --group g1 review ivanov   -> yapis-2026-g1-ivanov
   #   ./manage.sh review yapis-2026-g1-ivanov:4
-  if [ -n "${only}" ]; then
-    local only_repo="${only%%:*}" only_pr=""
-    case "${only}" in *:*) only_pr="${only#*:}" ;; esac
-    only_repo="$(repo_for_student "${only_repo}")"
-    only="${only_repo}${only_pr:+:${only_pr}}"
-  fi
+  [ -n "${only}" ] && only="$(normalize_only "${only}")"
 
   if [ -n "${only}" ]; then
     echo "Будет запущено ревью только для: ${only}"
@@ -1309,12 +1322,7 @@ cmd_assign_reviewers() {
   fi
 
   # Фамилию принимаем наравне с именем репозитория — как в cmd_review.
-  if [ -n "${only}" ]; then
-    local only_repo="${only%%:*}" only_pr=""
-    case "${only}" in *:*) only_pr="${only#*:}" ;; esac
-    only_repo="$(repo_for_student "${only_repo}")"
-    only="${only_repo}${only_pr:+:${only_pr}}"
-  fi
+  [ -n "${only}" ] && only="$(normalize_only "${only}")"
 
   local args=("${ORG}" "$(group_prefix)")
   [ -n "${only}" ] && args+=(--only "${only}")

@@ -161,6 +161,54 @@ _probe_nest() {
   ' "$1"
 }
 
+# Операнд для зонда «вложенные скобки» в примерах без числовых литералов
+# (khachatryan#9, XMLLang: чисел нет, все зонды глубины пропускались, и
+# RecursionError на 110 скобках остался незамеченным). Ищет после «=», «(»
+# или «,» строковый литерал (kind=str) либо имя, за которым сразу идут «;»,
+# «)», «,» или конец строки (kind=id) — то есть целый операнд, а не начало
+# объявления параметра или вызова. Печатает «строка<TAB>начало<TAB>длина».
+#   _probe_operand_site <файл> str|id
+_probe_operand_site() {
+  LC_ALL=C awk -v kind="$2" "${_PROBE_AWK_MASK}"'
+    /^[[:space:]]*(==|!=)/ { next }
+    {
+      m = mask($0); s = m; off = 0
+      # Пробелы пропускаем по исходной строке: в маске строковый литерал —
+      # тоже пробелы.
+      while (match(s, /(=|\(|,)/)) {
+        p = off + RSTART + 1
+        while (substr($0, p, 1) == " " || substr($0, p, 1) == "\t") p++
+        c = substr($0, p, 1)
+        if (kind == "str" && (c == "\"" || c == "\047")) {
+          q = index(substr($0, p + 1), c)
+          if (q > 0) { print NR "\t" p "\t" (q + 1); exit }
+        }
+        if (kind == "id" && match(substr(m, p), /^[A-Za-z_][A-Za-z0-9_]*[ \t]*/)) {
+          idl = RLENGTH; nx = substr(m, p + idl, 1)
+          if (nx == ";" || nx == ")" || nx == "," || nx == "") {
+            id = substr(m, p, idl); sub(/[ \t]+$/, "", id)
+            print NR "\t" p "\t" length(id); exit
+          }
+        }
+        off = p - 1; s = substr(m, p)
+        if (s == "") break
+      }
+    }
+  ' "$1"
+}
+
+# Печатает файл, в строке ln которого фрагмент [start, start+len) обёрнут
+# в n пар скобок.
+_probe_wrap() {
+  LC_ALL=C awk -v ln="$2" -v st="$3" -v len="$4" -v n="$5" '
+    NR == ln {
+      lo = ""; hi = ""; for (k = 0; k < n; k++) { lo = lo "("; hi = hi ")" }
+      $0 = substr($0, 1, st - 1) lo substr($0, st, len) hi substr($0, st + len)
+    }
+    { print }
+  ' "$1"
+}
+
 # Номер строки и операнд для зонда «цепочка ||/&&»: однословный операнд X
 # (имя или true/false) слева от ||, &&, or, and, перед которым стоит «=»,
 # «(», «,», «!» или if/while/return/until. Такой X можно заменить на
@@ -260,8 +308,29 @@ run_probe_checks() {
     if [ -n "${deep_line}" ]; then deep_src="${f_ok}"; break; fi
   done < <(find "${examples_dir}" -type f -not -iname 'error-*' -not -iname '*.md' 2>/dev/null | sort)
   total=$((total + 1))
+  # Без числового литерала суммы не построить, но скобки — можно: вокруг
+  # строкового литерала или имени-операнда (khachatryan#9).
+  local wrap_src="" wrap_site="" wrap_line="" wrap_start="" wrap_len="" wrap_what="" wkind
   if [ -z "${deep_src}" ]; then
-    echo "--- зонд «глубокое выражение»: ни в одном корректном примере не найден числовой литерал после «=», «(» или «,» — зонд пропущен."
+    for wkind in str id; do
+      while IFS= read -r f_ok; do
+        [ -z "${f_ok}" ] && continue
+        wrap_site="$(_probe_operand_site "${f_ok}" "${wkind}")"
+        if [ -n "${wrap_site}" ]; then wrap_src="${f_ok}"; break; fi
+      done < <(find "${examples_dir}" -type f -not -iname 'error-*' -not -iname '*.md' 2>/dev/null | sort)
+      if [ -n "${wrap_src}" ]; then
+        IFS=$'\t' read -r wrap_line wrap_start wrap_len <<< "${wrap_site}"
+        if [ "${wkind}" = "str" ]; then wrap_what="строковый литерал"; else wrap_what="имя-операнд"; fi
+        break
+      fi
+    done
+  fi
+  if [ -z "${deep_src}" ]; then
+    if [ -n "${wrap_src}" ]; then
+      echo "--- зонд «глубокое выражение»: числового литерала после «=», «(» или «,» нет — сумма не строится; вложенные скобки строятся вокруг операнда (${wrap_what})."
+    else
+      echo "--- зонд «глубокое выражение»: ни в одном корректном примере нет операнда (число, строка, имя) после «=», «(» или «,» — зонды глубины пропущены. ЗАМЕЧАНИЕ ПРОВЕРКИ: глубина выражений не проверена, в таблице — «не проверено»."
+    fi
   else
     ok_rel="${deep_src#"${work}"/}"
     _probe_deepen "${deep_src}" "${deep_line}" "${PROBE_SUM_TERMS}" > "${pdir}/deep-sum.txt"
@@ -294,20 +363,28 @@ run_probe_checks() {
       elif [ "${rc}" -eq 0 ]; then _probe_ok "код 0 на ${PROBE_SUM_LONG} слагаемых"
       else _probe_remark "код ${rc} на ${PROBE_SUM_LONG} слагаемых, а на 300 — код 0: корректная программа отвергнута из-за длины выражения (если это явный предел из README с понятным сообщением — не дефект)"; fi
     fi
+  fi
 
-    # 4б. Вложенные скобки: тот же литерал в N парах скобок. Сумма выше
-    # проверяет длинную цепочку, а скобки — глубину дерева разбора: на
-    # левоассоциативной сумме рекурсивный обход может и не упасть
-    # (sergievich#9: 2000 скобок — 3,5 с, квадратичный обход).
+  # 4б. Вложенные скобки: тот же литерал (или операнд) в N парах скобок. Сумма выше
+  # проверяет длинную цепочку, а скобки — глубину дерева разбора: на
+  # левоассоциативной сумме рекурсивный обход может и не упасть
+  # (sergievich#9: 2000 скобок — 3,5 с, квадратичный обход).
+  if [ -n "${deep_src}${wrap_src}" ]; then
     local depth kind nest_failed=0 nest_timeout=$(( timeout_s < 30 ? timeout_s : 30 ))
+    local nest_src="${deep_src:-${wrap_src}}" nest_line="${deep_line:-${wrap_line}}" nest_what="литерал L"
+    [ -n "${deep_src}" ] || nest_what="${wrap_what} L"
     for depth in ${PROBE_NEST_DEPTHS}; do
       if [ "${nest_failed}" -eq 1 ]; then
         echo "--- зонд «вложенные скобки» на ${depth} уровнях пропущен: падение уже на меньшей глубине."
         continue
       fi
       total=$((total + 1))
-      _probe_nest "${deep_src}" "${deep_line}" "${depth}" > "${pdir}/nest-${depth}.txt"
-      echo "--- зонд «вложенные скобки»: ${ok_rel}, строка ${deep_line}: литерал L заменён на (((L))) из ${depth} пар скобок"
+      if [ -n "${deep_src}" ]; then
+        _probe_nest "${deep_src}" "${deep_line}" "${depth}" > "${pdir}/nest-${depth}.txt"
+      else
+        _probe_wrap "${wrap_src}" "${wrap_line}" "${wrap_start}" "${wrap_len}" "${depth}" > "${pdir}/nest-${depth}.txt"
+      fi
+      echo "--- зонд «вложенные скобки»: ${nest_src#"${work}"/}, строка ${nest_line}: ${nest_what} заменён на (((L))) из ${depth} пар скобок"
       res="$(_probe_run "${work}" "${pdir_rel}/nest-${depth}.txt" "${nest_timeout}")"; rc="${res%%$'\t'*}"; out="${res#*$'\t'}"
       _probe_quote "${out}"
       kind=""

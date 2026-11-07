@@ -3,7 +3,9 @@
 #   1. наличие директории отчёта doc/ с непустым содержимым;
 #   2. наличие compile.sh в корне (обязателен с ЛР3, см. TASK.md);
 #   3. фактический прогон примеров через compile.sh — на этом этапе он должен
-#      не только находить ошибки, но и генерировать запускаемый файл.
+#      не только находить ошибки, но и генерировать запускаемый файл;
+#   4. исполнение сгенерированного кода корректных примеров и сверка с
+#      .expected/.out студента (lib/run-artifacts.sh).
 #
 # Использование: check.sh <work_dir>
 
@@ -20,6 +22,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../../lib/layout-check.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/probe-check.sh"
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/../../lib/grammar-facts.sh"
+# shellcheck source=/dev/null
+source "$(dirname "${BASH_SOURCE[0]}")/../../lib/run-artifacts.sh"
 
 STATUS=0
 
@@ -88,5 +92,11 @@ echo
 # и удаляются, в список артефактов студента они попасть не должны.
 echo "== Зонды устойчивости =="
 run_probe_checks "${WORK_DIR}" "${EXAMPLES_DIR}" 60 'sem' || STATUS=1
+echo
+
+# Последним: если общий таймаут check.sh всё же сработает, оборвётся только
+# этот раздел.
+echo "== Исполнение целевого кода =="
+run_artifact_checks "${WORK_DIR}" "${EXAMPLES_DIR}" 3 10
 
 exit "${STATUS}"

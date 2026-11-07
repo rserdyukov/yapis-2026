@@ -22,7 +22,8 @@
 #                                    сгенерированных файлов (см.
 #                                    .github/review/lib/generated-files.sh).
 #      При превышении PR-лимита — в PR ставится комментарий-отказ (один раз
-#      на SHA). При исчерпании дневных лимитов комментарий НЕ ставится: PR
+#      на SHA). Исключение — FINAL_REVIEW_OVER_LIMIT=1: первый новый коммит
+#      после лимита получает одно итоговое ревью (final=true, MARKER_FINAL). При исчерпании дневных лимитов комментарий НЕ ставится: PR
 #      просто дождётся следующего запуска.
 #      Слишком большой PR НЕ пропускается: он помечается oversize=true и
 #      ревью проводится в сокращённом режиме — только по результатам
@@ -124,7 +125,7 @@ ONLY_PR=""
 if [[ "${ONLY}" == *:* ]]; then
   ONLY_PR="${ONLY#*:}"
   case "${ONLY_PR}" in
-    ''|*[!0-9]*) echo "Номер PR в --only должен быть числом: ${ONLY}" >&2; exit 2 ;;
+    ''|*[!0-9]*) echo "Номер PR в --only должен быть числом: ${ONLY}. Формат: <repo>[:<pr>], например yapis-2026-ivanov:4 (./manage.sh review принимает и ссылку на PR)." >&2; exit 2 ;;
   esac
 fi
 
@@ -248,10 +249,25 @@ while IFS= read -r repo; do
         | select(.body | contains($f) | not)
       ] | length')"
 
+    # Сверх лимита — одно итоговое ревью в коротком режиме (romanov#9,
+    # rublevskaya#10: исправления после третьего ревью остались без ответа).
+    # Коммит ещё не обработан (проверено выше), значит он новее прошлого ревью.
+    final=false
     if [ "${published}" -ge "${MAX_REVIEWS_PER_PR}" ] && [ "${FORCE}" -eq 0 ]; then
-      log "${repo}#${number}: лимит ревью на PR (${published}/${MAX_REVIEWS_PER_PR})."
-      post_skip "${ORG}/${repo}" "${number}" "${head_sha}" "$(render_msg "${MSG_LIMIT_PER_PR}")"
-      continue
+      had_final="$(printf '%s' "${prs_json}" | jq -r --argjson n "${number}" \
+        --arg fm "${MARKER_FINAL}" --arg f "${MARKER_FAILED}" '
+        [ .[] | select(.number == $n) | .comments[]
+          | select(.body | contains($fm))
+          | select(.body | contains($f) | not)
+        ] | length')"
+      if [ "${FINAL_REVIEW_OVER_LIMIT:-0}" = "1" ] && [ "${had_final}" -eq 0 ]; then
+        log "${repo}#${number}: лимит ревью на PR (${published}/${MAX_REVIEWS_PER_PR}) — итоговое ревью."
+        final=true
+      else
+        log "${repo}#${number}: лимит ревью на PR (${published}/${MAX_REVIEWS_PER_PR})."
+        post_skip "${ORG}/${repo}" "${number}" "${head_sha}" "$(render_msg "${MSG_LIMIT_PER_PR}")"
+        continue
+      fi
     fi
 
     changed_raw=$((additions + deletions))
@@ -292,8 +308,8 @@ while IFS= read -r repo; do
     item="$(jq -cn \
       --arg repo "${repo}" --argjson pr "${number}" --arg head "${head_sha}" \
       --arg base "${base_sha}" --arg branch "${branch}" --arg student "${student}" \
-      --argjson oversize "${oversize}" --argjson changed "${changed}" \
-      '{repo:$repo, pr:$pr, head_sha:$head, base_sha:$base, branch:$branch, student:$student, oversize:$oversize, changed:$changed}')"
+      --argjson oversize "${oversize}" --argjson changed "${changed}" --argjson final "${final}" \
+      '{repo:$repo, pr:$pr, head_sha:$head, base_sha:$base, branch:$branch, student:$student, oversize:$oversize, changed:$changed, final:$final}')"
     CANDIDATES="${CANDIDATES}${updated_at}"$'\t'"${repo}"$'\t'"${item}"$'\n'
   done < <(printf '%s' "${prs_json}" | jq -r '.[] |
     [.number, .headRefName, .headRefOid, .baseRefName, (.isDraft|tostring),

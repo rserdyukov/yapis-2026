@@ -141,10 +141,23 @@ SANDBOX_PARENT="${CHECK_SANDBOX_DIR:-$(cd "$(dirname "${STUDENT_REPO_DIR}")" && 
 SANDBOX="$(mktemp -d "${SANDBOX_PARENT}/check-sandbox.XXXXXX")"
 # CHECK_KEEP_DIR: сохранить рабочую копию после проверки (сгенерированный
 # парсер, .deps/) — в ней run-model-probes.sh запускает зонды модели.
+#
+# Файлы, созданные в контейнере, принадлежат uid 1000, а раннер GitHub
+# работает от другого uid: каталоги без права записи для остальных
+# (.deps/nuget, NuGet http-cache, DEPS_DIR) rm -rf удалить не мог — сотни
+# строк «Permission denied» в логе и мусор в /tmp. Права расширяем изнутри
+# контейнера от того же uid, тогда удаление проходит.
+DOCKER_RAN=0
+open_sandbox_perms() {
+  [ "${DOCKER_RAN}" = "1" ] || return 0
+  docker run --rm --network none --user 1000:1000 \
+    -v "${SANDBOX}/repo:/work:rw" "${CHECK_IMAGE}" \
+    chmod -R a+rwX /work >/dev/null 2>&1 || true
+}
 if [ -n "${CHECK_KEEP_DIR:-}" ]; then
-  trap 'rm -rf "${CHECK_KEEP_DIR}"; mv "${SANDBOX}/repo" "${CHECK_KEEP_DIR}" 2>/dev/null; rm -rf "${SANDBOX}"' EXIT
+  trap 'open_sandbox_perms; rm -rf "${CHECK_KEEP_DIR}"; mv "${SANDBOX}/repo" "${CHECK_KEEP_DIR}" 2>/dev/null; rm -rf "${SANDBOX}"' EXIT
 else
-  trap 'rm -rf "${SANDBOX}"' EXIT
+  trap 'open_sandbox_perms; rm -rf "${SANDBOX}"' EXIT
 fi
 
 # Копия репозитория студента: контейнер может писать в неё что угодно, на
@@ -184,6 +197,7 @@ DOCKER_COMMON=(
 )
 
 : > "${OUT_FILE}"
+DOCKER_RAN=1
 
 # --- Фаза 1: зависимости (сеть есть, секретов нет) --------------------------
 if [ "${DEPS_PHASE}" = "1" ]; then

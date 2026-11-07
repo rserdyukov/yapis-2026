@@ -1857,6 +1857,8 @@ test_length_retry_disables_tools() {
   local prompt
   prompt="$(NO_TOOLS_MODE=1 bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 . s 4 2>/dev/null)"
   assert_contains "${prompt}" "Режим ревью: без инструментов" "блок режима в промпте" || return 1
+  # olikhver#9 07.11: догадка о Scope.__eq__ из файла вне промпта.
+  assert_contains "${prompt}" "Никаких гипотез о содержимом файлов вне промпта" "запрет гипотез" || return 1
   prompt="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 . s 4 2>/dev/null)"
   assert_not_contains "${prompt}" "Режим ревью: без инструментов" "без режима блока нет" || return 1
   grep -q '^RETRY_NO_TOOLS=1' "${REVIEW_DIR}/config.env" || { fail "нет RETRY_NO_TOOLS=1 в config.env"; return 1; }

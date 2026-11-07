@@ -291,6 +291,7 @@ build_prompt() {
     MAX_DIFF_LINES_IN_PROMPT="${DIFF_LINES_IN_PROMPT}" MAX_CHECK_LINES_IN_PROMPT="${check_lines}" \
     DIFF_FILE_HINT=".review/pr-diff.txt" \
     GENERATED_FILES_LIST="${GENERATED_FILE}" OVERSIZE_MODE="${OVERSIZE}" FINAL_MODE="${FINAL}" \
+    NO_TOOLS_MODE="${AGENT_NO_TOOLS:-0}" \
     PREV_REVIEW_FILE="${PREV_REVIEW_FILE}" PREV_REVIEW_SHA="${PREV_SHA}" PREV_DIFF_FILE="${PREV_DIFF_FILE}" \
       bash "${REVIEW_ROOT}/lib/build-prompt.sh" \
         "${TASK_DIR}" "${WORK_DIR}" "${STUDENT}" "${TASK_NUM}" \
@@ -302,7 +303,7 @@ build_prompt() {
     fi
     DIFF_LINES_IN_PROMPT=$((DIFF_LINES_IN_PROMPT / 2))
   done
-  log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF_LINES_IN_PROMPT} строк, вывод проверок: до ${check_lines} строк$([ "${OVERSIZE}" -eq 1 ] && echo ', сокращённый режим')$([ "${FINAL}" -eq 1 ] && echo ', итоговое ревью'))"
+  log "промпт: ${PROMPT_BYTES} байт (diff в промпте: до ${DIFF_LINES_IN_PROMPT} строк, вывод проверок: до ${check_lines} строк$([ "${OVERSIZE}" -eq 1 ] && echo ', сокращённый режим')$([ "${FINAL}" -eq 1 ] && echo ', итоговое ревью')$([ "${AGENT_NO_TOOLS:-0}" = "1" ] && echo ', без инструментов'))"
 }
 
 build_prompt "${MAX_DIFF_LINES_IN_PROMPT:-6000}" "${MAX_CHECK_LINES_IN_PROMPT:-600}" "${MAX_PROMPT_BYTES}"
@@ -314,7 +315,6 @@ build_prompt "${MAX_DIFF_LINES_IN_PROMPT:-6000}" "${MAX_CHECK_LINES_IN_PROMPT:-6
 # на чтение, small_model, объявление модели) — в lib/agent-config.sh, общем
 # с review-local.sh и eval-prompts.sh.
 AGENT_HOME="${WORK}/agent-home"
-AGENT_CONFIG="$(agent_config_json "${MODEL}")"
 mapfile -t AGENT_RUN_FLAGS < <(agent_run_flags "${MODEL}" json)
 
 RESULT_FILE="${WORK}/result.md"
@@ -322,18 +322,24 @@ AGENT_EVENTS="${WORK}/agent-events.jsonl"
 AGENT_ERR="${WORK}/agent.err"
 
 # Минимальное окружение: PATH, HOME (пустой временный), ключ провайдера и
-# флаги opencode. GH_TOKEN и прочее сюда НЕ попадают.
-AGENT_ENV=(
-  "PATH=${PATH}"
-  "HOME=${AGENT_HOME}"
-  "TMPDIR=${AGENT_HOME}"
-  "LANG=C.UTF-8"
-  "OPENCODE_CONFIG_CONTENT=${AGENT_CONFIG}"
-  "OPENCODE_DISABLE_CLAUDE_CODE=true"
-  "OPENCODE_DISABLE_AUTOUPDATE=true"
-  "OPENCODE_DISABLE_DEFAULT_PLUGINS=true"
-  "OPENROUTER_API_KEY=${KEY_VALUE}"
-)
+# флаги opencode. GH_TOKEN и прочее сюда НЕ попадают. Собирается заново при
+# смене AGENT_NO_TOOLS (повтор после обрыва по length).
+set_agent_env() {
+  AGENT_CONFIG="$(agent_config_json "${MODEL}")"
+  AGENT_ENV=(
+    "PATH=${PATH}"
+    "HOME=${AGENT_HOME}"
+    "TMPDIR=${AGENT_HOME}"
+    "LANG=C.UTF-8"
+    "OPENCODE_CONFIG_CONTENT=${AGENT_CONFIG}"
+    "OPENCODE_DISABLE_CLAUDE_CODE=true"
+    "OPENCODE_DISABLE_AUTOUPDATE=true"
+    "OPENCODE_DISABLE_DEFAULT_PLUGINS=true"
+    "OPENROUTER_API_KEY=${KEY_VALUE}"
+  )
+}
+AGENT_NO_TOOLS=0
+set_agent_env
 
 # Один запуск агента. Возвращает 0 и готовый ответ в RESULT_FILE, либо 1 и
 # причину в AGENT_FAIL_REASON. Каждая попытка — с чистым HOME: сессия
@@ -360,6 +366,10 @@ run_agent_once() {
   )
   local rc=$?
   log "агент: код ${rc}; $(summarize_agent_events "${AGENT_EVENTS}")"
+  local step
+  while IFS= read -r step; do
+    [ -n "${step}" ] && log "  ${step}"
+  done < <(agent_step_trace "${AGENT_EVENTS}")
   if [ "${rc}" -ne 0 ] && [ -s "${AGENT_ERR}" ]; then
     log "stderr opencode (хвост): $(tail -5 "${AGENT_ERR}" | tr '\n' ' ' | head -c 600)"
   fi
@@ -420,8 +430,15 @@ while :; do
   # После обрыва по length повтор с тем же промптом обрывается так же
   # (putyato#9, olikhver#9: обе попытки по ~300 токенов). Все обрывы
   # 29.10–03.11 — при промпте ≥ 160 КБ, поэтому повторяем с урезанным.
+  # Одного урезания мало: olikhver#9 07.11 с промптом 104 КБ оборвался
+  # снова — модель за 11 вызовов read дочитала контекст обратно. Поэтому
+  # повтор идёт без инструментов (RETRY_NO_TOOLS): контекст = промпт.
   case "${AGENT_FAIL_REASON}" in
     "${FAIL_LENGTH_PREFIX}"*)
+      if [ "${RETRY_NO_TOOLS:-1}" = "1" ]; then
+        AGENT_NO_TOOLS=1
+        set_agent_env
+      fi
       build_prompt "${RETRY_DIFF_LINES_IN_PROMPT:-2000}" "${RETRY_CHECK_LINES_IN_PROMPT:-300}" \
         "${RETRY_MAX_PROMPT_BYTES:-120000}" ;;
   esac

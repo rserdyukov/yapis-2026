@@ -1311,7 +1311,7 @@ test_agent_runs_with_clean_env() {
     || { fail "агент должен запускаться через env -i с минимальным окружением"; return 1; }
 
   local block
-  block="$(sed -n '/^AGENT_ENV=(/,/^)/p' "${REPO_ROOT}/reviewer/lib/review-pr.sh")"
+  block="$(sed -n '/^ *AGENT_ENV=(/,/^ *)/p' "${REPO_ROOT}/reviewer/lib/review-pr.sh")"
   [ -n "${block}" ] || { fail "не найден список переменных окружения агента"; return 1; }
   case "${block}" in
     *GH_TOKEN*|*GITHUB_TOKEN*) fail "в окружении агента не должно быть токена GitHub"; return 1 ;;
@@ -1827,6 +1827,41 @@ EOF
   grep -q 'agent_finish_reason' "${rp}" || { fail "review-pr.sh не проверяет finish=length"; return 1; }
   grep -q 'RETRY_DIFF_LINES_IN_PROMPT' "${rp}" || { fail "повтор после length должен урезать промпт"; return 1; }
   grep -q '^RETRY_MAX_PROMPT_BYTES=' "${REVIEW_DIR}/config.env" || { fail "нет RETRY_MAX_PROMPT_BYTES в config.env"; return 1; }
+}
+
+# Трасса по шагам: на каком контексте и после каких read оборвался ответ
+# (olikhver#9 07.11: по сумме токенов этого не было видно).
+test_agent_step_trace_shows_context_per_step() {
+  local ev="${TMP_ROOT}/trace.jsonl" out
+  cat > "${ev}" <<'EOF'
+{"type":"tool_use","part":{"messageID":"m1","tool":"read","state":{"input":{"filePath":"/w/compiler/semantic.py"},"output":"0123456789"}}}
+{"type":"step_finish","part":{"messageID":"m1","reason":"tool-calls","tokens":{"input":3,"output":5,"cache":{"read":100,"write":50}}}}
+{"type":"step_finish","part":{"messageID":"m2","reason":"length","tokens":{"input":2,"output":271,"cache":{"read":150000,"write":0}}}}
+EOF
+  out="$(bash -c "source '${REPO_ROOT}/reviewer/lib/common.sh'; agent_step_trace '${ev}'")"
+  assert_contains "${out}" "шаг 1: tool-calls, контекст 153, выход 5; read semantic.py (10 симв)" "шаг с чтением" || return 1
+  assert_contains "${out}" "шаг 2: length, контекст 150002, выход 271" "шаг обрыва" || return 1
+  grep -q 'agent_step_trace' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
+    || { fail "review-pr.sh не пишет трассу шагов"; return 1; }
+}
+
+# Повтор после length — без инструментов: olikhver#9 07.11 с урезанным
+# промптом оборвался снова, дочитав файлы.
+test_length_retry_disables_tools() {
+  local cfg
+  cfg="$(source "${REVIEW_DIR}/lib/agent-config.sh"; AGENT_NO_TOOLS=1 agent_config_json openrouter/a/b)"
+  assert_eq "$(printf '%s' "${cfg}" | jq -r '[.permission.read, .permission.glob, .permission.grep, .permission.list] | unique | join(",")')" \
+    "deny" "AGENT_NO_TOOLS=1 запрещает чтение" || return 1
+  cfg="$(source "${REVIEW_DIR}/lib/agent-config.sh"; agent_config_json openrouter/a/b)"
+  assert_eq "$(printf '%s' "${cfg}" | jq -r '.permission.read')" "allow" "по умолчанию чтение разрешено" || return 1
+  local prompt
+  prompt="$(NO_TOOLS_MODE=1 bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 . s 4 2>/dev/null)"
+  assert_contains "${prompt}" "Режим ревью: без инструментов" "блок режима в промпте" || return 1
+  prompt="$(bash "${REVIEW_DIR}/lib/build-prompt.sh" task4 . s 4 2>/dev/null)"
+  assert_not_contains "${prompt}" "Режим ревью: без инструментов" "без режима блока нет" || return 1
+  grep -q '^RETRY_NO_TOOLS=1' "${REVIEW_DIR}/config.env" || { fail "нет RETRY_NO_TOOLS=1 в config.env"; return 1; }
+  grep -q 'AGENT_NO_TOOLS=1' "${REPO_ROOT}/reviewer/lib/review-pr.sh" \
+    || { fail "review-pr.sh не отключает инструменты при повторе"; return 1; }
 }
 
 test_validate_rejects_unfinished_table_row() {

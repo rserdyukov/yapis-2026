@@ -10,7 +10,12 @@
 #                         заданы для MODEL из config.env, поэтому при
 #                         подмене модели вызывающая сторона сбрасывает его;
 #   MODEL_CONTEXT_TOKENS  лимит контекста для объявления;
-#   MODEL_OUTPUT_TOKENS   лимит ответа для объявления.
+#   MODEL_OUTPUT_TOKENS   лимит ответа для объявления;
+#   AGENT_NO_TOOLS        1 — запретить и чтение/поиск: модель отвечает
+#                         только по промпту. Так идёт повтор после обрыва
+#                         по length: у olikhver#9 урезанный вдвое промпт
+#                         (104 КБ) снова оборвался, потому что модель за
+#                         11 вызовов read дочитала контекст обратно.
 #
 # ЗАЧЕМ ОБЪЯВЛЕНИЕ. opencode знает модели из каталога models.dev, который
 # кэшируется и обновляется с задержкой. Модель, которой в кэше ещё нет,
@@ -38,9 +43,11 @@ agent_config_json() {
     provider_block="$(printf '"provider":{"%s":{"models":{"%s":{"name":"%s","tool_call":true,"limit":{"context":%s,"output":%s}}}}},' \
       "${provider}" "${model_id}" "${model_id}" "${ctx}" "${out}")"
   fi
+  local ro="allow"
+  [ "${AGENT_NO_TOOLS:-0}" = "1" ] && ro="deny"
   # shellcheck disable=SC2016  # "$schema" — ключ JSON, а не переменная
-  printf '{"$schema":"https://opencode.ai/config.json",%s"model":"%s","small_model":"%s","share":"disabled","autoupdate":false,"snapshot":false,"plugin":[],"instructions":[],"permission":{"*":"deny","read":"allow","glob":"allow","grep":"allow","list":"allow","bash":"deny","edit":"deny","write":"deny","patch":"deny","task":"deny","skill":"deny","lsp":"deny","question":"deny","webfetch":"deny","websearch":"deny","todowrite":"deny","external_directory":"deny","doom_loop":"deny"}}\n' \
-    "${provider_block}" "${model}" "${model}"
+  printf '{"$schema":"https://opencode.ai/config.json",%s"model":"%s","small_model":"%s","share":"disabled","autoupdate":false,"snapshot":false,"plugin":[],"instructions":[],"permission":{"*":"deny","read":"%s","glob":"%s","grep":"%s","list":"%s","bash":"deny","edit":"deny","write":"deny","patch":"deny","task":"deny","skill":"deny","lsp":"deny","question":"deny","webfetch":"deny","websearch":"deny","todowrite":"deny","external_directory":"deny","doom_loop":"deny"}}\n' \
+    "${provider_block}" "${model}" "${model}" "${ro}" "${ro}" "${ro}" "${ro}"
 }
 
 # Флаги opencode run, общие для всех запусков агента. Модель передаётся

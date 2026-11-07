@@ -194,6 +194,34 @@ summarize_agent_events() {
   ' 2>/dev/null || echo "события не разобраны"
 }
 
+# Трасса агента по шагам — одна строка на шаг: причина завершения, размер
+# контекста (вход + чтение и запись кэша — всё, что модель получила на этом
+# шаге), выход и прочитанные файлы с размером результата.
+#   agent_step_trace <events.jsonl>
+#
+# ЗАЧЕМ. Сводка summarize_agent_events суммирует токены по всем шагам, и по
+# ней не видно, на каком контексте оборвался ответ: у olikhver#9 повтор с
+# промптом 104 КБ оборвался после 11 вызовов read, а сколько модель успела
+# дочитать — неизвестно. Провайдера OpenRouter opencode в событиях не
+# передаёт; размер контекста на шаге обрыва — главный доступный признак.
+agent_step_trace() {
+  jq -R 'fromjson? // empty' "${1}" 2>/dev/null | jq -rs '
+    [ .[] | select(type == "object") ] as $all
+    | [ $all[] | select(.type == "step_finish") ] as $s
+    | range(0; $s | length) as $i
+    | $s[$i].part as $p
+    | ($p.tokens // {}) as $t
+    | [ $all[] | select(.type == "tool_use" and .part.messageID == $p.messageID) | .part
+        | "\(.tool)" + ((.state.input.path // .state.input.filePath // .state.input.pattern // "")
+            | tostring | if . == "" then "" else " " + (split("/") | last | .[0:60]) end)
+          + " (\((.state.output // "") | tostring | length) симв)" ] as $tools
+    | "шаг \($i + 1): \($p.reason // "?")"
+      + ", контекст \(($t.input // 0) + ($t.cache.read // 0) + ($t.cache.write // 0))"
+      + ", выход \($t.output // 0)"
+      + (if ($tools | length) > 0 then "; " + ($tools | join(", ")) else "" end)
+  ' 2>/dev/null || :
+}
+
 # Причина завершения последнего шага агента (stop / tool-calls / length /
 # content-filter …) или пустая строка.
 #   agent_finish_reason <events.jsonl>
